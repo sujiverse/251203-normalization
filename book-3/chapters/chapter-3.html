@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3장: 데이터베이스 & 테이블 생성 - 물리치료사를 위한 데이터베이스 3권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "3"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📙 물리치료사를 위한</h1>
+                <p>실전 구축 & 대시보드 (3권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">데이터베이스 & 테이블 생성</h1>
+
+            <h2>드디어 진짜 시작입니다</h2>
+
+            <p>환경 설정이 끝났으니, 이제 진짜로 데이터베이스를 만들어봅시다. 김지훈 원장의 힐링손 물리치료센터를 위한 데이터베이스, 이름은 <code>healing_hands</code>입니다.</p>
+
+            <p>이번 장에서는 데이터베이스를 생성하고, 9개의 테이블을 하나씩 만들어갑니다. 1권에서 배운 테이블 설계를 실제로 구현하는 과정이에요.</p>
+
+            <h3>이번 장에서 만들 것들</h3>
+
+            <pre><code>📁 healing_hands (데이터베이스)
+│
+├── 🏷️ insurances (보험사)
+├── 📋 fee_items (수가 항목)
+├── 🏷️ diagnosis_codes (진단 코드)
+├── 👨‍⚕️ therapists (치료사)
+├── 👥 patients (환자)
+├── 🔗 patient_diagnoses (환자-진단 연결)
+├── 📅 treatment_sessions (치료 세션)
+├── 💰 billings (청구/수납)
+└── 📝 soap_notes (SOAP 기록)</code></pre>
+
+            <hr>
+
+            <h2>테이블 생성 순서가 중요합니다</h2>
+
+            <p>테이블을 아무 순서로나 만들면 안 됩니다. 왜 그럴까요?</p>
+
+            <p>테이블들은 서로 연결되어 있습니다. 예를 들어 <code>patients</code> 테이블에는 "이 환자의 보험사"를 저장하는 컬럼이 있어요. 이 컬럼은 <code>insurances</code> 테이블을 참조합니다.</p>
+
+            <p>그런데 <code>insurances</code> 테이블이 아직 없는데 <code>patients</code> 테이블에서 "insurances를 참조해!"라고 하면? 에러가 납니다. 존재하지 않는 걸 참조할 수는 없으니까요.</p>
+
+            <blockquote>
+            <strong>원칙:</strong> 참조당하는 테이블을 먼저 만들고, 참조하는 테이블을 나중에 만든다.
+            </blockquote>
+
+            <p>그래서 우리는 이 순서로 만듭니다:</p>
+
+            <ol>
+                <li><strong>기준 테이블 (다른 테이블에서 참조됨)</strong>
+                    <ul>
+                        <li>insurances - 보험사 목록</li>
+                        <li>fee_items - 수가 항목 목록</li>
+                        <li>diagnosis_codes - 진단 코드 목록</li>
+                        <li>therapists - 치료사 목록</li>
+                    </ul>
+                </li>
+                <li><strong>핵심 테이블 (기준 테이블을 참조함)</strong>
+                    <ul>
+                        <li>patients - 환자 (insurances 참조)</li>
+                        <li>treatment_sessions - 치료 세션 (patients, therapists 참조)</li>
+                        <li>billings - 청구 (treatment_sessions, fee_items 참조)</li>
+                    </ul>
+                </li>
+                <li><strong>연결/보조 테이블</strong>
+                    <ul>
+                        <li>patient_diagnoses - 환자-진단 연결</li>
+                        <li>soap_notes - SOAP 기록</li>
+                    </ul>
+                </li>
+            </ol>
+
+            <hr>
+
+            <h2>DBeaver에서 작업하기</h2>
+
+            <p>이제부터 DBeaver에서 SQL을 실행합니다. DBeaver를 열고 MySQL에 연결하세요.</p>
+
+            <h3>새 SQL 스크립트 만들기</h3>
+
+            <ol>
+                <li>DBeaver 상단 메뉴에서 <strong>SQL 편집기 → 새 SQL 편집기</strong> 클릭</li>
+                <li>또는 단축키 <code>Ctrl + ]</code> (Windows) / <code>Cmd + ]</code> (Mac)</li>
+                <li>빈 SQL 편집기 창이 열립니다</li>
+            </ol>
+
+            <p>여기에 SQL을 입력하고 실행할 거예요. 실행은 <code>Ctrl + Enter</code>입니다.</p>
+
+            <hr>
+
+            <h2>1단계: 데이터베이스 생성</h2>
+
+            <p>먼저 데이터베이스를 만듭니다. 데이터베이스는 테이블들을 담는 큰 폴더라고 생각하면 됩니다.</p>
+
+            <pre><code>-- 힐링손 물리치료센터 데이터베이스 생성
+CREATE DATABASE healing_hands
+CHARACTER SET utf8mb4
+COLLATE utf8mb4_unicode_ci;</code></pre>
+
+            <p>이 명령어가 하는 일:</p>
+            <ul>
+                <li><code>CREATE DATABASE healing_hands</code> - healing_hands라는 이름의 데이터베이스 생성</li>
+                <li><code>CHARACTER SET utf8mb4</code> - 한글, 이모지 등 모든 문자 지원</li>
+                <li><code>COLLATE utf8mb4_unicode_ci</code> - 문자 정렬 방식 (한글 정렬 잘 됨)</li>
+            </ul>
+
+            <p>SQL 편집기에 입력하고 <code>Ctrl + Enter</code>를 누르세요.</p>
+
+            <p>성공하면 아래쪽 "출력" 패널에 이런 메시지가 나옵니다:</p>
+
+            <pre><code>1 row(s) affected</code></pre>
+
+            <h3>데이터베이스 사용 선언</h3>
+
+            <p>이제 만든 데이터베이스를 "사용하겠다"고 선언합니다.</p>
+
+            <pre><code>-- 이 데이터베이스를 사용하겠다
+USE healing_hands;</code></pre>
+
+            <p>앞으로 실행하는 모든 SQL은 healing_hands 데이터베이스 안에서 실행됩니다.</p>
+
+            <div class="tip"><strong>💡 DBeaver에서 더 쉽게 하는 방법</strong><br>
+            왼쪽 Database Navigator에서 healing_hands를 더블클릭하면 자동으로 이 데이터베이스가 선택됩니다. 그러면 <code>USE</code> 명령어 없이도 됩니다.</div>
+
+            <h3>✅ 체크포인트</h3>
+
+            <pre><code>-- 데이터베이스 목록 확인
+SHOW DATABASES;</code></pre>
+
+            <p>결과에 <code>healing_hands</code>가 보이면 성공!</p>
+
+            <hr>
+
+            <h2>2단계: 기준 테이블 생성</h2>
+
+            <p>이제 테이블을 만들어봅시다. 먼저 다른 테이블들이 참조할 "기준 테이블"들을 만듭니다.</p>
+
+            <h3>2-1. insurances (보험사)</h3>
+
+            <p>환자가 가입한 보험사 정보를 저장합니다.</p>
+
+            <pre><code>-- 보험사 테이블
+CREATE TABLE insurances (
+insurance_code VARCHAR(10) PRIMARY KEY,
+insurance_name VARCHAR(50) NOT NULL,
+insurance_type VARCHAR(20) NOT NULL,
+contact_number VARCHAR(20),
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);</code></pre>
+
+            <p>각 컬럼 설명:</p>
+            <ul>
+                <li><code>insurance_code</code> - 보험사 코드 (기본키). 예: 'INS001'</li>
+                <li><code>insurance_name</code> - 보험사 이름. 예: '국민건강보험'</li>
+                <li><code>insurance_type</code> - 보험 종류. 예: '건강보험', '실손보험'</li>
+                <li><code>contact_number</code> - 연락처</li>
+                <li><code>created_at</code> - 등록 일시 (자동으로 현재 시간 입력)</li>
+            </ul>
+
+            <h3>2-2. fee_items (수가 항목)</h3>
+
+            <p>치료 종류별 가격표입니다. 도수치료 얼마, 운동치료 얼마... 이런 정보를 저장합니다.</p>
+
+            <pre><code>-- 수가 항목 테이블
+CREATE TABLE fee_items (
+fee_code VARCHAR(10) PRIMARY KEY,
+fee_name VARCHAR(50) NOT NULL,
+fee_category VARCHAR(30) NOT NULL,
+unit_price INT NOT NULL,
+duration_minutes INT,
+is_active CHAR(1) DEFAULT 'Y',
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);</code></pre>
+
+            <p>각 컬럼 설명:</p>
+            <ul>
+                <li><code>fee_code</code> - 수가 코드 (기본키). 예: 'FEE001'</li>
+                <li><code>fee_name</code> - 항목 이름. 예: '도수치료'</li>
+                <li><code>fee_category</code> - 분류. 예: '도수', '운동', '물리'</li>
+                <li><code>unit_price</code> - 단가 (원). 예: 80000</li>
+                <li><code>duration_minutes</code> - 소요 시간 (분). 예: 30</li>
+                <li><code>is_active</code> - 사용 여부. 'Y' 또는 'N'</li>
+            </ul>
+
+            <h3>2-3. diagnosis_codes (진단 코드)</h3>
+
+            <p>의료에서 사용하는 표준 진단 코드(KCD)를 저장합니다. 환자가 어떤 진단을 받았는지 기록할 때 사용해요.</p>
+
+            <pre><code>-- 진단 코드 테이블
+CREATE TABLE diagnosis_codes (
+diagnosis_code VARCHAR(10) PRIMARY KEY,
+diagnosis_name VARCHAR(100) NOT NULL,
+diagnosis_category VARCHAR(50),
+description TEXT,
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);</code></pre>
+
+            <p>각 컬럼 설명:</p>
+            <ul>
+                <li><code>diagnosis_code</code> - KCD 코드 (기본키). 예: 'M54.5'</li>
+                <li><code>diagnosis_name</code> - 진단명. 예: '요통'</li>
+                <li><code>diagnosis_category</code> - 분류. 예: '척추', '관절'</li>
+                <li><code>description</code> - 상세 설명</li>
+            </ul>
+
+            <h3>2-4. therapists (치료사)</h3>
+
+            <p>힐링손에서 일하는 치료사 정보입니다. 김지훈 원장과 3명의 치료사 정보가 들어갈 거예요.</p>
+
+            <pre><code>-- 치료사 테이블
+CREATE TABLE therapists (
+therapist_id VARCHAR(10) PRIMARY KEY,
+name VARCHAR(30) NOT NULL,
+license_number VARCHAR(20) NOT NULL UNIQUE,
+phone VARCHAR(20),
+email VARCHAR(50),
+specialization VARCHAR(50),
+hire_date DATE NOT NULL,
+is_active CHAR(1) DEFAULT 'Y',
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);</code></pre>
+
+            <p>각 컬럼 설명:</p>
+            <ul>
+                <li><code>therapist_id</code> - 치료사 ID (기본키). 예: 'T001'</li>
+                <li><code>name</code> - 이름. 예: '김지훈'</li>
+                <li><code>license_number</code> - 면허번호 (중복 불가)</li>
+                <li><code>phone</code> - 연락처</li>
+                <li><code>email</code> - 이메일</li>
+                <li><code>specialization</code> - 전문분야. 예: '도수치료'</li>
+                <li><code>hire_date</code> - 입사일</li>
+                <li><code>is_active</code> - 재직 여부</li>
+            </ul>
+
+            <h3>✅ 체크포인트: 기준 테이블 확인</h3>
+
+            <pre><code>-- 생성된 테이블 목록 확인
+SHOW TABLES;</code></pre>
+
+            <p>결과:</p>
+            <pre><code>+------------------------+
+| Tables_in_healing_hands |
++------------------------+
+| diagnosis_codes         |
+| fee_items              |
+| insurances             |
+| therapists             |
++------------------------+</code></pre>
+
+            <p>4개 테이블이 보이면 성공!</p>
+
+            <hr>
+
+            <h2>3단계: 핵심 테이블 생성</h2>
+
+            <p>이제 실제 업무 데이터가 들어갈 핵심 테이블들을 만듭니다.</p>
+
+            <h3>3-1. patients (환자)</h3>
+
+            <p>환자 기본 정보를 저장하는 가장 중요한 테이블입니다.</p>
+
+            <pre><code>-- 환자 테이블
+CREATE TABLE patients (
+patient_id VARCHAR(10) PRIMARY KEY,
+name VARCHAR(30) NOT NULL,
+gender CHAR(1) NOT NULL,
+birth_date DATE NOT NULL,
+phone VARCHAR(20) NOT NULL,
+email VARCHAR(50),
+address VARCHAR(200),
+insurance_code VARCHAR(10),
+emergency_contact VARCHAR(30),
+emergency_phone VARCHAR(20),
+memo TEXT,
+is_active CHAR(1) DEFAULT 'Y',
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+FOREIGN KEY (insurance_code) REFERENCES insurances(insurance_code)
+);</code></pre>
+
+            <p>각 컬럼 설명:</p>
+            <ul>
+                <li><code>patient_id</code> - 환자 ID (기본키). 예: 'P001'</li>
+                <li><code>name</code> - 이름</li>
+                <li><code>gender</code> - 성별. 'M' 또는 'F'</li>
+                <li><code>birth_date</code> - 생년월일</li>
+                <li><code>phone</code> - 연락처</li>
+                <li><code>insurance_code</code> - 보험사 코드 (insurances 테이블 참조)</li>
+                <li><code>emergency_contact</code> - 비상연락처 이름</li>
+                <li><code>emergency_phone</code> - 비상연락처 전화번호</li>
+                <li><code>memo</code> - 메모 (특이사항 등)</li>
+                <li><code>updated_at</code> - 정보 수정 시 자동 업데이트</li>
+            </ul>
+
+            <p>맨 아래 <code>FOREIGN KEY</code>가 보이시죠? 이게 바로 "참조" 설정입니다. <code>insurance_code</code>는 반드시 <code>insurances</code> 테이블에 있는 값이어야 해요.</p>
+
+            <h3>3-2. treatment_sessions (치료 세션)</h3>
+
+            <p>실제 치료 기록입니다. 언제, 누가, 어떤 환자를 치료했는지 기록합니다.</p>
+
+            <pre><code>-- 치료 세션 테이블
+CREATE TABLE treatment_sessions (
+session_id INT AUTO_INCREMENT PRIMARY KEY,
+patient_id VARCHAR(10) NOT NULL,
+therapist_id VARCHAR(10) NOT NULL,
+session_date DATE NOT NULL,
+start_time TIME,
+end_time TIME,
+session_status VARCHAR(20) DEFAULT '완료',
+notes TEXT,
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+FOREIGN KEY (patient_id) REFERENCES patients(patient_id),
+FOREIGN KEY (therapist_id) REFERENCES therapists(therapist_id)
+);</code></pre>
+
+            <p>새로운 것들:</p>
+            <ul>
+                <li><code>INT AUTO_INCREMENT</code> - 자동으로 1, 2, 3... 번호가 매겨짐</li>
+                <li><code>session_status</code> - 예약, 완료, 취소, 노쇼 등</li>
+                <li>두 개의 FOREIGN KEY - patients와 therapists 테이블 참조</li>
+            </ul>
+
+            <h3>3-3. billings (청구/수납)</h3>
+
+            <p>치료비 청구와 수납 정보입니다.</p>
+
+            <pre><code>-- 청구/수납 테이블
+CREATE TABLE billings (
+billing_id INT AUTO_INCREMENT PRIMARY KEY,
+session_id INT NOT NULL,
+fee_code VARCHAR(10) NOT NULL,
+quantity INT DEFAULT 1,
+unit_price INT NOT NULL,
+total_amount INT NOT NULL,
+payment_status VARCHAR(20) DEFAULT '대기',
+payment_method VARCHAR(20),
+payment_date DATE,
+memo TEXT,
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+FOREIGN KEY (session_id) REFERENCES treatment_sessions(session_id),
+FOREIGN KEY (fee_code) REFERENCES fee_items(fee_code)
+);</code></pre>
+
+            <p>각 컬럼 설명:</p>
+            <ul>
+                <li><code>session_id</code> - 어떤 치료에 대한 청구인지</li>
+                <li><code>fee_code</code> - 어떤 항목인지 (도수치료, 운동치료 등)</li>
+                <li><code>quantity</code> - 수량 (보통 1)</li>
+                <li><code>unit_price</code> - 단가</li>
+                <li><code>total_amount</code> - 총액 (단가 × 수량)</li>
+                <li><code>payment_status</code> - 수납 상태 (대기, 완료, 환불 등)</li>
+                <li><code>payment_method</code> - 결제 방법 (카드, 현금, 계좌이체)</li>
+                <li><code>payment_date</code> - 수납 완료 날짜</li>
+            </ul>
+
+            <hr>
+
+            <h2>4단계: 연결/보조 테이블 생성</h2>
+
+            <h3>4-1. patient_diagnoses (환자-진단 연결)</h3>
+
+            <p>환자 한 명이 여러 진단을 받을 수 있습니다. "허리 디스크"도 있고 "목 디스크"도 있을 수 있죠. 이런 다대다(N:N) 관계를 저장하는 연결 테이블입니다.</p>
+
+            <pre><code>-- 환자-진단 연결 테이블
+CREATE TABLE patient_diagnoses (
+id INT AUTO_INCREMENT PRIMARY KEY,
+patient_id VARCHAR(10) NOT NULL,
+diagnosis_code VARCHAR(10) NOT NULL,
+diagnosis_date DATE NOT NULL,
+is_primary CHAR(1) DEFAULT 'N',
+notes TEXT,
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+FOREIGN KEY (patient_id) REFERENCES patients(patient_id),
+FOREIGN KEY (diagnosis_code) REFERENCES diagnosis_codes(diagnosis_code)
+);</code></pre>
+
+            <p><code>is_primary</code>는 주진단 여부입니다. 여러 진단 중 가장 주된 진단에 'Y'를 넣어요.</p>
+
+            <h3>4-2. soap_notes (SOAP 기록)</h3>
+
+            <p>물리치료사라면 SOAP 노트가 익숙하시죠? Subjective(주관적), Objective(객관적), Assessment(평가), Plan(계획)을 기록하는 테이블입니다.</p>
+
+            <pre><code>-- SOAP 노트 테이블
+CREATE TABLE soap_notes (
+note_id INT AUTO_INCREMENT PRIMARY KEY,
+session_id INT NOT NULL UNIQUE,
+subjective TEXT,
+objective TEXT,
+assessment TEXT,
+plan TEXT,
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+FOREIGN KEY (session_id) REFERENCES treatment_sessions(session_id)
+);</code></pre>
+
+            <p><code>session_id</code>에 <code>UNIQUE</code>가 붙어있습니다. 하나의 치료 세션에는 하나의 SOAP 노트만 있어야 하니까요.</p>
+
+            <hr>
+
+            <h2>5단계: 최종 확인</h2>
+
+            <h3>모든 테이블 확인</h3>
+
+            <pre><code>SHOW TABLES;</code></pre>
+
+            <p>결과:</p>
+            <pre><code>+------------------------+
+| Tables_in_healing_hands |
++------------------------+
+| billings               |
+| diagnosis_codes        |
+| fee_items              |
+| insurances             |
+| patient_diagnoses      |
+| patients               |
+| soap_notes             |
+| therapists             |
+| treatment_sessions     |
++------------------------+
+9 rows in set</code></pre>
+
+            <p>9개 테이블이 모두 보이면 성공입니다!</p>
+
+            <h3>테이블 구조 확인</h3>
+
+            <p>특정 테이블의 구조를 보고 싶다면:</p>
+
+            <pre><code>-- patients 테이블 구조 확인
+DESCRIBE patients;</code></pre>
+
+            <p>컬럼 이름, 타입, NULL 가능 여부, 키 정보 등이 표시됩니다.</p>
+
+            <div class="tip"><strong>💡 DBeaver에서 더 쉽게 보기</strong><br>
+            왼쪽 Database Navigator에서 healing_hands → Tables → patients 를 클릭하면 GUI로 테이블 구조를 볼 수 있어요. 훨씬 직관적입니다!</div>
+
+            <hr>
+
+            <h2>이번 장 요약</h2>
+
+            <p>이번 장에서 한 일:</p>
+
+            <ol>
+                <li><code>healing_hands</code> 데이터베이스 생성</li>
+                <li>기준 테이블 4개 생성 (insurances, fee_items, diagnosis_codes, therapists)</li>
+                <li>핵심 테이블 3개 생성 (patients, treatment_sessions, billings)</li>
+                <li>연결/보조 테이블 2개 생성 (patient_diagnoses, soap_notes)</li>
+            </ol>
+
+            <p>총 9개의 테이블이 만들어졌습니다. 아직 테이블은 모두 비어있어요. 다음 장에서는 테이블 간의 관계를 더 단단하게 설정하고, 제약조건을 추가합니다.</p>
+
+            <div class="warning"><strong>⚠️ 에러가 났다면?</strong><br>
+            SQL 에러가 나면 메시지를 잘 읽어보세요. 대부분 오타이거나, 순서가 잘못됐거나, 이미 존재하는 테이블을 다시 만들려고 한 경우입니다.<br><br>
+            이미 존재하는 테이블을 지우려면: <code>DROP TABLE 테이블명;</code><br>
+            데이터베이스 전체를 지우고 다시 시작하려면: <code>DROP DATABASE healing_hands;</code></div>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/nav.js"></script>
+</body>
+</html>

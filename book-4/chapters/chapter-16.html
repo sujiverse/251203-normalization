@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>16장: 기본 시트 만들기 - 물리치료사를 위한 DB 4권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "4"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📕 물리치료사를 위한</h1>
+                <p>웹 앱 만들기 (4권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">기본 시트 만들기</h1>
+
+            <h2>예약 시트 구조</h2>
+
+            <table>
+                <tr>
+                    <th style="background:#fee2e2;">환자명</th>
+                    <th>12/1(월)</th>
+                    <th>12/2(화)</th>
+                    <th>12/3(수)</th>
+                    <th>...</th>
+                </tr>
+                <tr>
+                    <td style="background:#fee2e2;">김철수</td>
+                    <td>10:00</td>
+                    <td></td>
+                    <td>14:00</td>
+                    <td>...</td>
+                </tr>
+                <tr>
+                    <td style="background:#fee2e2;">이영희</td>
+                    <td></td>
+                    <td>11:00</td>
+                    <td></td>
+                    <td>...</td>
+                </tr>
+            </table>
+
+            <ul>
+                <li><strong>행</strong>: 환자 (첫 열은 환자명)</li>
+                <li><strong>열</strong>: 날짜 (첫 행은 날짜)</li>
+                <li><strong>셀</strong>: 예약 시간</li>
+            </ul>
+
+            <hr>
+
+            <h2>시트 데이터 생성 함수</h2>
+
+            <pre><code>// static/js/sheet.js
+
+// 날짜 범위 생성
+function getDateRange(startDate, days) {
+    const dates = [];
+    const start = new Date(startDate);
+
+    for (let i = 0; i < days; i++) {
+        const date = new Date(start);
+        date.setDate(start.getDate() + i);
+
+        const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+        const dayName = dayNames[date.getDay()];
+
+        dates.push({
+            date: date.toISOString().split('T')[0],
+            display: `${date.getMonth() + 1}/${date.getDate()}(${dayName})`
+        });
+    }
+
+    return dates;
+}
+
+// 헤더 행 생성 (날짜)
+function createHeaderRow(dates) {
+    const cells = [
+        // A1: 빈 셀 (환자명 열 위)
+        {
+            r: 0, c: 0,
+            v: { v: '환자명', m: '환자명', bg: '#f1f5f9', bl: 1 }
+        }
+    ];
+
+    dates.forEach((d, i) => {
+        cells.push({
+            r: 0,
+            c: i + 1,
+            v: {
+                v: d.date,
+                m: d.display,
+                bg: '#f1f5f9',
+                bl: 1  // 굵게
+            }
+        });
+    });
+
+    return cells;
+}
+
+// 환자 행 생성
+function createPatientRows(patients, startRow) {
+    const cells = [];
+
+    patients.forEach((patient, i) => {
+        cells.push({
+            r: startRow + i,
+            c: 0,
+            v: {
+                v: patient.patient_id,  // 실제 값은 ID
+                m: patient.name,         // 표시값은 이름
+                bg: '#fee2e2'
+            }
+        });
+    });
+
+    return cells;
+}</code></pre>
+
+            <hr>
+
+            <h2>API에서 데이터 가져와서 시트 생성</h2>
+
+            <pre><code>async function initReservationSheet() {
+    // 오늘부터 14일간
+    const today = new Date().toISOString().split('T')[0];
+    const dates = getDateRange(today, 14);
+
+    // 날짜 범위
+    const startDate = dates[0].date;
+    const endDate = dates[dates.length - 1].date;
+
+    // API에서 데이터 가져오기
+    const [patientsRes, reservationsRes] = await Promise.all([
+        fetch('/api/patients').then(r => r.json()),
+        fetch(`/api/reservations/sheet?start_date=${startDate}&end_date=${endDate}`)
+            .then(r => r.json())
+    ]);
+
+    const patients = patientsRes.data;
+    const reservations = reservationsRes.reservations;
+
+    // 셀 데이터 생성
+    let celldata = [];
+
+    // 1. 헤더 행 (날짜)
+    celldata = celldata.concat(createHeaderRow(dates));
+
+    // 2. 환자 행
+    celldata = celldata.concat(createPatientRows(patients, 1));
+
+    // 3. 예약 데이터
+    patients.forEach((patient, rowIdx) => {
+        const patientReservations = reservations[patient.patient_id] || {};
+
+        dates.forEach((d, colIdx) => {
+            const res = patientReservations[d.date];
+            if (res) {
+                celldata.push({
+                    r: rowIdx + 1,
+                    c: colIdx + 1,
+                    v: {
+                        v: res.time,
+                        m: res.time,
+                        bg: getTherapistColor(res.therapist)
+                    }
+                });
+            }
+        });
+    });
+
+    // Luckysheet 생성
+    luckysheet.create({
+        container: 'luckysheet',
+        title: '예약 현황',
+        lang: 'ko',
+        data: [{
+            name: '예약',
+            celldata: celldata,
+            row: patients.length + 1,
+            column: dates.length + 1
+        }]
+    });
+}
+
+// 치료사별 색상
+function getTherapistColor(therapistName) {
+    const colors = {
+        '김치료': '#dbeafe',  // 파란색
+        '이치료': '#fef3c7',  // 노란색
+        '박치료': '#dcfce7',  // 초록색
+    };
+    return colors[therapistName] || '#ffffff';
+}
+
+// 페이지 로드 시 실행
+document.addEventListener('DOMContentLoaded', initReservationSheet);</code></pre>
+
+            <hr>
+
+            <h2>열/행 크기 설정</h2>
+
+            <pre><code>luckysheet.create({
+    container: 'luckysheet',
+    data: [{
+        name: '예약',
+        celldata: celldata,
+
+        // 열 너비 설정
+        config: {
+            columnlen: {
+                0: 100,  // A열 (환자명): 100px
+                // 나머지 열은 기본값 (73px)
+            },
+            rowlen: {
+                0: 30    // 1행 (헤더): 30px
+            }
+        }
+    }]
+});</code></pre>
+
+            <hr>
+
+            <h2>결과 확인</h2>
+
+            <p>Flask 서버 실행 후 <code>/reservations</code> 접속</p>
+
+            <ul>
+                <li>첫 행에 날짜가 표시됨</li>
+                <li>첫 열에 환자명이 표시됨</li>
+                <li>예약이 있는 셀에 시간과 색상이 표시됨</li>
+            </ul>
+
+            <div class="warning"><strong>⚠️ 데이터가 안 보인다면?</strong><br>
+            1. Flask 서버가 실행 중인지 확인<br>
+            2. 브라우저 개발자 도구 → Network 탭에서 API 응답 확인<br>
+            3. Console 탭에서 JavaScript 에러 확인</div>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li>날짜 범위와 환자 목록으로 시트 구조를 만들었습니다</li>
+                <li>API에서 예약 데이터를 가져와 셀에 채웠습니다</li>
+                <li>치료사별 색상을 지정했습니다</li>
+            </ul>
+
+            <blockquote>다음 장에서는 셀 스타일을 더 꾸며봅니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

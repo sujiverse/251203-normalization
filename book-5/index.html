@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>5권: DB & 서버 보안 - 물리치료사를 위한 DB</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "..", "activeBook": "5"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>🛡️ 5권: 보안 편</h1>
+                <p>DB & 서버 보안</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">5권: DB & 서버 보안</h1>
+
+            <h2>환자 정보를 지켜라!</h2>
+
+            <p>4권까지 열심히 만든 시스템... 해킹당하면 어떻게 될까요?</p>
+
+            <ul>
+                <li>환자 개인정보 유출</li>
+                <li>진료 기록 삭제/변조</li>
+                <li>매출 데이터 조작</li>
+                <li>법적 책임 + 신뢰 상실</li>
+            </ul>
+
+            <blockquote>
+                <strong>의료 데이터는 특히 민감합니다.</strong><br>
+                개인정보보호법, 의료법 위반 시 강력한 처벌을 받습니다.
+            </blockquote>
+
+            <hr>
+
+            <h2>이 책에서 배우는 것</h2>
+
+            <h3>Part 1: 웹 공격 이해와 방어</h3>
+            <ul>
+                <li><strong>SQL 인젝션</strong> - DB를 직접 공격하는 기법</li>
+                <li><strong>XSS</strong> - 사용자 브라우저를 공격</li>
+                <li><strong>CSRF</strong> - 사용자 권한을 도용</li>
+            </ul>
+
+            <h3>Part 2: 인증과 권한</h3>
+            <ul>
+                <li><strong>안전한 로그인</strong> - 세션, 토큰 관리</li>
+                <li><strong>비밀번호 저장</strong> - 해싱, 솔팅</li>
+                <li><strong>DB 권한 관리</strong> - 최소 권한 원칙</li>
+            </ul>
+
+            <h3>Part 3: 데이터 보호</h3>
+            <ul>
+                <li><strong>암호화</strong> - 민감 데이터 보호</li>
+                <li><strong>접근 제어</strong> - 누가 뭘 볼 수 있나</li>
+                <li><strong>HTTPS</strong> - 통신 구간 암호화</li>
+            </ul>
+
+            <h3>Part 4: 운영 보안</h3>
+            <ul>
+                <li><strong>WAS 서버 설정</strong> - Flask/Gunicorn 보안</li>
+                <li><strong>로깅</strong> - 침입 탐지</li>
+                <li><strong>백업</strong> - 최후의 보루</li>
+            </ul>
+
+            <hr>
+
+            <h2>전체 구조</h2>
+
+            <pre class="file-tree">보안 위협
+├── 외부 공격
+│   ├── SQL 인젝션 → DB 탈취/파괴
+│   ├── XSS → 사용자 정보 탈취
+│   └── CSRF → 권한 도용
+│
+├── 내부 위협
+│   ├── 과도한 DB 권한
+│   ├── 평문 비밀번호 저장
+│   └── 민감 데이터 미암호화
+│
+└── 운영 실수
+    ├── 디버그 모드 배포
+    ├── 기본 비밀번호 사용
+    └── 백업 미실시</pre>
+
+            <hr>
+
+            <h2>목차</h2>
+
+            <table>
+                <tr>
+                    <th>장</th>
+                    <th>제목</th>
+                    <th>핵심 내용</th>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>보안이 왜 중요한가</td>
+                    <td>실제 사례, 법적 책임</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>SQL 인젝션 공격</td>
+                    <td>공격 원리 이해</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>SQL 인젝션 방어</td>
+                    <td>Prepared Statement</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>XSS 공격과 방어</td>
+                    <td>이스케이프, CSP</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>CSRF 공격과 방어</td>
+                    <td>CSRF 토큰</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>인증과 세션 관리</td>
+                    <td>안전한 로그인</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>비밀번호 안전하게 저장</td>
+                    <td>bcrypt, 솔팅</td>
+                </tr>
+                <tr>
+                    <td>8</td>
+                    <td>DB 사용자 권한 관리</td>
+                    <td>GRANT, REVOKE</td>
+                </tr>
+                <tr>
+                    <td>9</td>
+                    <td>DB 접근 제어</td>
+                    <td>IP 제한, 방화벽</td>
+                </tr>
+                <tr>
+                    <td>10</td>
+                    <td>민감 데이터 암호화</td>
+                    <td>AES, 칼럼 암호화</td>
+                </tr>
+                <tr>
+                    <td>11</td>
+                    <td>WAS 서버 보안 설정</td>
+                    <td>Gunicorn, Nginx</td>
+                </tr>
+                <tr>
+                    <td>12</td>
+                    <td>HTTPS 적용하기</td>
+                    <td>Let's Encrypt</td>
+                </tr>
+                <tr>
+                    <td>13</td>
+                    <td>로깅과 모니터링</td>
+                    <td>침입 탐지</td>
+                </tr>
+                <tr>
+                    <td>14</td>
+                    <td>백업과 복구</td>
+                    <td>mysqldump, 자동화</td>
+                </tr>
+                <tr>
+                    <td>15</td>
+                    <td>보안 체크리스트</td>
+                    <td>최종 점검</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>시작하기 전에</h2>
+
+            <div class="warning">
+                <strong>⚠️ 주의사항</strong><br>
+                이 책에서 배우는 공격 기법은 <strong>오직 자신의 시스템</strong>에서만 테스트하세요.
+                다른 사람의 시스템을 허락 없이 공격하면 <strong>범죄</strong>입니다.
+            </div>
+
+            <p>준비물:</p>
+            <ul>
+                <li>4권까지 만든 힐링손 시스템</li>
+                <li>테스트용 로컬 환경</li>
+                <li>보안 의식!</li>
+            </ul>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn" disabled>← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="js/nav.js"></script>
+</body>
+</html>

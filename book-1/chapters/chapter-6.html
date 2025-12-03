@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[6권] SQL 기초 - 물리치료사를 위한 DB</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "1"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📗 1권: 정규화 편</h1>
+                <p>데이터베이스 기초 개념</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">[6권] SQL 기초</h1>
+
+            <h2>SQL이란?</h2>
+            <p><strong>SQL</strong>: 데이터베이스에게 명령을 내리는 언어</p>
+            <pre><code>SELECT * FROM 환자 WHERE 이름 = '김철수';</code></pre>
+            <blockquote>"환자 테이블에서 이름이 김철수인 모든 것을 선택해라"</blockquote>
+            <hr>
+
+            <h2>SELECT - 조회하기</h2>
+            <pre><code>-- 전체 조회
+SELECT * FROM patients;
+
+-- 특정 컬럼만
+SELECT name, phone FROM patients;
+
+-- 조건 걸기
+SELECT * FROM patients WHERE name = '김철수';
+
+-- 정렬
+SELECT * FROM treatment_sessions ORDER BY session_date DESC;</code></pre>
+            <hr>
+
+            <h2>INSERT - 추가하기</h2>
+            <pre><code>INSERT INTO patients (patient_id, name, phone)
+VALUES ('P004', '최지영', '010-4567-8901');</code></pre>
+            <hr>
+
+            <h2>UPDATE - 수정하기</h2>
+            <pre><code>UPDATE patients
+SET phone = '010-9999-8888'
+WHERE patient_id = 'P001';</code></pre>
+            <blockquote>⚠️ <strong>WHERE 빼먹으면 전체가 수정됩니다!</strong></blockquote>
+            <hr>
+
+            <h2>DELETE - 삭제하기</h2>
+            <pre><code>DELETE FROM treatment_sessions WHERE session_id = 4;</code></pre>
+            <blockquote>⚠️ <strong>WHERE 빼먹으면 전체가 삭제됩니다!</strong></blockquote>
+            <hr>
+
+            <h2>JOIN - 테이블 연결</h2>
+            <pre><code>SELECT
+    patients.name,
+    treatment_sessions.session_date
+FROM treatment_sessions
+JOIN patients
+    ON treatment_sessions.patient_id = patients.patient_id;</code></pre>
+
+            <div class="nav-buttons">
+                <a href="chapter-5.html" class="nav-btn">← 이전</a>
+                <span class="page-num">6 / 12</span>
+                <a href="chapter-7.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/nav.js"></script>
+</body>
+</html>

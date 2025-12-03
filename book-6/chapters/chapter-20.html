@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[20장] 분석 도구 연동 - 연구 데이터 설계</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>📊</span> 연구 데이터 설계</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+            <a href="../../book-6/index.html" class="top-nav-link book-6 active">6권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📘 6권: 연구 데이터 설계</h1><p>변수부터 회귀분석까지</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <div class="part-header">5부: 실무 데이터 관리</div>
+            <h1 class="title">[20장] 분석 도구 연동</h1>
+
+            <div class="intro-box">
+                <p>이 장에서는 설계한 DB를 <strong>SPSS, R, Python, Excel</strong> 등 실제 분석 도구와 연동하는 방법을 배웁니다.</p>
+            </div>
+
+            <hr>
+
+            <h2>1. 데이터 내보내기 형식</h2>
+
+            <h3>1.1 주요 데이터 형식 비교</h3>
+
+            <div class="table-container">
+                <table>
+                    <tr><th>형식</th><th>확장자</th><th>장점</th><th>단점</th><th>용도</th></tr>
+                    <tr>
+                        <td>CSV</td>
+                        <td>.csv</td>
+                        <td>범용, 모든 도구 호환</td>
+                        <td>메타데이터 없음, 인코딩 문제</td>
+                        <td>데이터 교환 표준</td>
+                    </tr>
+                    <tr>
+                        <td>TSV</td>
+                        <td>.tsv, .txt</td>
+                        <td>쉼표 포함 데이터 안전</td>
+                        <td>메타데이터 없음</td>
+                        <td>텍스트 데이터</td>
+                    </tr>
+                    <tr>
+                        <td>Excel</td>
+                        <td>.xlsx</td>
+                        <td>서식 유지, 시트 구분</td>
+                        <td>대용량 불리, 오래된 버전 호환</td>
+                        <td>보고서, 공유</td>
+                    </tr>
+                    <tr>
+                        <td>SPSS</td>
+                        <td>.sav</td>
+                        <td>변수/값 레이블 포함</td>
+                        <td>SPSS 전용</td>
+                        <td>통계 분석</td>
+                    </tr>
+                    <tr>
+                        <td>SQLite</td>
+                        <td>.db, .sqlite</td>
+                        <td>관계형, 쿼리 가능</td>
+                        <td>별도 도구 필요</td>
+                        <td>데이터 저장/관리</td>
+                    </tr>
+                </table>
+            </div>
+
+            <h3>1.2 SQLite에서 CSV 내보내기</h3>
+
+            <div class="sql-box">
+                <h3>▶ DB Browser for SQLite에서 CSV 내보내기</h3>
+                <pre><code>-- 1. 원하는 데이터를 SELECT 쿼리로 준비
+SELECT
+    p.participant_id,
+    p.age,
+    p.sex,
+    p.group_id,
+    p.vas_pre,
+    p.vas_post,
+    p.berg_pre,
+    p.berg_post
+FROM participants p
+WHERE p.vas_pre IS NOT NULL;
+
+-- 2. DB Browser에서: File → Export → Table(s) as CSV file
+-- 또는: 쿼리 결과 우클릭 → Export to CSV
+
+-- 3. 명령줄에서 내보내기 (sqlite3)
+-- sqlite3 -header -csv research.db "SELECT * FROM participants;" > data.csv</code></pre>
+            </div>
+
+            <h3>1.3 인코딩 주의사항</h3>
+
+            <div class="warning-box">
+                <h3>⚠️ 한글 인코딩 문제</h3>
+                <ul>
+                    <li><strong>UTF-8</strong>: 국제 표준, R/Python 권장</li>
+                    <li><strong>UTF-8 with BOM</strong>: Excel에서 한글 깨짐 방지</li>
+                    <li><strong>EUC-KR (CP949)</strong>: 구형 한글 Windows 프로그램</li>
+                </ul>
+                <p>Excel에서 CSV를 열 때 한글이 깨지면: 데이터 → 텍스트에서 가져오기 → 인코딩 UTF-8 선택</p>
+            </div>
+
+            <hr>
+
+            <h2>2. SPSS 연동</h2>
+
+            <h3>2.1 ODBC를 통한 SQLite 연결</h3>
+
+            <div class="concept-box">
+                <h3>📋 ODBC란?</h3>
+                <p><strong>ODBC(Open Database Connectivity)</strong>는 응용 프로그램이 다양한 데이터베이스에 접근할 수 있게 해주는 표준 인터페이스입니다. SPSS, Excel 등에서 SQLite DB에 직접 연결할 수 있습니다.</p>
+            </div>
+
+            <div class="example-box">
+                <h3>💡 SPSS에서 SQLite 연결 단계</h3>
+                <ol>
+                    <li>SQLite ODBC 드라이버 설치 (sqliteodbc.org)</li>
+                    <li>Windows ODBC 데이터 원본 관리자에서 DSN 생성</li>
+                    <li>SPSS: 파일 → 데이터베이스 열기 → 새 쿼리</li>
+                    <li>생성한 DSN 선택 후 쿼리 작성</li>
+                </ol>
+            </div>
+
+            <h3>2.2 SPSS 구문(Syntax)으로 데이터 가져오기</h3>
+
+            <div class="sql-box">
+                <h3>▶ SPSS Syntax: CSV 파일 읽기</h3>
+                <pre><code>* SPSS Syntax: CSV 파일 읽기.
+GET DATA
+  /TYPE=TXT
+  /FILE="C:\연구데이터\balance_study.csv"
+  /ENCODING='UTF8'
+  /DELCASE=LINE
+  /DELIMITERS=","
+  /QUALIFIER='"'
+  /ARRANGEMENT=DELIMITED
+  /FIRSTCASE=2
+  /VARIABLES=
+    participant_id A10
+    age F3.0
+    sex F1.0
+    group_id F1.0
+    vas_pre F3.0
+    vas_post F3.0
+    berg_pre F2.0
+    berg_post F2.0.
+EXECUTE.</code></pre>
+            </div>
+
+            <h3>2.3 SPSS에서 변수/값 레이블 설정</h3>
+
+            <div class="sql-box">
+                <h3>▶ SPSS Syntax: 변수 레이블 정의</h3>
+                <pre><code>* 변수 레이블 정의.
+VARIABLE LABELS
+    participant_id '참가자 ID'
+    age '나이(세)'
+    sex '성별'
+    group_id '집단'
+    vas_pre '사전 VAS 점수'
+    vas_post '사후 VAS 점수'
+    berg_pre '사전 BBS 점수'
+    berg_post '사후 BBS 점수'.
+
+* 값 레이블 정의.
+VALUE LABELS
+    sex
+        1 '남성'
+        2 '여성'
+    /group_id
+        1 '실험군-A (균형훈련)'
+        2 '실험군-B (근력훈련)'
+        3 '대조군'.
+
+* 측정 수준 지정.
+VARIABLE LEVEL
+    age vas_pre vas_post (SCALE)
+    berg_pre berg_post (ORDINAL)
+    sex group_id (NOMINAL).
+
+* 결측값 정의.
+MISSING VALUES
+    vas_pre vas_post berg_pre berg_post (-9, -99).</code></pre>
+            </div>
+
+            <h3>2.4 코드북에서 SPSS 구문 자동 생성</h3>
+
+            <div class="sql-box">
+                <h3>▶ SQL로 SPSS 변수 레이블 구문 생성</h3>
+                <pre><code>-- SPSS VARIABLE LABELS 구문 생성
+SELECT
+    'VARIABLE LABELS' AS syntax
+UNION ALL
+SELECT
+    '    ' || variable_name || ' ''' || variable_label || ''''
+    || CASE
+        WHEN position = (SELECT MAX(position) FROM data_dictionary WHERE dataset_id = 1)
+        THEN '.'
+        ELSE ''
+    END
+FROM data_dictionary
+WHERE dataset_id = 1
+ORDER BY position;
+
+/* 출력:
+VARIABLE LABELS
+    participant_id '참가자 ID'
+    age '나이'
+    sex '성별'
+    ...
+*/
+
+-- SPSS VALUE LABELS 구문 생성
+SELECT
+    'VALUE LABELS' AS line_text
+UNION ALL
+SELECT
+    '    ' || dd.variable_name || CHAR(10) ||
+    GROUP_CONCAT('        ' || vl.code_value || ' ''' || vl.label || '''', CHAR(10))
+FROM data_dictionary dd
+JOIN value_labels vl ON dd.variable_id = vl.variable_id
+WHERE dd.dataset_id = 1
+GROUP BY dd.variable_id;</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>3. R 연동</h2>
+
+            <h3>3.1 R에서 SQLite 연결</h3>
+
+            <div class="concept-box">
+                <h3>📋 필요한 R 패키지</h3>
+                <ul>
+                    <li><strong>DBI</strong>: 데이터베이스 인터페이스 표준</li>
+                    <li><strong>RSQLite</strong>: SQLite 전용 드라이버</li>
+                    <li><strong>dplyr/dbplyr</strong>: tidyverse 스타일 DB 쿼리</li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <h3>▶ R 코드: SQLite 연결 및 쿼리</h3>
+                <pre><code># 패키지 설치 (최초 1회)
+install.packages(c("DBI", "RSQLite", "dplyr", "dbplyr"))
+
+# 패키지 로드
+library(DBI)
+library(RSQLite)
+library(dplyr)
+
+# SQLite 데이터베이스 연결
+con <- dbConnect(RSQLite::SQLite(), "research.db")
+
+# 테이블 목록 확인
+dbListTables(con)
+
+# SQL 쿼리로 데이터 가져오기
+participants <- dbGetQuery(con, "
+    SELECT *
+    FROM participants
+    WHERE vas_pre IS NOT NULL
+")
+
+# 결과 확인
+head(participants)
+str(participants)</code></pre>
+            </div>
+
+            <h3>3.2 dplyr을 이용한 DB 쿼리</h3>
+
+            <div class="sql-box">
+                <h3>▶ R 코드: dplyr 파이프라인으로 DB 쿼리</h3>
+                <pre><code># 테이블을 dplyr 테이블로 참조
+tbl_participants <- tbl(con, "participants")
+
+# dplyr 문법으로 쿼리 (실제 SQL로 변환됨)
+result <- tbl_participants %>%
+    filter(!is.na(vas_pre)) %>%
+    group_by(group_id) %>%
+    summarise(
+        n = n(),
+        mean_age = mean(age, na.rm = TRUE),
+        mean_vas_pre = mean(vas_pre, na.rm = TRUE),
+        mean_vas_post = mean(vas_post, na.rm = TRUE)
+    ) %>%
+    collect()  # DB에서 R로 데이터 가져오기
+
+print(result)
+
+# 생성된 SQL 확인
+tbl_participants %>%
+    filter(!is.na(vas_pre)) %>%
+    group_by(group_id) %>%
+    summarise(mean_vas = mean(vas_pre)) %>%
+    show_query()</code></pre>
+            </div>
+
+            <h3>3.3 분석 결과를 DB에 저장</h3>
+
+            <div class="sql-box">
+                <h3>▶ R 코드: 분석 결과 DB에 저장</h3>
+                <pre><code># t-검정 실행
+t_result <- t.test(
+    vas_post ~ group_id,
+    data = participants %>% filter(group_id %in% c(1, 3))
+)
+
+# 결과를 데이터프레임으로 정리
+analysis_result <- data.frame(
+    analysis_id = 1,
+    analysis_type = "independent_t_test",
+    dependent_var = "vas_post",
+    grouping_var = "group_id",
+    groups_compared = "1 vs 3",
+    t_statistic = t_result$statistic,
+    df = t_result$parameter,
+    p_value = t_result$p.value,
+    mean_group1 = t_result$estimate[1],
+    mean_group2 = t_result$estimate[2],
+    analysis_date = Sys.time()
+)
+
+# 결과 테이블에 저장
+dbWriteTable(con, "analysis_results", analysis_result,
+             append = TRUE, row.names = FALSE)
+
+# 저장 확인
+dbGetQuery(con, "SELECT * FROM analysis_results")</code></pre>
+            </div>
+
+            <h3>3.4 R에서 값 레이블 적용</h3>
+
+            <div class="sql-box">
+                <h3>▶ R 코드: factor로 값 레이블 적용</h3>
+                <pre><code># 값 레이블을 DB에서 가져오기
+sex_labels <- dbGetQuery(con, "
+    SELECT code_value, label
+    FROM value_labels vl
+    JOIN data_dictionary dd ON vl.variable_id = dd.variable_id
+    WHERE dd.variable_name = 'sex'
+    ORDER BY display_order
+")
+
+group_labels <- dbGetQuery(con, "
+    SELECT code_value, label
+    FROM value_labels vl
+    JOIN data_dictionary dd ON vl.variable_id = dd.variable_id
+    WHERE dd.variable_name = 'group'
+    ORDER BY display_order
+")
+
+# factor 변환 (레이블 적용)
+participants$sex <- factor(
+    participants$sex,
+    levels = sex_labels$code_value,
+    labels = sex_labels$label
+)
+
+participants$group_id <- factor(
+    participants$group_id,
+    levels = group_labels$code_value,
+    labels = group_labels$label
+)
+
+# 확인
+table(participants$sex)
+table(participants$group_id)
+
+# 연결 종료
+dbDisconnect(con)</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>4. Python 연동</h2>
+
+            <h3>4.1 sqlite3 기본 연결</h3>
+
+            <div class="sql-box">
+                <h3>▶ Python 코드: sqlite3 기본 사용</h3>
+                <pre><code>import sqlite3
+import pandas as pd
+
+# 데이터베이스 연결
+conn = sqlite3.connect('research.db')
+cursor = conn.cursor()
+
+# 테이블 목록 확인
+cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+print(cursor.fetchall())
+
+# SQL 쿼리 실행
+cursor.execute("""
+    SELECT participant_id, age, sex, group_id, vas_pre, vas_post
+    FROM participants
+    WHERE vas_pre IS NOT NULL
+""")
+
+# 결과 가져오기
+rows = cursor.fetchall()
+columns = [description[0] for description in cursor.description]
+
+# 확인
+for row in rows[:5]:
+    print(row)
+
+conn.close()</code></pre>
+            </div>
+
+            <h3>4.2 pandas로 데이터 가져오기</h3>
+
+            <div class="sql-box">
+                <h3>▶ Python 코드: pandas + SQLite</h3>
+                <pre><code>import pandas as pd
+import sqlite3
+
+# 연결
+conn = sqlite3.connect('research.db')
+
+# SQL 쿼리 결과를 DataFrame으로
+df = pd.read_sql_query("""
+    SELECT *
+    FROM participants
+    WHERE vas_pre IS NOT NULL
+""", conn)
+
+# 기본 정보 확인
+print(df.info())
+print(df.describe())
+
+# 집단별 기술통계
+print(df.groupby('group_id').agg({
+    'age': ['mean', 'std'],
+    'vas_pre': ['mean', 'std'],
+    'vas_post': ['mean', 'std']
+}))
+
+conn.close()</code></pre>
+            </div>
+
+            <h3>4.3 SQLAlchemy 활용</h3>
+
+            <div class="concept-box">
+                <h3>📋 SQLAlchemy란?</h3>
+                <p><strong>SQLAlchemy</strong>는 Python의 강력한 ORM(Object-Relational Mapping) 라이브러리입니다. 다양한 DB(SQLite, PostgreSQL, MySQL 등)를 동일한 코드로 다룰 수 있습니다.</p>
+            </div>
+
+            <div class="sql-box">
+                <h3>▶ Python 코드: SQLAlchemy 사용</h3>
+                <pre><code>from sqlalchemy import create_engine
+import pandas as pd
+
+# SQLite 엔진 생성
+engine = create_engine('sqlite:///research.db')
+
+# pandas와 함께 사용
+df = pd.read_sql_query("""
+    SELECT p.*, g.group_name
+    FROM participants p
+    LEFT JOIN groups g ON p.group_id = g.group_id
+""", engine)
+
+# 분석 결과 저장
+results_df = pd.DataFrame({
+    'analysis_id': [1],
+    'test_type': ['t-test'],
+    'p_value': [0.023],
+    'effect_size': [0.45]
+})
+
+# DataFrame을 DB 테이블로 저장
+results_df.to_sql('python_analysis_results', engine,
+                  if_exists='append', index=False)
+
+# 확인
+pd.read_sql_query("SELECT * FROM python_analysis_results", engine)</code></pre>
+            </div>
+
+            <h3>4.4 값 레이블을 카테고리로 변환</h3>
+
+            <div class="sql-box">
+                <h3>▶ Python 코드: 카테고리 타입 적용</h3>
+                <pre><code>import pandas as pd
+import sqlite3
+
+conn = sqlite3.connect('research.db')
+
+# 데이터 로드
+df = pd.read_sql_query("SELECT * FROM participants", conn)
+
+# 값 레이블 로드
+value_labels = pd.read_sql_query("""
+    SELECT dd.variable_name, vl.code_value, vl.label
+    FROM value_labels vl
+    JOIN data_dictionary dd ON vl.variable_id = dd.variable_id
+""", conn)
+
+# sex 변수에 레이블 적용
+sex_map = value_labels[value_labels['variable_name'] == 'sex']
+sex_dict = dict(zip(sex_map['code_value'].astype(int), sex_map['label']))
+df['sex'] = df['sex'].map(sex_dict)
+
+# group 변수에 레이블 적용
+group_map = value_labels[value_labels['variable_name'] == 'group']
+group_dict = dict(zip(group_map['code_value'].astype(int), group_map['label']))
+df['group_id'] = df['group_id'].map(group_dict)
+
+# 카테고리 타입으로 변환
+df['sex'] = df['sex'].astype('category')
+df['group_id'] = df['group_id'].astype('category')
+
+print(df.dtypes)
+print(df['sex'].value_counts())
+
+conn.close()</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>5. Excel 연동</h2>
+
+            <h3>5.1 파워 쿼리(Power Query)로 SQLite 연결</h3>
+
+            <div class="example-box">
+                <h3>💡 Excel 파워 쿼리 연결 단계</h3>
+                <ol>
+                    <li>데이터 탭 → 데이터 가져오기 → 데이터베이스에서 → ODBC에서</li>
+                    <li>SQLite ODBC DSN 선택</li>
+                    <li>원하는 테이블 선택 또는 SQL 쿼리 직접 입력</li>
+                    <li>로드 또는 데이터 변환 선택</li>
+                </ol>
+                <p>파워 쿼리의 장점: 원본 데이터 변경 시 새로 고침으로 자동 업데이트</p>
+            </div>
+
+            <h3>5.2 Excel에서 직접 CSV 가져오기</h3>
+
+            <div class="example-box">
+                <h3>💡 Excel에서 UTF-8 CSV 올바르게 열기</h3>
+                <ol>
+                    <li>새 Excel 워크북 열기</li>
+                    <li>데이터 탭 → 텍스트/CSV에서 가져오기</li>
+                    <li>파일 선택 후 인코딩을 <strong>65001: 유니코드 (UTF-8)</strong>로 선택</li>
+                    <li>구분 기호 확인 (쉼표) 후 로드</li>
+                </ol>
+            </div>
+
+            <h3>5.3 피벗 테이블로 요약 분석</h3>
+
+            <div class="example-box">
+                <h3>💡 피벗 테이블 활용</h3>
+                <p>데이터를 Excel로 가져온 후:</p>
+                <ol>
+                    <li>데이터 범위 선택 → 삽입 → 피벗 테이블</li>
+                    <li>행: group_id (집단)</li>
+                    <li>값: vas_pre, vas_post의 평균</li>
+                    <li>필터: sex (성별)</li>
+                </ol>
+                <p>SQL의 GROUP BY와 유사한 집계 분석을 시각적으로 수행할 수 있습니다.</p>
+            </div>
+
+            <h3>5.4 Excel 데이터를 DB로 가져오기</h3>
+
+            <div class="sql-box">
+                <h3>▶ Python으로 Excel → SQLite</h3>
+                <pre><code>import pandas as pd
+import sqlite3
+
+# Excel 파일 읽기
+df_new = pd.read_excel('new_participants.xlsx', sheet_name='Sheet1')
+
+# 데이터 검증
+print(df_new.info())
+print(df_new.head())
+
+# SQLite에 저장
+conn = sqlite3.connect('research.db')
+
+# 기존 테이블에 추가 (append)
+df_new.to_sql('participants', conn, if_exists='append', index=False)
+
+# 또는 새 테이블로 저장
+# df_new.to_sql('participants_wave2', conn, if_exists='replace', index=False)
+
+print(f"저장 완료: {len(df_new)}건")
+conn.close()</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>6. 분석 워크플로우 설계</h2>
+
+            <h3>6.1 DB 중심 분석 워크플로우</h3>
+
+            <div class="concept-box">
+                <h3>🔄 데이터 분석 사이클</h3>
+                <pre>
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  원본 데이터  │ →  │  SQLite DB   │ →  │  분석 도구   │
+│  (Excel/CSV) │    │  (저장/관리)  │    │  (R/Python) │
+└─────────────┘    └─────────────┘    └─────────────┘
+                          ↓                   ↓
+                   ┌─────────────┐    ┌─────────────┐
+                   │  코드북/     │ ←  │  분석 결과   │
+                   │  메타데이터  │    │  (DB 저장)   │
+                   └─────────────┘    └─────────────┘
+                </pre>
+            </div>
+
+            <h3>6.2 자동화 스크립트 예시</h3>
+
+            <div class="sql-box">
+                <h3>▶ Python: 분석 파이프라인 자동화</h3>
+                <pre><code>"""
+연구 데이터 분석 자동화 스크립트
+balance_analysis.py
+"""
+
+import sqlite3
+import pandas as pd
+from scipy import stats
+from datetime import datetime
+
+def connect_db(db_path='research.db'):
+    """데이터베이스 연결"""
+    return sqlite3.connect(db_path)
+
+def load_data(conn, query=None):
+    """분석용 데이터 로드"""
+    if query is None:
+        query = """
+            SELECT * FROM participants
+            WHERE vas_pre IS NOT NULL AND vas_post IS NOT NULL
+        """
+    return pd.read_sql_query(query, conn)
+
+def run_descriptive(df, group_var, outcome_vars):
+    """집단별 기술통계"""
+    results = df.groupby(group_var)[outcome_vars].agg(['count', 'mean', 'std'])
+    return results
+
+def run_ttest(df, group_var, outcome_var, group1, group2):
+    """독립표본 t-검정"""
+    g1 = df[df[group_var] == group1][outcome_var].dropna()
+    g2 = df[df[group_var] == group2][outcome_var].dropna()
+    stat, pval = stats.ttest_ind(g1, g2)
+    return {'t_statistic': stat, 'p_value': pval,
+            'mean_g1': g1.mean(), 'mean_g2': g2.mean()}
+
+def save_results(conn, results_df, table_name):
+    """분석 결과 DB에 저장"""
+    results_df['analysis_date'] = datetime.now()
+    results_df.to_sql(table_name, conn, if_exists='append', index=False)
+
+def main():
+    # 연결
+    conn = connect_db()
+
+    # 데이터 로드
+    df = load_data(conn)
+    print(f"분석 대상: {len(df)}명")
+
+    # 기술통계
+    desc = run_descriptive(df, 'group_id', ['vas_pre', 'vas_post', 'berg_pre', 'berg_post'])
+    print("\n=== 기술통계 ===")
+    print(desc)
+
+    # t-검정 (실험군A vs 대조군)
+    ttest = run_ttest(df, 'group_id', 'vas_post', 1, 3)
+    print(f"\n=== t-검정 (VAS 사후: 실험군A vs 대조군) ===")
+    print(f"t = {ttest['t_statistic']:.3f}, p = {ttest['p_value']:.4f}")
+
+    # 결과 저장
+    results = pd.DataFrame([{
+        'analysis_type': 'ttest_vas_post',
+        'comparison': 'group1_vs_group3',
+        't_value': ttest['t_statistic'],
+        'p_value': ttest['p_value']
+    }])
+    save_results(conn, results, 'automated_results')
+
+    conn.close()
+    print("\n분석 완료!")
+
+if __name__ == "__main__":
+    main()</code></pre>
+            </div>
+
+            <h3>6.3 버전 관리와 백업</h3>
+
+            <div class="warning-box">
+                <h3>⚠️ 데이터베이스 백업 원칙</h3>
+                <ul>
+                    <li><strong>정기 백업</strong>: 주요 분석 전후 DB 파일 복사</li>
+                    <li><strong>버전명 포함</strong>: research_v1.0_2024-03-15.db</li>
+                    <li><strong>분석 코드</strong>: Git으로 버전 관리</li>
+                    <li><strong>결과 재현</strong>: 코드 + 데이터 버전 매칭 기록</li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <h3>▶ 백업 자동화 스크립트 (Python)</h3>
+                <pre><code>import shutil
+from datetime import datetime
+import os
+
+def backup_database(db_path, backup_dir='backups'):
+    """데이터베이스 자동 백업"""
+
+    # 백업 디렉토리 생성
+    os.makedirs(backup_dir, exist_ok=True)
+
+    # 백업 파일명 생성
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    db_name = os.path.basename(db_path).replace('.db', '')
+    backup_name = f"{db_name}_{timestamp}.db"
+    backup_path = os.path.join(backup_dir, backup_name)
+
+    # 복사
+    shutil.copy2(db_path, backup_path)
+    print(f"백업 완료: {backup_path}")
+
+    return backup_path
+
+# 사용
+backup_database('research.db')</code></pre>
+            </div>
+
+            <h3>6.4 최종 통합 연구 DB 구조</h3>
+
+            <div class="sql-box">
+                <h3>▶ 완전한 연구 데이터베이스 스키마</h3>
+                <pre><code>-- =============================================
+-- 연구 데이터베이스 통합 스키마
+-- 물리치료 연구를 위한 완전한 DB 구조
+-- =============================================
+
+-- 1. 메타데이터 영역
+-- studies: 연구 프로젝트 정보
+-- datasets: 데이터셋 정보
+-- data_dictionary: 변수 사전
+-- value_labels: 값 레이블
+-- dataset_versions: 버전 관리
+
+-- 2. 연구 대상 영역
+-- participants: 연구 대상자
+-- groups: 실험/대조군 정의
+-- assessors: 평가자 정보
+
+-- 3. 측정 데이터 영역
+-- measurements: 측정 결과 (EAV 구조)
+-- sessions: 측정 세션/시점
+-- instruments: 측정 도구 정보
+
+-- 4. 설문 데이터 영역
+-- surveys: 설문지 정의
+-- questions: 문항
+-- responses: 응답
+
+-- 5. 분석 결과 영역
+-- analysis_results: 통계 분석 결과
+-- descriptive_stats: 기술통계
+-- regression_models: 회귀 모델
+
+-- 테이블 관계 요약
+/*
+studies (1) ─┬─ (N) datasets (1) ─── (N) data_dictionary
+             │                              │
+             │                              └── (N) value_labels
+             │
+             └─ (N) participants (1) ─┬─ (N) measurements
+                                      │
+                                      └─ (N) survey_responses
+*/
+
+-- DB 정보 확인 쿼리
+SELECT
+    'tables' AS category,
+    COUNT(*) AS count
+FROM sqlite_master
+WHERE type = 'table'
+
+UNION ALL
+
+SELECT
+    'views' AS category,
+    COUNT(*) AS count
+FROM sqlite_master
+WHERE type = 'view'
+
+UNION ALL
+
+SELECT
+    'triggers' AS category,
+    COUNT(*) AS count
+FROM sqlite_master
+WHERE type = 'trigger';</code></pre>
+            </div>
+
+            <div class="summary-box">
+                <h3>📝 이 장의 핵심 정리</h3>
+                <ul>
+                    <li><strong>CSV</strong>는 범용 교환 형식이지만 메타데이터를 포함하지 않습니다</li>
+                    <li><strong>SPSS</strong>: ODBC 연결 또는 CSV 가져오기 후 구문으로 레이블 정의</li>
+                    <li><strong>R</strong>: DBI/RSQLite 패키지로 직접 연결, dplyr로 tidyverse 스타일 쿼리 가능</li>
+                    <li><strong>Python</strong>: sqlite3 또는 SQLAlchemy + pandas로 유연한 데이터 처리</li>
+                    <li><strong>Excel</strong>: 파워 쿼리로 ODBC 연결, 피벗 테이블로 요약 분석</li>
+                    <li><strong>분석 워크플로우</strong>: DB 중심 저장 → 분석 도구 연결 → 결과 DB 저장</li>
+                    <li><strong>자동화</strong>: Python/R 스크립트로 반복 작업 자동화</li>
+                    <li><strong>백업</strong>: 분석 전후 정기적 백업과 버전 관리 필수</li>
+                </ul>
+            </div>
+
+            <div class="final-box">
+                <h3>🎓 6권을 마치며</h3>
+                <p>축하합니다! <strong>연구 데이터 설계</strong>의 기초부터 고급 통계 분석을 위한 DB 구조까지 모두 학습했습니다.</p>
+
+                <h4>6권에서 배운 내용:</h4>
+                <ul>
+                    <li><strong>1부</strong>: 변수의 종류와 측정 척도 (명목, 서열, 등간, 비율)</li>
+                    <li><strong>2부</strong>: 다양한 연구 설계 (횡단, 종단, RCT, 코호트 등)에 맞는 DB 구조</li>
+                    <li><strong>3부</strong>: 임상 측정, 설문, 질적 연구 데이터의 체계적 저장</li>
+                    <li><strong>4부</strong>: 기술통계, t-test, ANOVA, 상관, 회귀분석 결과를 위한 테이블 설계</li>
+                    <li><strong>5부</strong>: 코드북, 메타데이터, 분석 도구 연동</li>
+                </ul>
+
+                <h4>다음 단계:</h4>
+                <ul>
+                    <li>직접 연구 데이터베이스를 설계하고 구축해보세요</li>
+                    <li>실제 연구 데이터로 전체 워크플로우를 실습하세요</li>
+                    <li>코드북을 작성하고 데이터를 문서화하세요</li>
+                    <li>R 또는 Python으로 분석 자동화를 시도해보세요</li>
+                </ul>
+
+                <p style="margin-top: 1.5rem; font-size: 1.1rem;"><strong>잘 설계된 연구 데이터베이스는 재현 가능한 연구의 시작입니다.</strong></p>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-19.html" class="nav-btn">← 이전</a>
+                <span class="page-num">20 / 20</span>
+                <a href="../index.html" class="nav-btn">목차로 →</a>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

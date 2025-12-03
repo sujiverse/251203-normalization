@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>물리치료사를 위한 데이터베이스 - 완전정복 시리즈</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-dark: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-card-hover: #f9fafb;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --accent-green: #10b981;
+            --accent-orange: #f97316;
+            --accent-blue: #3b82f6;
+            --accent-red: #ef4444;
+            --accent-cyan: #0ea5e9;
+            --accent-purple: #6366f1;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* 배경 그라데이션 효과 */
+        .bg-gradient {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59, 130, 246, 0.08), transparent),
+                radial-gradient(ellipse 60% 40% at 80% 60%, rgba(16, 185, 129, 0.05), transparent),
+                radial-gradient(ellipse 50% 30% at 20% 80%, rgba(239, 68, 68, 0.05), transparent);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .wrapper {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 네비게이션 */
+        .nav {
+            padding: 24px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        .nav-brand-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-green));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        /* 히어로 섹션 */
+        .hero {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 60px 40px 80px;
+            text-align: center;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 100px;
+            font-size: 0.85rem;
+            color: var(--accent-blue);
+            margin-bottom: 24px;
+        }
+
+        .hero-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: var(--accent-blue);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #1e293b 0%, #475569 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+            font-weight: 300;
+        }
+
+        /* 카드 그리드 */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 40px 100px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 20px;
+        }
+
+        /* 책 카드 */
+        .book-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .book-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .book-1::before { background: linear-gradient(90deg, var(--accent-green), #34d399); }
+        .book-2::before { background: linear-gradient(90deg, var(--accent-orange), #fb923c); }
+        .book-3::before { background: linear-gradient(90deg, var(--accent-blue), #60a5fa); }
+        .book-4::before { background: linear-gradient(90deg, var(--accent-red), #f87171); }
+        .book-5::before { background: linear-gradient(90deg, var(--accent-cyan), #38bdf8); }
+        .book-6::before { background: linear-gradient(90deg, var(--accent-purple), #818cf8); }
+
+        .book-card:hover {
+            background: var(--bg-card-hover);
+            border-color: #cbd5e1;
+            transform: translateY(-4px);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+        }
+
+        .book-card:hover::before {
+            opacity: 1;
+        }
+
+        .card-header {
+            padding: 28px 24px 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .book-1 .card-icon { background: rgba(16, 185, 129, 0.15); }
+        .book-2 .card-icon { background: rgba(249, 115, 22, 0.15); }
+        .book-3 .card-icon { background: rgba(59, 130, 246, 0.15); }
+        .book-4 .card-icon { background: rgba(239, 68, 68, 0.15); }
+        .book-5 .card-icon { background: rgba(14, 165, 233, 0.15); }
+        .book-6 .card-icon { background: rgba(99, 102, 241, 0.15); }
+
+        .card-title-group {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .card-number {
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .book-1 .card-number { color: var(--accent-green); }
+        .book-2 .card-number { color: var(--accent-orange); }
+        .book-3 .card-number { color: var(--accent-blue); }
+        .book-4 .card-number { color: var(--accent-red); }
+        .book-5 .card-number { color: var(--accent-cyan); }
+        .book-6 .card-number { color: var(--accent-purple); }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 2px;
+            color: var(--text-primary);
+        }
+
+        .card-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .card-body {
+            padding: 0 24px 24px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-desc {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            flex: 1;
+            line-height: 1.7;
+        }
+
+        .topics {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 20px;
+        }
+
+        .topic-tag {
+            background: #f1f5f9;
+            color: var(--text-secondary);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .chapter-count {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        .read-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: gap 0.2s;
+        }
+
+        .book-1 .read-btn { color: var(--accent-green); }
+        .book-2 .read-btn { color: var(--accent-orange); }
+        .book-3 .read-btn { color: var(--accent-blue); }
+        .book-4 .read-btn { color: var(--accent-red); }
+        .book-5 .read-btn { color: var(--accent-cyan); }
+        .book-6 .read-btn { color: var(--accent-purple); }
+
+        .book-card:hover .read-btn {
+            gap: 10px;
+        }
+
+        /* 로드맵 */
+        .roadmap {
+            margin-top: 60px;
+            padding: 40px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+        }
+
+        .roadmap-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .roadmap-header h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .roadmap-header p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .roadmap-steps {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            padding: 20px;
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            min-width: 140px;
+            transition: all 0.2s;
+        }
+
+        .step:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+
+        .step-number {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: white;
+        }
+
+        .step:nth-child(1) .step-number { background: var(--accent-green); }
+        .step:nth-child(3) .step-number { background: var(--accent-orange); }
+        .step:nth-child(5) .step-number { background: var(--accent-blue); }
+        .step:nth-child(7) .step-number { background: var(--accent-red); }
+        .step:nth-child(9) .step-number { background: var(--accent-cyan); }
+        .step:nth-child(11) .step-number { background: var(--accent-purple); }
+
+        .step-content {
+            text-align: center;
+        }
+
+        .step-title {
+            font-weight: 500;
+            font-size: 0.9rem;
+            margin-bottom: 2px;
+        }
+
+        .step-desc {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        .arrow {
+            color: var(--text-muted);
+            font-size: 1.2rem;
+        }
+
+        /* 푸터 */
+        .footer {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        /* 반응형 */
+        @media (max-width: 1400px) {
+            .cards {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 1000px) {
+            .cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav, .hero, .container, .footer {
+                padding-left: 20px;
+                padding-right: 20px;
+            }
+
+            .hero {
+                padding-top: 40px;
+                padding-bottom: 60px;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .cards {
+                grid-template-columns: 1fr;
+            }
+
+            .roadmap {
+                padding: 24px;
+            }
+
+            .roadmap-steps {
+                flex-direction: column;
+            }
+
+            .step {
+                width: 100%;
+                flex-direction: row;
+                justify-content: flex-start;
+                gap: 16px;
+            }
+
+            .step-content {
+                text-align: left;
+            }
+
+            .arrow {
+                display: none;
+            }
+
+            .footer {
+                flex-direction: column;
+                gap: 12px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-gradient"></div>
+
+    <div class="wrapper">
+        <nav class="nav">
+            <a href="#" class="nav-brand">
+                <div class="nav-brand-icon">🏥</div>
+                <span>DB 완전정복</span>
+            </a>
+        </nav>
+
+        <header class="hero">
+            <div class="hero-badge">시리즈 완간</div>
+            <h1>물리치료사를 위한<br>데이터베이스</h1>
+            <p>엑셀의 한계를 넘어, 체계적인 데이터 관리부터 웹 앱 구현까지.<br>물리치료사가 직접 배우는 실전 데이터베이스 완전정복</p>
+        </header>
+
+        <main class="container">
+            <div class="section-header">
+                <h2 class="section-title">시리즈 목록</h2>
+            </div>
+
+            <div class="cards">
+                <!-- 1권 -->
+                <a href="book-1/index.html" class="book-card book-1">
+                    <div class="card-header">
+                        <div class="card-icon">📗</div>
+                        <div class="card-title-group">
+                            <div class="card-number">Volume 01</div>
+                            <h3 class="card-title">정규화 편</h3>
+                            <div class="card-subtitle">데이터베이스 기초 개념</div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-desc">엑셀의 한계를 느끼셨나요? 데이터가 왜 꼬이는지, 정규화 개념부터 테이블 설계까지 배웁니다.</p>
+                        <div class="topics">
+                            <span class="topic-tag">정규화</span>
+                            <span class="topic-tag">1NF~3NF</span>
+                            <span class="topic-tag">테이블 설계</span>
+                        </div>
+                        <div class="card-footer">
+                            <span class="chapter-count">12개 챕터</span>
+                            <span class="read-btn">시작하기 →</span>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- 2권 -->
+                <a href="book-2/index.html" class="book-card book-2">
+                    <div class="card-header">
+                        <div class="card-icon">📙</div>
+                        <div class="card-title-group">
+                            <div class="card-number">Volume 02</div>
+                            <h3 class="card-title">SQL 기초 편</h3>
+                            <div class="card-subtitle">데이터 조작의 기본</div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-desc">설계한 DB를 실제로 만들고 사용합니다. SQL 문법부터 데이터 CRUD까지 핵심을 익힙니다.</p>
+                        <div class="topics">
+                            <span class="topic-tag">SELECT</span>
+                            <span class="topic-tag">JOIN</span>
+                            <span class="topic-tag">CRUD</span>
+                        </div>
+                        <div class="card-footer">
+                            <span class="chapter-count">11개 챕터 + 부록</span>
+                            <span class="read-btn">시작하기 →</span>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- 3권 -->
+                <a href="book-3/index.html" class="book-card book-3">
+                    <div class="card-header">
+                        <div class="card-icon">📘</div>
+                        <div class="card-title-group">
+                            <div class="card-number">Volume 03</div>
+                            <h3 class="card-title">실전 구축</h3>
+                            <div class="card-subtitle">힐링손 물리치료센터</div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-desc">가상 클리닉을 위한 완전한 시스템 구축. MySQL 실습부터 Metabase 대시보드까지!</p>
+                        <div class="topics">
+                            <span class="topic-tag">MySQL</span>
+                            <span class="topic-tag">Metabase</span>
+                            <span class="topic-tag">대시보드</span>
+                        </div>
+                        <div class="card-footer">
+                            <span class="chapter-count">15개 챕터 + 부록 3개</span>
+                            <span class="read-btn">시작하기 →</span>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- 4권 -->
+                <a href="book-4/index.html" class="book-card book-4">
+                    <div class="card-header">
+                        <div class="card-icon">📕</div>
+                        <div class="card-title-group">
+                            <div class="card-number">Volume 04</div>
+                            <h3 class="card-title">웹 앱 만들기</h3>
+                            <div class="card-subtitle">DB 연동 프론트엔드</div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-desc">DB를 웹 화면으로! Flask API와 Luckysheet로 엑셀처럼 편리한 예약 시스템 구현.</p>
+                        <div class="topics">
+                            <span class="topic-tag">Flask</span>
+                            <span class="topic-tag">Luckysheet</span>
+                            <span class="topic-tag">실시간 동기화</span>
+                        </div>
+                        <div class="card-footer">
+                            <span class="chapter-count">29개 챕터</span>
+                            <span class="read-btn">시작하기 →</span>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- 5권 -->
+                <a href="book-5/index.html" class="book-card book-5">
+                    <div class="card-header">
+                        <div class="card-icon">🛡️</div>
+                        <div class="card-title-group">
+                            <div class="card-number">Volume 05</div>
+                            <h3 class="card-title">보안 편</h3>
+                            <div class="card-subtitle">DB & 서버 보안</div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-desc">환자 정보를 지켜라! SQL 인젝션 방어부터 WAS 서버 보안, 백업까지 완벽 대비.</p>
+                        <div class="topics">
+                            <span class="topic-tag">SQL 인젝션</span>
+                            <span class="topic-tag">XSS/CSRF</span>
+                            <span class="topic-tag">암호화</span>
+                        </div>
+                        <div class="card-footer">
+                            <span class="chapter-count">15개 챕터</span>
+                            <span class="read-btn">시작하기 →</span>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- 6권 -->
+                <a href="book-6/index.html" class="book-card book-6">
+                    <div class="card-header">
+                        <div class="card-icon">📊</div>
+                        <div class="card-title-group">
+                            <div class="card-number">Volume 06</div>
+                            <h3 class="card-title">연구 데이터 설계</h3>
+                            <div class="card-subtitle">변수부터 회귀분석까지</div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-desc">연구 데이터를 체계적으로! 변수 설계부터 통계 분석 결과 저장, R/Python 연동까지.</p>
+                        <div class="topics">
+                            <span class="topic-tag">변수/척도</span>
+                            <span class="topic-tag">RCT/코호트</span>
+                            <span class="topic-tag">회귀분석</span>
+                        </div>
+                        <div class="card-footer">
+                            <span class="chapter-count">20개 챕터</span>
+                            <span class="read-btn">시작하기 →</span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- 학습 로드맵 -->
+            <div class="roadmap">
+                <div class="roadmap-header">
+                    <h2>추천 학습 순서</h2>
+                    <p>처음부터 순서대로 학습하시는 것을 권장합니다</p>
+                </div>
+                <div class="roadmap-steps">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <div class="step-title">정규화</div>
+                            <div class="step-desc">개념 이해</div>
+                        </div>
+                    </div>
+                    <div class="arrow">→</div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <div class="step-title">SQL 기초</div>
+                            <div class="step-desc">문법 익히기</div>
+                        </div>
+                    </div>
+                    <div class="arrow">→</div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <div class="step-title">실전 구축</div>
+                            <div class="step-desc">직접 만들기</div>
+                        </div>
+                    </div>
+                    <div class="arrow">→</div>
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <div class="step-title">웹 앱</div>
+                            <div class="step-desc">화면 구현</div>
+                        </div>
+                    </div>
+                    <div class="arrow">→</div>
+                    <div class="step">
+                        <div class="step-number">5</div>
+                        <div class="step-content">
+                            <div class="step-title">보안</div>
+                            <div class="step-desc">안전하게 운영</div>
+                        </div>
+                    </div>
+                    <div class="arrow">→</div>
+                    <div class="step">
+                        <div class="step-number">6</div>
+                        <div class="step-content">
+                            <div class="step-title">연구 설계</div>
+                            <div class="step-desc">데이터 분석</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <span>물리치료사를 위한 데이터베이스 완전정복 시리즈</span>
+            <span>© 2024 · 데이터로 더 나은 진료 환경을 만듭니다</span>
+        </footer>
+    </div>
+</body>
+</html>

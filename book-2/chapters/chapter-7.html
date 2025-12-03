@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[7장] 정기 리포트 만들기 - 물리치료사를 위한 DB 2권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>🏥</span> DB 완전정복</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2 active">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📙 2권: SQL 기초 편</h1><p>데이터베이스 활용</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <h1 class="title">[7장] 정기 리포트 만들기</h1>
+
+            <div class="intro-box">
+                <p>이번 장에서는 <strong>주간/월간 정기 리포트</strong>를 만드는 쿼리를 배웁니다. 한 번 만들어두면 매주, 매달 같은 쿼리로 리포트를 뽑을 수 있어요. 원장님께 보고할 때 아주 유용합니다!</p>
+            </div>
+
+            <hr>
+
+            <!-- ===== 쿼리 1: 주간 요약 ===== -->
+            <h2>1. 주간 요약 리포트</h2>
+
+            <div class="concept-box">
+                <h3>🎯 이 쿼리가 필요한 상황</h3>
+                <p>"이번 주 실적이 어땠어?" - 매주 월요일에 지난주 실적을 한눈에 파악합니다. 치료건수, 환자수, 매출을 빠르게 확인할 수 있어요.</p>
+            </div>
+
+            <pre><code>SELECT
+    COUNT(DISTINCT ts.session_id) AS 총치료건,
+    COUNT(DISTINCT ts.patient_id) AS 총환자수,
+    SUM(b.total_amount) AS 총매출
+FROM treatment_sessions ts
+JOIN billings b ON ts.session_id = b.session_id
+WHERE ts.session_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY);</code></pre>
+
+            <div class="explanation-box">
+                <h3>📖 DATE_SUB로 기간 계산하기</h3>
+
+                <div class="line-explain highlight-line">
+                    <div class="code-line">DATE_SUB(CURDATE(), INTERVAL 7 DAY)</div>
+                    <div class="explain-text">
+                        <strong>DATE_SUB</strong>는 날짜에서 빼는 함수예요!<br><br>
+
+                        <code>DATE_SUB(기준일, INTERVAL 숫자 단위)</code><br><br>
+
+                        오늘이 1월 20일이라면:<br>
+                        <code>DATE_SUB(CURDATE(), INTERVAL 7 DAY)</code> = 1월 13일<br><br>
+
+                        <div class="tip-inline">
+                            <strong>사용 가능한 단위들</strong><br>
+                            • <code>DAY</code>: 일<br>
+                            • <code>WEEK</code>: 주<br>
+                            • <code>MONTH</code>: 월<br>
+                            • <code>YEAR</code>: 년
+                        </div>
+                    </div>
+                </div>
+
+                <div class="line-explain">
+                    <div class="code-line">COUNT(DISTINCT ts.session_id) vs COUNT(DISTINCT ts.patient_id)</div>
+                    <div class="explain-text">
+                        <strong>두 값의 차이를 이해하는 게 중요해요!</strong><br><br>
+
+                        • <strong>총치료건</strong>: 치료 세션의 개수 (한 환자가 3번 오면 3건)<br>
+                        • <strong>총환자수</strong>: 고유한 환자 수 (한 환자가 3번 와도 1명)<br><br>
+
+                        <div class="analogy-box">
+                            <h4>🎭 비유로 이해하기</h4>
+                            <p>식당에서 일주일 동안:</p>
+                            <ul>
+                                <li><strong>총치료건</strong> = 총 식사 횟수 (같은 손님이 여러 번 와도 각각 카운트)</li>
+                                <li><strong>총환자수</strong> = 방문한 손님 종류 (단골이 10번 와도 1명)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-example">
+                <h4>📋 실행 결과 예시</h4>
+                <table class="result-table">
+                    <tr><th>총치료건</th><th>총환자수</th><th>총매출</th></tr>
+                    <tr><td>156</td><td>68</td><td>7,800,000</td></tr>
+                </table>
+                <p class="result-note">지난 7일간 68명의 환자가 총 156건의 치료를 받고 780만원 매출!</p>
+            </div>
+
+            <div class="tip">
+                <strong>💡 DATE_ADD vs DATE_SUB</strong><br><br>
+                • <code>DATE_SUB</code>: 날짜 빼기 (과거로)<br>
+                • <code>DATE_ADD</code>: 날짜 더하기 (미래로)<br><br>
+                예: 30일 후 = <code>DATE_ADD(CURDATE(), INTERVAL 30 DAY)</code>
+            </div>
+
+            <hr>
+
+            <!-- ===== 쿼리 2: 월간 치료사별 실적표 ===== -->
+            <h2>2. 월간 치료사별 실적표</h2>
+
+            <div class="concept-box">
+                <h3>🎯 이 쿼리가 필요한 상황</h3>
+                <p>"이번 달 치료사별로 실적 뽑아줘" - 월말 정산이나 인사 평가에 활용되는 핵심 리포트입니다. 치료건, 매출, 인센티브까지 한번에!</p>
+            </div>
+
+            <pre><code>SELECT
+    t.name AS 치료사,
+    COUNT(DISTINCT ts.session_id) AS 치료건,
+    SUM(b.total_amount) AS 매출,
+    SUM(CASE WHEN fi.fee_name = '도수치료' THEN 5000
+             WHEN fi.fee_name = '운동치료' THEN 3000 ELSE 0 END) AS 인센티브
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+JOIN billings b ON ts.session_id = b.session_id
+JOIN fee_items fi ON b.fee_code = fi.fee_code
+WHERE ts.session_date >= '2024-01-01'
+  AND ts.session_date < '2024-02-01'
+GROUP BY t.therapist_id, t.name
+ORDER BY 매출 DESC;</code></pre>
+
+            <div class="explanation-box">
+                <h3>📖 실적표의 구성 요소</h3>
+
+                <p>이 쿼리는 지금까지 배운 것들의 <strong>종합 응용</strong>이에요!</p>
+
+                <table class="summary-table">
+                    <tr>
+                        <th>항목</th>
+                        <th>사용 문법</th>
+                        <th>이전 챕터</th>
+                    </tr>
+                    <tr>
+                        <td>치료건 집계</td>
+                        <td>COUNT(DISTINCT)</td>
+                        <td>4장</td>
+                    </tr>
+                    <tr>
+                        <td>매출 합산</td>
+                        <td>SUM()</td>
+                        <td>4장</td>
+                    </tr>
+                    <tr>
+                        <td>인센티브 계산</td>
+                        <td>SUM(CASE WHEN)</td>
+                        <td>5장</td>
+                    </tr>
+                    <tr>
+                        <td>기간 필터</td>
+                        <td>WHERE >= AND <</td>
+                        <td>4장</td>
+                    </tr>
+                    <tr>
+                        <td>치료사별 그룹화</td>
+                        <td>GROUP BY</td>
+                        <td>3장</td>
+                    </tr>
+                </table>
+
+                <div class="why-box">
+                    <h4>❓ 왜 ORDER BY 매출 DESC?</h4>
+                    <p>실적 리포트는 보통 <strong>"잘하는 사람 순서"</strong>로 보고 싶잖아요!</p>
+                    <p>매출 높은 치료사가 맨 위에 오도록 내림차순(DESC) 정렬합니다.</p>
+                </div>
+            </div>
+
+            <div class="result-example">
+                <h4>📋 실행 결과 예시 - 월간 실적표</h4>
+                <table class="result-table">
+                    <tr><th>치료사</th><th>치료건</th><th>매출</th><th>인센티브</th></tr>
+                    <tr><td>박치료</td><td>127</td><td>5,080,000</td><td>370,000</td></tr>
+                    <tr><td>김재활</td><td>98</td><td>4,410,000</td><td>445,000</td></tr>
+                    <tr><td>이물리</td><td>115</td><td>2,300,000</td><td>260,000</td></tr>
+                </table>
+            </div>
+
+            <hr>
+
+            <!-- ===== 엑셀로 내보내기 ===== -->
+            <h2>3. 엑셀로 내보내기</h2>
+
+            <div class="concept-box">
+                <h3>🎯 왜 엑셀로 내보낼까요?</h3>
+                <p>SQL 결과를 그대로 보여주기보다, 엑셀로 내보내면 차트도 만들고, 추가 계산도 하고, 이쁘게 꾸며서 보고할 수 있어요!</p>
+            </div>
+
+            <div class="step-box">
+                <h4>📋 MySQL Workbench에서 엑셀 내보내기</h4>
+                <div class="step-item">
+                    <span class="step-num">1단계</span>
+                    <span class="step-desc">쿼리 실행 후 결과 확인</span>
+                </div>
+                <div class="step-item">
+                    <span class="step-num">2단계</span>
+                    <span class="step-desc">결과창에서 <strong>우클릭</strong></span>
+                </div>
+                <div class="step-item">
+                    <span class="step-num">3단계</span>
+                    <span class="step-desc"><strong>Export Data</strong> 또는 <strong>Export Resultset</strong> 선택</span>
+                </div>
+                <div class="step-item">
+                    <span class="step-num">4단계</span>
+                    <span class="step-desc"><strong>XLSX</strong> 또는 <strong>CSV</strong> 선택 후 저장</span>
+                </div>
+            </div>
+
+            <div class="tip">
+                <strong>💡 CSV vs XLSX</strong><br><br>
+                • <strong>CSV</strong>: 어디서든 열림, 파일 크기 작음, 서식 없음<br>
+                • <strong>XLSX</strong>: 엑셀 전용, 서식/수식 유지 가능<br><br>
+                일반적으로 <strong>CSV로 저장 후 엑셀에서 여는 것</strong>을 권장합니다!
+            </div>
+
+            <div class="summary-box">
+                <h3>📝 이번 장 핵심 정리</h3>
+                <table class="summary-table">
+                    <tr>
+                        <th>함수</th>
+                        <th>역할</th>
+                        <th>예시</th>
+                    </tr>
+                    <tr>
+                        <td><strong>DATE_SUB()</strong></td>
+                        <td>날짜 빼기</td>
+                        <td>7일 전, 1개월 전</td>
+                    </tr>
+                    <tr>
+                        <td><strong>DATE_ADD()</strong></td>
+                        <td>날짜 더하기</td>
+                        <td>7일 후, 1개월 후</td>
+                    </tr>
+                    <tr>
+                        <td><strong>INTERVAL</strong></td>
+                        <td>기간 단위 지정</td>
+                        <td>DAY, WEEK, MONTH, YEAR</td>
+                    </tr>
+                </table>
+                <br>
+                <p><strong>🔑 핵심</strong>: 정기 리포트는 한 번 만들어두면 날짜만 바꿔서 재사용!</p>
+            </div>
+
+            <div class="practice-box">
+                <h3>🏋️ 응용 연습</h3>
+                <p><strong>Q. 최근 30일 요일별 치료 건수를 보려면?</strong></p>
+                <details>
+                    <summary>정답 보기</summary>
+                    <pre><code>SELECT
+    DAYNAME(ts.session_date) AS 요일,
+    COUNT(*) AS 치료건
+FROM treatment_sessions ts
+WHERE ts.session_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+GROUP BY DAYNAME(ts.session_date)
+ORDER BY FIELD(DAYNAME(ts.session_date),
+    'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday');</code></pre>
+                    <p>DAYNAME()은 요일 이름을 반환하고, FIELD()로 정렬 순서를 지정해요!</p>
+                </details>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-6.html" class="nav-btn">← 이전</a>
+                <span class="page-num">7 / 12</span>
+                <a href="chapter-8.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

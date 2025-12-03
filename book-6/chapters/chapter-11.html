@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[11장] 종단 연구 - 연구 데이터 설계</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>📊</span> 연구 데이터 설계</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+            <a href="../../book-6/index.html" class="top-nav-link book-6 active">6권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📘 6권: 연구 데이터 설계</h1><p>변수부터 회귀분석까지</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <div class="part-header">3부: 연구 형태별 DB 설계</div>
+            <h1 class="title">[11장] 종단 연구 (Longitudinal)</h1>
+
+            <div class="intro-box">
+                <p>이 장에서는 <strong>시간에 따라 반복 측정하는 종단 연구</strong>의 DB 설계를 배웁니다. Wide vs Long 형식의 핵심 차이, 시점 관리, 탈락 처리 방법을 다룹니다.</p>
+            </div>
+
+            <hr>
+
+            <h2>1. 종단 연구의 종류</h2>
+
+            <div class="concept-box">
+                <h3>📖 종단 연구(Longitudinal Study)란?</h3>
+                <p>동일한 변수를 <strong>2회 이상</strong> 시간 간격을 두고 측정하는 연구 설계입니다. 시간에 따른 변화를 관찰할 수 있습니다.</p>
+            </div>
+
+            <h3>1.1 패널 연구 (Panel Study)</h3>
+
+            <div class="concept-box">
+                <h3>📖 패널 연구</h3>
+                <p><strong>정의</strong>: 동일한 참가자를 여러 시점에서 반복 측정</p>
+                <p><strong>특징</strong>:</p>
+                <ul>
+                    <li>개인 내 변화(within-person change) 추적 가능</li>
+                    <li>시점 간 상관관계 분석 가능</li>
+                    <li>탈락(attrition) 문제 발생</li>
+                </ul>
+                <p><strong>예시</strong>: 무릎 관절염 환자 100명을 수술 전, 수술 후 3개월, 6개월, 12개월 추적</p>
+            </div>
+
+            <h3>1.2 코호트 연구 (Cohort Study)</h3>
+
+            <div class="concept-box">
+                <h3>📖 코호트 연구</h3>
+                <p><strong>정의</strong>: 특정 특성을 공유하는 집단을 시간에 따라 추적</p>
+                <p><strong>특징</strong>:</p>
+                <ul>
+                    <li>노출(exposure) → 결과(outcome) 관계 연구</li>
+                    <li>발생률(incidence) 계산 가능</li>
+                    <li>상대 위험도(relative risk) 추정 가능</li>
+                </ul>
+                <p><strong>예시</strong>: 2020년 입사한 물리치료사를 10년간 추적하여 요통 발생률 조사</p>
+            </div>
+
+            <h3>1.3 추세 연구 (Trend Study)</h3>
+
+            <div class="concept-box">
+                <h3>📖 추세 연구</h3>
+                <p><strong>정의</strong>: 같은 모집단에서 다른 표본을 추출하여 반복 조사</p>
+                <p><strong>특징</strong>:</p>
+                <ul>
+                    <li>동일 개인이 아닌 동일 모집단 추적</li>
+                    <li>개인 변화 추적 불가</li>
+                    <li>탈락 문제 없음</li>
+                </ul>
+                <p><strong>예시</strong>: 매년 전국 노인 1000명 표집하여 낙상률 조사 (다른 노인)</p>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>유형</th>
+                            <th>표본</th>
+                            <th>개인 추적</th>
+                            <th>탈락 문제</th>
+                            <th>DB 설계</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>패널</td>
+                            <td>동일 개인</td>
+                            <td>가능</td>
+                            <td>있음</td>
+                            <td>Long format</td>
+                        </tr>
+                        <tr>
+                            <td>코호트</td>
+                            <td>동일 집단</td>
+                            <td>가능</td>
+                            <td>있음</td>
+                            <td>Long format</td>
+                        </tr>
+                        <tr>
+                            <td>추세</td>
+                            <td>다른 표본</td>
+                            <td>불가</td>
+                            <td>없음</td>
+                            <td>wave별 별도</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <hr>
+
+            <h2>2. 반복 측정 데이터</h2>
+
+            <h3>2.1 시점(Time point)의 개념</h3>
+
+            <div class="concept-box">
+                <h3>📖 시점 정의 방법</h3>
+                <p>종단 연구에서 측정 시점을 정의하는 방법:</p>
+                <table>
+                    <thead>
+                        <tr><th>정의 방법</th><th>예시</th><th>적합한 상황</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>번호 (Wave)</td>
+                            <td>1차, 2차, 3차</td>
+                            <td>모든 참가자가 동시에 시작</td>
+                        </tr>
+                        <tr>
+                            <td>시점 라벨</td>
+                            <td>baseline, 3mo, 6mo</td>
+                            <td>중재 연구, 일정한 간격</td>
+                        </tr>
+                        <tr>
+                            <td>실제 날짜</td>
+                            <td>2024-01-15</td>
+                            <td>각자 다른 시점에 시작</td>
+                        </tr>
+                        <tr>
+                            <td>경과 시간</td>
+                            <td>수술 후 30일</td>
+                            <td>이벤트 기준 추적</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>2.2 측정 간격</h3>
+
+            <div class="example-box">
+                <h3>📝 측정 간격 예시</h3>
+                <table>
+                    <thead>
+                        <tr><th>연구 유형</th><th>일반적 측정 시점</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>단기 중재 연구 (4주)</td>
+                            <td>Baseline, 2주, 4주, 추후(8주)</td>
+                        </tr>
+                        <tr>
+                            <td>수술 후 재활</td>
+                            <td>수술 전, 2주, 6주, 3개월, 6개월, 12개월</td>
+                        </tr>
+                        <tr>
+                            <td>만성질환 추적</td>
+                            <td>매 3개월 또는 매 6개월</td>
+                        </tr>
+                        <tr>
+                            <td>노화 연구</td>
+                            <td>매년 (5~10년 추적)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>2.3 사전-사후-추후 설계</h3>
+
+            <div class="concept-box">
+                <h3>📖 가장 흔한 종단 설계</h3>
+                <ul>
+                    <li><strong>사전(Pre-test, Baseline)</strong>: 중재 전 측정</li>
+                    <li><strong>사후(Post-test)</strong>: 중재 직후 측정</li>
+                    <li><strong>추후(Follow-up)</strong>: 일정 기간 후 측정 (효과 유지 확인)</li>
+                </ul>
+            </div>
+
+            <hr>
+
+            <h2>3. Wide vs Long 형식 비교</h2>
+
+            <p>종단 데이터 저장의 가장 중요한 결정: <strong>Wide</strong>로 저장할 것인가, <strong>Long</strong>으로 저장할 것인가?</p>
+
+            <h3>3.1 Wide 형식</h3>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>participant_id</th>
+                            <th>pain_t1</th>
+                            <th>pain_t2</th>
+                            <th>pain_t3</th>
+                            <th>function_t1</th>
+                            <th>function_t2</th>
+                            <th>function_t3</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>P001</td><td>65</td><td>45</td><td>30</td><td>50</td><td>65</td><td>78</td></tr>
+                        <tr><td>P002</td><td>70</td><td>55</td><td>NULL</td><td>45</td><td>60</td><td>NULL</td></tr>
+                        <tr><td>P003</td><td>55</td><td>40</td><td>35</td><td>60</td><td>70</td><td>75</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="warning-box">
+                <h3>⚠️ Wide 형식의 문제점</h3>
+                <ul>
+                    <li><strong>컬럼 수 폭발</strong>: 시점 × 변수 수 만큼 컬럼 필요</li>
+                    <li><strong>유연성 부족</strong>: 새 시점 추가 시 테이블 구조 변경</li>
+                    <li><strong>결측 처리 어려움</strong>: 탈락자의 빈 컬럼들</li>
+                    <li><strong>쿼리 복잡</strong>: 시점별 비교 쿼리가 복잡해짐</li>
+                    <li><strong>시점 수 가변적일 때</strong>: 구조화 어려움</li>
+                </ul>
+            </div>
+
+            <h3>3.2 Long 형식</h3>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>participant_id</th>
+                            <th>wave</th>
+                            <th>assessment_date</th>
+                            <th>pain</th>
+                            <th>function</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>P001</td><td>1</td><td>2024-01-15</td><td>65</td><td>50</td></tr>
+                        <tr><td>P001</td><td>2</td><td>2024-04-15</td><td>45</td><td>65</td></tr>
+                        <tr><td>P001</td><td>3</td><td>2024-07-15</td><td>30</td><td>78</td></tr>
+                        <tr><td>P002</td><td>1</td><td>2024-01-20</td><td>70</td><td>45</td></tr>
+                        <tr><td>P002</td><td>2</td><td>2024-04-20</td><td>55</td><td>60</td></tr>
+                        <tr><td>P003</td><td>1</td><td>2024-02-01</td><td>55</td><td>60</td></tr>
+                        <tr><td>P003</td><td>2</td><td>2024-05-01</td><td>40</td><td>70</td></tr>
+                        <tr><td>P003</td><td>3</td><td>2024-08-01</td><td>35</td><td>75</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="concept-box">
+                <h3>📖 Long 형식의 장점</h3>
+                <ul>
+                    <li><strong>유연성</strong>: 시점 추가 시 테이블 구조 변경 불필요</li>
+                    <li><strong>정규화</strong>: 데이터베이스 정규화 원칙에 부합</li>
+                    <li><strong>자연스러운 결측</strong>: 탈락자는 해당 시점 행이 없음</li>
+                    <li><strong>쿼리 용이</strong>: GROUP BY로 시점별 집계 쉬움</li>
+                    <li><strong>통계 분석</strong>: 혼합효과모형, GEE 등에 적합</li>
+                </ul>
+            </div>
+
+            <h3>3.3 형식 변환</h3>
+
+            <div class="sql-box">
+                <h3>💻 Wide → Long 변환 (SQL)</h3>
+                <pre><code>-- Wide 테이블
+CREATE TABLE wide_data (
+    participant_id TEXT,
+    pain_t1 INTEGER, pain_t2 INTEGER, pain_t3 INTEGER
+);
+
+-- Long 테이블
+CREATE TABLE long_data (
+    participant_id TEXT,
+    wave INTEGER,
+    pain INTEGER
+);
+
+-- 변환 (UNION ALL 사용)
+INSERT INTO long_data
+SELECT participant_id, 1, pain_t1 FROM wide_data WHERE pain_t1 IS NOT NULL
+UNION ALL
+SELECT participant_id, 2, pain_t2 FROM wide_data WHERE pain_t2 IS NOT NULL
+UNION ALL
+SELECT participant_id, 3, pain_t3 FROM wide_data WHERE pain_t3 IS NOT NULL;</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>💻 Long → Wide 변환 (SQL)</h3>
+                <pre><code>-- Long → Wide (PIVOT 방식)
+SELECT
+    participant_id,
+    MAX(CASE WHEN wave = 1 THEN pain END) AS pain_t1,
+    MAX(CASE WHEN wave = 2 THEN pain END) AS pain_t2,
+    MAX(CASE WHEN wave = 3 THEN pain END) AS pain_t3
+FROM long_data
+GROUP BY participant_id;</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>4. 시점(Wave) 관리</h2>
+
+            <h3>4.1 Waves 테이블 설계</h3>
+
+            <div class="sql-box">
+                <h3>💻 시점 메타데이터 테이블</h3>
+                <pre><code>-- 시점 정의 테이블
+CREATE TABLE waves (
+    wave_id INTEGER PRIMARY KEY,
+    wave_name TEXT NOT NULL,  -- 'Baseline', '3-month', '6-month'
+    wave_order INTEGER NOT NULL,  -- 정렬용
+    target_day INTEGER,  -- 기준일로부터 목표 일수 (0, 90, 180)
+    window_before INTEGER DEFAULT 7,  -- 허용 범위 (목표일 전 7일)
+    window_after INTEGER DEFAULT 14,  -- 허용 범위 (목표일 후 14일)
+    description TEXT
+);
+
+INSERT INTO waves (wave_id, wave_name, wave_order, target_day, description) VALUES
+(1, 'Baseline', 1, 0, '중재 전 기초 평가'),
+(2, '3-month', 2, 90, '중재 후 3개월'),
+(3, '6-month', 3, 180, '중재 후 6개월'),
+(4, '12-month', 4, 365, '중재 후 12개월');</code></pre>
+            </div>
+
+            <h3>4.2 실제 측정일 vs 목표 측정일</h3>
+
+            <div class="concept-box">
+                <h3>📖 측정일 관리</h3>
+                <p>실제 연구에서는 정확히 목표일에 측정하기 어렵습니다:</p>
+                <ul>
+                    <li><strong>목표 측정일</strong>: 프로토콜상 측정해야 하는 날짜</li>
+                    <li><strong>실제 측정일</strong>: 실제로 측정이 이루어진 날짜</li>
+                    <li><strong>허용 범위(Window)</strong>: 목표일 ± N일 이내면 유효</li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <h3>💻 측정일 관리 예시</h3>
+                <pre><code>-- 평가 테이블
+CREATE TABLE assessments (
+    assessment_id INTEGER PRIMARY KEY,
+    participant_id TEXT NOT NULL,
+    wave_id INTEGER NOT NULL,
+    target_date DATE,  -- 목표 측정일
+    actual_date DATE,  -- 실제 측정일
+    days_from_baseline INTEGER,  -- 기준일로부터 실제 경과일
+    within_window INTEGER,  -- 허용 범위 내 여부 (0/1)
+
+    -- 측정 변수들
+    pain_vas INTEGER,
+    function_score INTEGER,
+
+    FOREIGN KEY (participant_id) REFERENCES participants(participant_id),
+    FOREIGN KEY (wave_id) REFERENCES waves(wave_id)
+);
+
+-- 목표일 계산 (Baseline 날짜 + 목표 일수)
+-- 허용 범위 확인
+SELECT
+    a.participant_id,
+    a.wave_id,
+    w.wave_name,
+    a.target_date,
+    a.actual_date,
+    julianday(a.actual_date) - julianday(a.target_date) AS deviation_days,
+    CASE
+        WHEN julianday(a.actual_date) BETWEEN
+             julianday(a.target_date) - w.window_before AND
+             julianday(a.target_date) + w.window_after
+        THEN 'Within window'
+        ELSE 'Out of window'
+    END AS window_status
+FROM assessments a
+JOIN waves w ON a.wave_id = w.wave_id;</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>5. 탈락(Attrition) 처리</h2>
+
+            <h3>5.1 탈락이란?</h3>
+
+            <div class="concept-box">
+                <h3>📖 탈락(Attrition)</h3>
+                <p>종단 연구에서 참가자가 추적관찰에서 빠지는 것을 의미합니다.</p>
+                <p><strong>탈락 유형</strong>:</p>
+                <ul>
+                    <li><strong>완전 탈락</strong>: 특정 시점 이후 모든 평가 누락</li>
+                    <li><strong>간헐적 결측</strong>: 일부 시점만 누락 (중간에 복귀)</li>
+                </ul>
+                <p><strong>탈락 사유</strong>:</p>
+                <ul>
+                    <li>연락 두절, 이사</li>
+                    <li>참여 거부, 시간 부족</li>
+                    <li>사망, 심각한 질병</li>
+                    <li>부작용, 중재 부적합</li>
+                </ul>
+            </div>
+
+            <h3>5.2 탈락률 계산</h3>
+
+            <div class="sql-box">
+                <h3>💻 시점별 탈락률 계산</h3>
+                <pre><code>-- 각 시점별 응답자 수와 탈락률
+WITH baseline_n AS (
+    SELECT COUNT(DISTINCT participant_id) AS n_baseline
+    FROM assessments WHERE wave_id = 1
+)
+SELECT
+    w.wave_name,
+    COUNT(DISTINCT a.participant_id) AS n_completed,
+    b.n_baseline,
+    ROUND(100.0 * COUNT(DISTINCT a.participant_id) / b.n_baseline, 1) AS retention_rate,
+    ROUND(100.0 * (1 - COUNT(DISTINCT a.participant_id) * 1.0 / b.n_baseline), 1) AS attrition_rate
+FROM waves w
+LEFT JOIN assessments a ON w.wave_id = a.wave_id
+CROSS JOIN baseline_n b
+GROUP BY w.wave_id, w.wave_name, w.wave_order, b.n_baseline
+ORDER BY w.wave_order;</code></pre>
+            </div>
+
+            <h3>5.3 탈락 사유 기록</h3>
+
+            <div class="sql-box">
+                <h3>💻 탈락 정보 테이블</h3>
+                <pre><code>-- 탈락 사유 코드
+CREATE TABLE dropout_reasons (
+    reason_code TEXT PRIMARY KEY,
+    reason_description TEXT
+);
+
+INSERT INTO dropout_reasons VALUES
+('LOST', '연락 두절'),
+('REFUSE', '참여 거부'),
+('DEATH', '사망'),
+('ILLNESS', '심각한 질병'),
+('MOVED', '이사/이동'),
+('ADVERSE', '부작용'),
+('COMPLETE', '연구 종료 (정상)'),
+('OTHER', '기타');
+
+-- 참가자 상태 테이블
+CREATE TABLE participant_status (
+    participant_id TEXT PRIMARY KEY,
+    enrollment_date DATE NOT NULL,
+    status TEXT DEFAULT 'ACTIVE',  -- 'ACTIVE', 'DROPPED', 'COMPLETED'
+    dropout_date DATE,
+    dropout_wave_id INTEGER,  -- 마지막 참여 시점
+    dropout_reason_code TEXT,
+    dropout_notes TEXT,
+    FOREIGN KEY (participant_id) REFERENCES participants(participant_id),
+    FOREIGN KEY (dropout_reason_code) REFERENCES dropout_reasons(reason_code)
+);
+
+-- 탈락 사유별 집계
+SELECT
+    dr.reason_description,
+    COUNT(*) AS n,
+    ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM participant_status WHERE status = 'DROPPED'), 1) AS pct
+FROM participant_status ps
+JOIN dropout_reasons dr ON ps.dropout_reason_code = dr.reason_code
+WHERE ps.status = 'DROPPED'
+GROUP BY dr.reason_description
+ORDER BY n DESC;</code></pre>
+            </div>
+
+            <h3>5.4 선택적 탈락의 문제</h3>
+
+            <div class="warning-box">
+                <h3>⚠️ 선택적 탈락(Selective Attrition)</h3>
+                <p>탈락이 무작위가 아니라 특정 특성과 관련될 때 문제가 발생합니다:</p>
+                <ul>
+                    <li><strong>예시</strong>: 중재 효과가 없는 사람이 더 많이 탈락</li>
+                    <li><strong>결과</strong>: 남은 사람들만 분석하면 효과가 과대평가됨</li>
+                    <li><strong>검토</strong>: 탈락자 vs 완료자의 baseline 특성 비교</li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <h3>💻 선택적 탈락 검토</h3>
+                <pre><code>-- 탈락자 vs 완료자 baseline 비교
+SELECT
+    CASE
+        WHEN ps.status = 'DROPPED' THEN '탈락'
+        ELSE '완료'
+    END AS group_status,
+    COUNT(*) AS n,
+    ROUND(AVG(a.pain_vas), 1) AS baseline_pain,
+    ROUND(AVG(a.function_score), 1) AS baseline_function,
+    ROUND(AVG(p.age), 1) AS mean_age
+FROM participants p
+JOIN participant_status ps ON p.participant_id = ps.participant_id
+JOIN assessments a ON p.participant_id = a.participant_id AND a.wave_id = 1
+GROUP BY CASE WHEN ps.status = 'DROPPED' THEN '탈락' ELSE '완료' END;
+
+-- 탈락자가 baseline에서 통증이 더 높았다면 선택적 탈락 의심</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>6. 종단 연구 DB 설계 예시</h2>
+
+            <h3>6.1 완전한 스키마</h3>
+
+            <div class="sql-box">
+                <h3>💻 무릎 관절염 재활 종단 연구</h3>
+                <pre><code>-- 연구: 무릎 인공관절 수술 후 12개월 추적
+-- 시점: 수술 전, 2주, 6주, 3개월, 6개월, 12개월
+
+-- 1. 참가자 기본 정보
+CREATE TABLE knee_study_participants (
+    participant_id TEXT PRIMARY KEY,
+    enrollment_date DATE NOT NULL,
+    surgery_date DATE,
+
+    -- 인구통계
+    birth_date DATE,
+    gender TEXT CHECK (gender IN ('M', 'F')),
+
+    -- 수술 정보
+    surgery_type TEXT,  -- 'TKA_right', 'TKA_left', 'TKA_bilateral'
+    surgeon_id TEXT,
+    hospital_id TEXT
+);
+
+-- 2. 시점 정의
+CREATE TABLE knee_study_waves (
+    wave_id INTEGER PRIMARY KEY,
+    wave_name TEXT NOT NULL,
+    wave_order INTEGER NOT NULL,
+    target_day INTEGER,  -- 수술일 기준 경과일
+    window_before INTEGER DEFAULT 7,
+    window_after INTEGER DEFAULT 14
+);
+
+INSERT INTO knee_study_waves VALUES
+(1, 'Pre-op', 1, -14, 14, 0),       -- 수술 2주 전 ~ 수술 전
+(2, '2-week', 2, 14, 3, 7),         -- 수술 후 11-21일
+(3, '6-week', 3, 42, 7, 14),        -- 수술 후 35-56일
+(4, '3-month', 4, 90, 14, 21),      -- 수술 후 76-111일
+(5, '6-month', 5, 180, 14, 28),     -- 수술 후 166-208일
+(6, '12-month', 6, 365, 21, 42);    -- 수술 후 344-407일
+
+-- 3. 평가 데이터 (Long format)
+CREATE TABLE knee_study_assessments (
+    assessment_id INTEGER PRIMARY KEY,
+    participant_id TEXT NOT NULL,
+    wave_id INTEGER NOT NULL,
+    assessment_date DATE NOT NULL,
+    assessor_id TEXT,
+
+    -- 계산된 필드
+    days_post_surgery INTEGER,  -- 수술 후 경과일
+
+    -- 통증 (VAS 0-100)
+    pain_rest INTEGER CHECK (pain_rest BETWEEN 0 AND 100),
+    pain_walking INTEGER CHECK (pain_walking BETWEEN 0 AND 100),
+    pain_stairs INTEGER CHECK (pain_stairs BETWEEN 0 AND 100),
+
+    -- 관절가동범위
+    rom_flexion INTEGER,
+    rom_extension INTEGER,
+
+    -- 근력 (도수근력검사 또는 동력계)
+    quad_strength DECIMAL(4,1),  -- kg or grade
+    hamstring_strength DECIMAL(4,1),
+
+    -- 기능 (WOMAC, 0-96점, 낮을수록 좋음)
+    womac_pain INTEGER,      -- 0-20
+    womac_stiffness INTEGER, -- 0-8
+    womac_function INTEGER,  -- 0-68
+    womac_total INTEGER,     -- 0-96
+
+    -- 보행
+    tug_time_sec DECIMAL(5,2),
+    gait_speed_ms DECIMAL(4,2),
+
+    FOREIGN KEY (participant_id) REFERENCES knee_study_participants(participant_id),
+    FOREIGN KEY (wave_id) REFERENCES knee_study_waves(wave_id)
+);
+
+-- 4. 참가자 상태 추적
+CREATE TABLE knee_study_status (
+    participant_id TEXT PRIMARY KEY,
+    current_status TEXT DEFAULT 'ACTIVE',
+    last_completed_wave INTEGER,
+    dropout_date DATE,
+    dropout_reason TEXT,
+    FOREIGN KEY (participant_id) REFERENCES knee_study_participants(participant_id)
+);
+
+-- 5. 통합 조회 VIEW
+CREATE VIEW knee_study_complete AS
+SELECT
+    p.participant_id,
+    (julianday(p.surgery_date) - julianday(p.birth_date)) / 365.25 AS age_at_surgery,
+    p.gender,
+    p.surgery_type,
+    w.wave_name,
+    w.wave_order,
+    a.assessment_date,
+    a.days_post_surgery,
+    a.pain_rest,
+    a.pain_walking,
+    a.rom_flexion,
+    a.rom_extension,
+    a.womac_total,
+    a.tug_time_sec,
+    s.current_status
+FROM knee_study_participants p
+JOIN knee_study_assessments a ON p.participant_id = a.participant_id
+JOIN knee_study_waves w ON a.wave_id = w.wave_id
+LEFT JOIN knee_study_status s ON p.participant_id = s.participant_id;</code></pre>
+            </div>
+
+            <h3>6.2 분석 쿼리</h3>
+
+            <div class="sql-box">
+                <h3>💻 종단 분석 쿼리</h3>
+                <pre><code>-- 1. 시점별 기술통계
+SELECT
+    wave_name,
+    COUNT(*) AS n,
+    ROUND(AVG(pain_rest), 1) AS mean_pain,
+    ROUND(AVG(rom_flexion), 1) AS mean_flexion,
+    ROUND(AVG(womac_total), 1) AS mean_womac,
+    ROUND(AVG(tug_time_sec), 2) AS mean_tug
+FROM knee_study_complete
+GROUP BY wave_name, wave_order
+ORDER BY wave_order;
+
+-- 2. 개인별 변화량 계산 (Pre-op vs 6-month)
+WITH pre_op AS (
+    SELECT participant_id, pain_rest AS pain_pre, womac_total AS womac_pre
+    FROM knee_study_complete WHERE wave_name = 'Pre-op'
+),
+six_month AS (
+    SELECT participant_id, pain_rest AS pain_6mo, womac_total AS womac_6mo
+    FROM knee_study_complete WHERE wave_name = '6-month'
+)
+SELECT
+    pre.participant_id,
+    pre.pain_pre,
+    six.pain_6mo,
+    pre.pain_pre - six.pain_6mo AS pain_change,
+    pre.womac_pre,
+    six.womac_6mo,
+    pre.womac_pre - six.womac_6mo AS womac_change
+FROM pre_op pre
+JOIN six_month six ON pre.participant_id = six.participant_id;
+
+-- 3. 시점별 탈락률
+WITH baseline_n AS (
+    SELECT COUNT(DISTINCT participant_id) AS n FROM knee_study_complete WHERE wave_name = 'Pre-op'
+)
+SELECT
+    wave_name,
+    wave_order,
+    COUNT(*) AS n_assessed,
+    (SELECT n FROM baseline_n) AS n_baseline,
+    ROUND(100.0 * COUNT(*) / (SELECT n FROM baseline_n), 1) AS retention_pct
+FROM knee_study_complete
+GROUP BY wave_name, wave_order
+ORDER BY wave_order;
+
+-- 4. 통계 분석용 Long format 데이터 추출
+SELECT
+    participant_id,
+    wave_order AS time,
+    days_post_surgery,
+    pain_rest,
+    womac_total,
+    rom_flexion
+FROM knee_study_complete
+ORDER BY participant_id, wave_order;</code></pre>
+            </div>
+
+            <div class="summary-box">
+                <h3>📝 이 장의 핵심 정리</h3>
+                <ol>
+                    <li><strong>종단 연구 유형</strong>: 패널(동일 개인), 코호트(특정 집단), 추세(다른 표본)</li>
+                    <li><strong>반복 측정</strong>: 시점(wave)을 명확히 정의하고 관리</li>
+                    <li><strong>Long format 권장</strong>: 유연성, 정규화, 통계 분석에 유리</li>
+                    <li><strong>시점 관리</strong>: waves 테이블로 시점 메타데이터 관리</li>
+                    <li><strong>탈락 처리</strong>: 탈락률, 탈락 사유, 선택적 탈락 검토</li>
+                    <li><strong>설계 패턴</strong>: participants + waves + assessments 구조</li>
+                </ol>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-10.html" class="nav-btn">← 이전</a>
+                <span class="page-num">11 / 20</span>
+                <a href="chapter-12.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

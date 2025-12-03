@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[3장] 해피콜 & 환자 리텐션 - 물리치료사를 위한 DB 2권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>🏥</span> DB 완전정복</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2 active">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📙 2권: SQL 기초 편</h1><p>데이터베이스 활용</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <h1 class="title">[3장] 해피콜 & 환자 리텐션</h1>
+
+            <div class="intro-box">
+                <p>이번 장에서는 <strong>환자 관리의 핵심</strong>인 리텐션(재방문) 쿼리를 배웁니다. 미방문 환자 찾기, 이탈 위험 환자 관리, 생일 축하 등 <strong>매출에 직결되는</strong> 실무 쿼리들이에요!</p>
+            </div>
+
+            <div class="concept-box">
+                <h3>📞 해피콜이란?</h3>
+                <p><strong>해피콜</strong>은 오래 방문하지 않은 환자에게 전화해서 안부를 묻고 재방문을 유도하는 것입니다.<br>
+                치료실 매출의 핵심은 <strong>신규 환자 유치</strong>보다 <strong>기존 환자 유지</strong>라는 사실, 알고 계시죠?</p>
+            </div>
+
+            <hr>
+
+            <!-- ===== 쿼리 1: 7일 이상 미방문 환자 ===== -->
+            <h2>1. 7일 이상 미방문 환자</h2>
+
+            <div class="concept-box">
+                <h3>🎯 이 쿼리가 필요한 상황</h3>
+                <p>"요즘 안 오시는 분들 있나?" - 일주일 이상 방문하지 않은 환자를 찾아서 해피콜 대상자로 삼습니다. 조기에 연락하면 이탈을 막을 수 있어요!</p>
+            </div>
+
+            <pre><code>SELECT
+    p.name AS 환자명,
+    p.phone AS 연락처,
+    MAX(ts.session_date) AS 마지막방문일,
+    DATEDIFF(CURDATE(), MAX(ts.session_date)) AS 경과일수
+FROM patients p
+JOIN treatment_sessions ts ON p.patient_id = ts.patient_id
+GROUP BY p.patient_id, p.name, p.phone
+HAVING DATEDIFF(CURDATE(), MAX(ts.session_date)) >= 7
+ORDER BY 경과일수 DESC;</code></pre>
+
+            <div class="explanation-box">
+                <h3>📖 쿼리 뜯어보기 (핵심 개념 집중!)</h3>
+
+                <div class="line-explain">
+                    <div class="code-line">MAX(ts.session_date) AS 마지막방문일</div>
+                    <div class="explain-text">
+                        <strong>MAX</strong>는 "가장 큰 값"을 찾는 함수예요.<br><br>
+                        날짜에서 MAX를 쓰면? <strong>가장 최근 날짜</strong>가 됩니다!<br>
+                        (2024-01-15가 2024-01-10보다 "크다"고 판단해요)<br><br>
+                        <strong>왜 MAX가 필요할까요?</strong><br>
+                        한 환자가 여러 번 방문했을 수 있잖아요. 그 중에서 <strong>가장 마지막에 온 날</strong>을 알아야 하니까요.
+                    </div>
+                </div>
+
+                <div class="line-explain">
+                    <div class="code-line">DATEDIFF(CURDATE(), MAX(ts.session_date))</div>
+                    <div class="explain-text">
+                        <strong>DATEDIFF</strong>는 두 날짜 사이의 <strong>일수 차이</strong>를 계산합니다.<br><br>
+                        <code>DATEDIFF(기준일, 비교일)</code> = 기준일 - 비교일<br><br>
+                        예시:<br>
+                        • 오늘: 2024-01-20<br>
+                        • 마지막 방문일: 2024-01-10<br>
+                        • DATEDIFF = 10일<br><br>
+                        <strong>해석</strong>: "오늘 기준으로 마지막 방문한지 며칠 됐어?"
+                    </div>
+                </div>
+
+                <div class="line-explain highlight-line">
+                    <div class="code-line">GROUP BY p.patient_id, p.name, p.phone</div>
+                    <div class="explain-text">
+                        <strong>GROUP BY</strong>는 SQL에서 가장 헷갈리는 개념 중 하나예요. 천천히 알아봅시다!<br><br>
+
+                        <div class="analogy-box">
+                            <h4>🎭 GROUP BY를 이해하는 비유</h4>
+                            <p>출석부를 생각해보세요.</p>
+                            <table class="mini-table">
+                                <tr><th>이름</th><th>출석일</th></tr>
+                                <tr><td>김철수</td><td>1월 5일</td></tr>
+                                <tr><td>김철수</td><td>1월 10일</td></tr>
+                                <tr><td>김철수</td><td>1월 15일</td></tr>
+                                <tr><td>이영희</td><td>1월 8일</td></tr>
+                                <tr><td>이영희</td><td>1월 12일</td></tr>
+                            </table>
+                            <p><br>각 학생별로 "마지막 출석일"을 알고 싶다면?<br>
+                            <strong>이름별로 묶어서(GROUP BY)</strong> 가장 큰 날짜(MAX)를 구하면 됩니다!</p>
+                            <table class="mini-table">
+                                <tr><th>이름</th><th>마지막출석일</th></tr>
+                                <tr><td>김철수</td><td>1월 15일</td></tr>
+                                <tr><td>이영희</td><td>1월 12일</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="line-explain highlight-line">
+                    <div class="code-line">HAVING DATEDIFF(...) >= 7</div>
+                    <div class="explain-text">
+                        <strong>HAVING</strong>은 GROUP BY 결과에 조건을 거는 거예요.<br><br>
+                        <strong>WHERE vs HAVING 차이점:</strong>
+                        <table class="compare-table">
+                            <tr><th>WHERE</th><th>HAVING</th></tr>
+                            <tr><td>묶기 전에 필터링</td><td>묶은 후에 필터링</td></tr>
+                            <tr><td>개별 행에 조건</td><td>그룹에 조건</td></tr>
+                            <tr><td>집계 함수 사용 불가</td><td>집계 함수 사용 가능</td></tr>
+                        </table>
+                        <br>
+                        <p><strong>왜 WHERE가 아니라 HAVING일까요?</strong><br>
+                        MAX(session_date)는 <strong>그룹을 만든 후에야</strong> 계산할 수 있는 값이에요.<br>
+                        그래서 그룹화 후 필터링인 HAVING을 써야 합니다.</p>
+                    </div>
+                </div>
+
+                <div class="line-explain">
+                    <div class="code-line">ORDER BY 경과일수 DESC</div>
+                    <div class="explain-text">
+                        경과일수가 많은 환자부터 보여줍니다.<br>
+                        <strong>30일 지난 환자가 7일 지난 환자보다 더 급하니까요!</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-example">
+                <h4>📋 실행 결과 예시</h4>
+                <table class="result-table">
+                    <tr><th>환자명</th><th>연락처</th><th>마지막방문일</th><th>경과일수</th></tr>
+                    <tr class="urgent-row"><td>박민수</td><td>010-3456-7890</td><td>2024-01-01</td><td>19</td></tr>
+                    <tr><td>최지영</td><td>010-4567-8901</td><td>2024-01-08</td><td>12</td></tr>
+                    <tr><td>이영희</td><td>010-2345-6789</td><td>2024-01-13</td><td>7</td></tr>
+                </table>
+                <p class="result-note">※ 경과일수가 긴 순서대로 정렬되어 우선순위 파악이 쉬워요!</p>
+            </div>
+
+            <div class="tip">
+                <strong>💡 실무 활용 팁</strong><br>
+                • 7일 이상: 안부 문자 발송<br>
+                • 14일 이상: 직접 전화 (해피콜)<br>
+                • 30일 이상: 특별 이벤트 안내
+            </div>
+
+            <hr>
+
+            <!-- ===== 쿼리 2: 10회 미만 방문 환자 ===== -->
+            <h2>2. 10회 미만 방문 환자 (이탈 위험)</h2>
+
+            <div class="concept-box">
+                <h3>🎯 이 쿼리가 필요한 상황</h3>
+                <p>물리치료는 보통 <strong>최소 10회 이상</strong> 받아야 효과가 있어요. 10회 미만에서 그만두면 "효과 없다"고 느끼고 다시는 안 올 수 있습니다. 이런 환자들을 미리 파악해서 관리해야 해요!</p>
+            </div>
+
+            <pre><code>SELECT
+    p.name AS 환자명,
+    p.phone AS 연락처,
+    COUNT(ts.session_id) AS 방문횟수,
+    CASE
+        WHEN COUNT(ts.session_id) < 5 THEN '🔴 긴급'
+        WHEN COUNT(ts.session_id) < 10 THEN '🟡 주의'
+        ELSE '✅ 양호'
+    END AS 관리등급
+FROM patients p
+JOIN treatment_sessions ts ON p.patient_id = ts.patient_id
+GROUP BY p.patient_id, p.name, p.phone
+HAVING COUNT(ts.session_id) < 10
+ORDER BY 방문횟수 ASC;</code></pre>
+
+            <div class="explanation-box">
+                <h3>📖 새로운 개념: CASE WHEN (조건 분기)</h3>
+
+                <div class="line-explain">
+                    <div class="code-line">COUNT(ts.session_id) AS 방문횟수</div>
+                    <div class="explain-text">
+                        <strong>COUNT</strong>는 개수를 세는 함수예요.<br><br>
+                        각 환자별로(GROUP BY) 치료 세션이 몇 개인지 = <strong>방문 횟수</strong>
+                    </div>
+                </div>
+
+                <div class="line-explain highlight-line">
+                    <div class="code-line">CASE WHEN ... THEN ... ELSE ... END</div>
+                    <div class="explain-text">
+                        <strong>CASE WHEN</strong>은 SQL의 <strong>if-else문</strong>이에요!<br><br>
+                        프로그래밍의 조건문처럼, 조건에 따라 다른 값을 출력합니다.
+
+                        <div class="syntax-box">
+                            <h4>📝 CASE WHEN 문법</h4>
+                            <pre><code>CASE
+    WHEN 조건1 THEN 결과1
+    WHEN 조건2 THEN 결과2
+    WHEN 조건3 THEN 결과3
+    ELSE 기본값
+END</code></pre>
+                        </div>
+
+                        <div class="analogy-box">
+                            <h4>🎭 비유로 이해하기</h4>
+                            <p>시험 점수로 학점 매기는 것과 같아요!</p>
+                            <ul>
+                                <li>90점 이상이면 → A</li>
+                                <li>80점 이상이면 → B</li>
+                                <li>70점 이상이면 → C</li>
+                                <li>그 외 → F</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="line-explain">
+                    <div class="code-line">WHEN COUNT(ts.session_id) < 5 THEN '🔴 긴급'</div>
+                    <div class="explain-text">
+                        "<strong>방문 횟수가 5회 미만이면 '긴급'으로 표시해줘</strong>"<br><br>
+                        • 5회 미만: 치료 초기 단계에서 이탈 가능성 높음<br>
+                        • 5~9회: 주의가 필요한 단계<br>
+                        • 10회 이상: 어느 정도 정착한 환자
+                    </div>
+                </div>
+
+                <div class="line-explain">
+                    <div class="code-line">ORDER BY 방문횟수 ASC</div>
+                    <div class="explain-text">
+                        <strong>ASC</strong>는 오름차순(작은 것부터)이에요.<br><br>
+                        방문 횟수가 <strong>적은 환자부터</strong> 보여줍니다.<br>
+                        1회 방문 환자가 9회 방문 환자보다 더 위험하니까요!
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-example">
+                <h4>📋 실행 결과 예시</h4>
+                <table class="result-table">
+                    <tr><th>환자명</th><th>연락처</th><th>방문횟수</th><th>관리등급</th></tr>
+                    <tr class="urgent-row"><td>신규환</td><td>010-5678-9012</td><td>2</td><td>🔴 긴급</td></tr>
+                    <tr class="urgent-row"><td>처음방</td><td>010-6789-0123</td><td>3</td><td>🔴 긴급</td></tr>
+                    <tr><td>최지영</td><td>010-4567-8901</td><td>6</td><td>🟡 주의</td></tr>
+                    <tr><td>이영희</td><td>010-2345-6789</td><td>8</td><td>🟡 주의</td></tr>
+                </table>
+            </div>
+
+            <div class="why-box">
+                <h4>❓ 왜 10회가 기준일까요?</h4>
+                <p>물리치료의 효과는 <strong>누적</strong>되어 나타납니다.</p>
+                <ul>
+                    <li><strong>1~3회</strong>: 아직 변화 못 느낌 → 이탈 위험 최고</li>
+                    <li><strong>4~6회</strong>: 약간의 변화 → 여전히 불안정</li>
+                    <li><strong>7~10회</strong>: 효과 체감 시작 → 정착 가능성 높아짐</li>
+                    <li><strong>10회 이상</strong>: 효과 확실히 느낌 → 충성 환자 전환</li>
+                </ul>
+            </div>
+
+            <hr>
+
+            <!-- ===== 쿼리 3: 이번 달 생일 환자 ===== -->
+            <h2>3. 이번 달 생일 환자</h2>
+
+            <div class="concept-box">
+                <h3>🎯 이 쿼리가 필요한 상황</h3>
+                <p>생일 축하 문자나 작은 선물은 <strong>환자 충성도를 높이는 가장 쉬운 방법</strong>이에요. 비용 대비 효과가 엄청나요!</p>
+            </div>
+
+            <pre><code>SELECT
+    p.name AS 환자명,
+    p.phone AS 연락처,
+    DATE_FORMAT(p.birth_date, '%m월 %d일') AS 생일
+FROM patients p
+WHERE MONTH(p.birth_date) = MONTH(CURDATE())
+ORDER BY DAY(p.birth_date);</code></pre>
+
+            <div class="explanation-box">
+                <h3>📖 날짜 함수 완전 정복</h3>
+
+                <div class="line-explain">
+                    <div class="code-line">DATE_FORMAT(p.birth_date, '%m월 %d일')</div>
+                    <div class="explain-text">
+                        <strong>DATE_FORMAT</strong>은 날짜를 원하는 형식으로 바꿔줍니다.<br><br>
+
+                        <div class="format-box">
+                            <h4>📅 자주 쓰는 날짜 포맷</h4>
+                            <table class="format-table">
+                                <tr><th>코드</th><th>의미</th><th>예시</th></tr>
+                                <tr><td>%Y</td><td>4자리 연도</td><td>2024</td></tr>
+                                <tr><td>%y</td><td>2자리 연도</td><td>24</td></tr>
+                                <tr><td>%m</td><td>월 (01~12)</td><td>01, 12</td></tr>
+                                <tr><td>%d</td><td>일 (01~31)</td><td>05, 31</td></tr>
+                                <tr><td>%H</td><td>시 (00~23)</td><td>09, 14</td></tr>
+                                <tr><td>%i</td><td>분 (00~59)</td><td>30, 45</td></tr>
+                            </table>
+                        </div>
+
+                        <p><br><strong>예시:</strong></p>
+                        <ul>
+                            <li><code>'%Y-%m-%d'</code> → 2024-01-15</li>
+                            <li><code>'%m월 %d일'</code> → 01월 15일</li>
+                            <li><code>'%Y년 %m월'</code> → 2024년 01월</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="line-explain">
+                    <div class="code-line">MONTH(p.birth_date) = MONTH(CURDATE())</div>
+                    <div class="explain-text">
+                        <strong>MONTH()</strong>는 날짜에서 <strong>월만 추출</strong>합니다.<br><br>
+
+                        • <code>MONTH('1990-03-15')</code> → 3<br>
+                        • <code>MONTH(CURDATE())</code> → 현재 월 (1월이면 1)<br><br>
+
+                        <strong>해석</strong>: "생년월일의 월과 오늘의 월이 같은 사람"<br>
+                        = 이번 달 생일인 사람!
+                    </div>
+                </div>
+
+                <div class="line-explain">
+                    <div class="code-line">ORDER BY DAY(p.birth_date)</div>
+                    <div class="explain-text">
+                        <strong>DAY()</strong>는 날짜에서 <strong>일만 추출</strong>합니다.<br><br>
+
+                        생일이 빠른 순서대로 정렬해서,<br>
+                        1일 생일 → 15일 생일 → 28일 생일 순으로 보여줍니다.
+                    </div>
+                </div>
+
+                <div class="analogy-box">
+                    <h4>🎭 날짜 함수 비유</h4>
+                    <p>날짜 <code>1990-03-15</code>를 케이크라고 생각해보세요.</p>
+                    <ul>
+                        <li><strong>YEAR()</strong>: 케이크 1층 (연도) → 1990</li>
+                        <li><strong>MONTH()</strong>: 케이크 2층 (월) → 3</li>
+                        <li><strong>DAY()</strong>: 케이크 3층 (일) → 15</li>
+                    </ul>
+                    <p>각 층만 따로 꺼내볼 수 있어요!</p>
+                </div>
+            </div>
+
+            <div class="result-example">
+                <h4>📋 실행 결과 예시 (1월 기준)</h4>
+                <table class="result-table">
+                    <tr><th>환자명</th><th>연락처</th><th>생일</th></tr>
+                    <tr><td>박민수</td><td>010-3456-7890</td><td>01월 05일</td></tr>
+                    <tr><td>이영희</td><td>010-2345-6789</td><td>01월 12일</td></tr>
+                    <tr><td>김철수</td><td>010-1234-5678</td><td>01월 23일</td></tr>
+                </table>
+            </div>
+
+            <div class="tip">
+                <strong>💡 생일 마케팅 활용법</strong><br><br>
+                <strong>생일 7일 전:</strong> 미리 문자 발송 예약<br>
+                <strong>생일 당일:</strong> 방문 시 작은 선물 (음료 쿠폰, 할인권 등)<br>
+                <strong>효과:</strong> 재방문율 20~30% 증가 (실제 마케팅 통계)
+            </div>
+
+            <div class="summary-box">
+                <h3>📝 이번 장 핵심 정리</h3>
+                <table class="summary-table">
+                    <tr>
+                        <th>함수/문법</th>
+                        <th>역할</th>
+                        <th>예시</th>
+                    </tr>
+                    <tr>
+                        <td><strong>MAX()</strong></td>
+                        <td>최대값 (날짜면 최신)</td>
+                        <td>MAX(date) → 가장 최근 날짜</td>
+                    </tr>
+                    <tr>
+                        <td><strong>COUNT()</strong></td>
+                        <td>개수 세기</td>
+                        <td>COUNT(*) → 총 몇 개</td>
+                    </tr>
+                    <tr>
+                        <td><strong>DATEDIFF()</strong></td>
+                        <td>날짜 차이 계산</td>
+                        <td>DATEDIFF(오늘, 과거) → 며칠</td>
+                    </tr>
+                    <tr>
+                        <td><strong>GROUP BY</strong></td>
+                        <td>그룹으로 묶기</td>
+                        <td>환자별, 날짜별 등</td>
+                    </tr>
+                    <tr>
+                        <td><strong>HAVING</strong></td>
+                        <td>그룹 조건 필터</td>
+                        <td>묶은 후 조건 적용</td>
+                    </tr>
+                    <tr>
+                        <td><strong>CASE WHEN</strong></td>
+                        <td>조건 분기 (if-else)</td>
+                        <td>조건별 다른 값 출력</td>
+                    </tr>
+                    <tr>
+                        <td><strong>MONTH(), DAY()</strong></td>
+                        <td>날짜에서 월/일 추출</td>
+                        <td>생일 찾기에 활용</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="practice-box">
+                <h3>🏋️ 응용 연습</h3>
+                <p><strong>Q. "14일 이상 미방문 + 방문 5회 미만" 환자를 찾으려면?</strong></p>
+                <details>
+                    <summary>정답 보기</summary>
+                    <pre><code>SELECT p.name, p.phone,
+       MAX(ts.session_date) AS 마지막방문,
+       DATEDIFF(CURDATE(), MAX(ts.session_date)) AS 경과일,
+       COUNT(*) AS 방문횟수
+FROM patients p
+JOIN treatment_sessions ts ON p.patient_id = ts.patient_id
+GROUP BY p.patient_id, p.name, p.phone
+HAVING DATEDIFF(CURDATE(), MAX(ts.session_date)) >= 14
+   AND COUNT(*) < 5;</code></pre>
+                    <p>HAVING에 AND로 조건 두 개를 연결하면 됩니다!</p>
+                </details>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-2.html" class="nav-btn">← 이전</a>
+                <span class="page-num">3 / 12</span>
+                <a href="chapter-4.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

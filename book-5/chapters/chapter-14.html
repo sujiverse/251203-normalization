@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>14장: 백업과 복구 - 물리치료사를 위한 DB 5권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "5"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>🛡️ 5권: 보안 편</h1>
+                <p>DB & 서버 보안</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">백업과 복구</h1>
+
+            <h2>백업이 필요한 이유</h2>
+
+            <pre class="file-tree">데이터 손실 원인
+│
+├── 하드웨어 장애
+│   └── 디스크 고장, 서버 다운
+│
+├── 소프트웨어 오류
+│   └── 버그, 잘못된 배포
+│
+├── 인적 실수
+│   └── 실수로 DELETE, DROP
+│
+├── 악의적 공격
+│   └── 랜섬웨어, 해킹
+│
+└── 자연재해
+    └── 화재, 홍수</pre>
+
+            <blockquote>
+                <strong>백업은 선택이 아니라 필수입니다.</strong><br>
+                복구 불가능한 데이터 손실은 사업 종료를 의미할 수 있습니다.
+            </blockquote>
+
+            <hr>
+
+            <h2>백업 전략: 3-2-1 규칙</h2>
+
+            <pre class="file-tree">3-2-1 백업 규칙
+│
+├── 3: 최소 3개의 복사본
+│   ├── 원본 데이터
+│   ├── 로컬 백업
+│   └── 원격 백업
+│
+├── 2: 2가지 다른 저장 매체
+│   ├── 서버 디스크
+│   └── 외장 드라이브 / 클라우드
+│
+└── 1: 1개는 오프사이트(원격지)
+    └── 다른 건물/지역에 보관</pre>
+
+            <hr>
+
+            <h2>mysqldump로 백업</h2>
+
+            <pre><code># 전체 데이터베이스 백업
+mysqldump -u healing_backup -p healing_hands > backup_$(date +%Y%m%d).sql
+
+# 특정 테이블만 백업
+mysqldump -u healing_backup -p healing_hands patients treatment_sessions > tables_backup.sql
+
+# 스키마만 백업 (데이터 제외)
+mysqldump -u healing_backup -p --no-data healing_hands > schema_only.sql
+
+# 데이터만 백업 (스키마 제외)
+mysqldump -u healing_backup -p --no-create-info healing_hands > data_only.sql
+
+# 압축 백업
+mysqldump -u healing_backup -p healing_hands | gzip > backup_$(date +%Y%m%d).sql.gz</code></pre>
+
+            <h3>백업 옵션</h3>
+            <pre><code># 권장 옵션 조합
+mysqldump -u healing_backup -p \
+    --single-transaction \    # InnoDB 일관성 보장
+    --routines \              # 저장 프로시저 포함
+    --triggers \              # 트리거 포함
+    --events \                # 이벤트 포함
+    healing_hands > backup.sql</code></pre>
+
+            <hr>
+
+            <h2>자동 백업 스크립트</h2>
+
+            <pre><code>#!/bin/bash
+# /usr/local/bin/backup_db.sh
+
+# 설정
+DB_USER="healing_backup"
+DB_PASS="backup_password"
+DB_NAME="healing_hands"
+BACKUP_DIR="/var/backups/mysql"
+RETENTION_DAYS=30
+
+# 날짜 형식
+DATE=$(date +%Y%m%d_%H%M%S)
+BACKUP_FILE="${BACKUP_DIR}/${DB_NAME}_${DATE}.sql.gz"
+
+# 백업 디렉토리 확인
+mkdir -p $BACKUP_DIR
+
+# 백업 실행
+mysqldump -u $DB_USER -p$DB_PASS \
+    --single-transaction \
+    --routines --triggers \
+    $DB_NAME | gzip > $BACKUP_FILE
+
+# 백업 성공 확인
+if [ $? -eq 0 ]; then
+    echo "백업 성공: $BACKUP_FILE"
+
+    # 오래된 백업 삭제
+    find $BACKUP_DIR -name "*.sql.gz" -mtime +$RETENTION_DAYS -delete
+    echo "30일 이상 된 백업 삭제 완료"
+else
+    echo "백업 실패!" >&2
+    exit 1
+fi</code></pre>
+
+            <pre><code># 실행 권한 부여
+chmod +x /usr/local/bin/backup_db.sh
+
+# Cron으로 자동 실행 (매일 새벽 2시)
+crontab -e
+0 2 * * * /usr/local/bin/backup_db.sh >> /var/log/backup.log 2>&1</code></pre>
+
+            <hr>
+
+            <h2>복구 방법</h2>
+
+            <pre><code># 전체 복구
+mysql -u root -p healing_hands < backup.sql
+
+# 압축 백업 복구
+gunzip < backup.sql.gz | mysql -u root -p healing_hands
+
+# 새 데이터베이스로 복구 (테스트용)
+mysql -u root -p -e "CREATE DATABASE healing_hands_restore"
+mysql -u root -p healing_hands_restore < backup.sql</code></pre>
+
+            <div class="warning">
+                <strong>복구 전 확인사항</strong><br>
+                - 현재 DB 상태 백업 (복구 실패 대비)<br>
+                - 충분한 디스크 공간 확인<br>
+                - 서비스 중단 여부 결정
+            </div>
+
+            <hr>
+
+            <h2>Point-in-Time Recovery</h2>
+
+            <p>특정 시점으로 복구하려면 바이너리 로그가 필요합니다.</p>
+
+            <pre><code># my.cnf - 바이너리 로그 활성화
+[mysqld]
+log_bin = /var/log/mysql/mysql-bin
+binlog_expire_logs_seconds = 604800  # 7일 보관
+max_binlog_size = 100M</code></pre>
+
+            <pre><code># 1. 풀 백업 복구
+mysql -u root -p healing_hands < full_backup.sql
+
+# 2. 바이너리 로그로 특정 시점까지 복구
+mysqlbinlog --stop-datetime="2024-01-15 10:30:00" \
+    /var/log/mysql/mysql-bin.000001 | mysql -u root -p healing_hands</code></pre>
+
+            <hr>
+
+            <h2>원격 백업</h2>
+
+            <h3>AWS S3로 백업</h3>
+            <pre><code>#!/bin/bash
+# S3 백업 스크립트
+
+BUCKET="healing-hands-backups"
+DATE=$(date +%Y%m%d)
+
+# 백업 생성
+mysqldump -u healing_backup -p$DB_PASS \
+    --single-transaction healing_hands | gzip > /tmp/backup.sql.gz
+
+# S3 업로드
+aws s3 cp /tmp/backup.sql.gz s3://$BUCKET/daily/backup_$DATE.sql.gz
+
+# 로컬 임시 파일 삭제
+rm /tmp/backup.sql.gz
+
+# 30일 이상 된 S3 백업 삭제 (수명 주기 정책으로도 가능)
+aws s3 rm s3://$BUCKET/daily/ --recursive \
+    --exclude "*" --include "backup_*.sql.gz" \
+    --older-than 30days</code></pre>
+
+            <h3>다른 서버로 백업</h3>
+            <pre><code># rsync로 원격 복사
+rsync -avz /var/backups/mysql/ backup-server:/var/backups/healing-hands/
+
+# SSH를 통한 직접 백업
+mysqldump -u healing_backup -p healing_hands | \
+    ssh backup-server "cat > /var/backups/healing_$(date +%Y%m%d).sql"</code></pre>
+
+            <hr>
+
+            <h2>백업 검증</h2>
+
+            <div class="danger">
+                <strong>검증되지 않은 백업은 백업이 아닙니다!</strong>
+            </div>
+
+            <pre><code>#!/bin/bash
+# 백업 검증 스크립트
+
+BACKUP_FILE=$1
+TEST_DB="healing_hands_test"
+
+# 테스트 DB 생성
+mysql -u root -p -e "DROP DATABASE IF EXISTS $TEST_DB; CREATE DATABASE $TEST_DB"
+
+# 백업 복구 시도
+if gunzip < $BACKUP_FILE | mysql -u root -p $TEST_DB; then
+    echo "복구 성공!"
+
+    # 데이터 검증
+    PATIENT_COUNT=$(mysql -u root -p -N -e "SELECT COUNT(*) FROM $TEST_DB.patients")
+    echo "환자 수: $PATIENT_COUNT"
+
+    if [ $PATIENT_COUNT -gt 0 ]; then
+        echo "백업 검증 완료!"
+    else
+        echo "경고: 데이터가 없습니다!"
+    fi
+else
+    echo "복구 실패!"
+fi
+
+# 테스트 DB 삭제
+mysql -u root -p -e "DROP DATABASE $TEST_DB"</code></pre>
+
+            <hr>
+
+            <h2>백업 보안</h2>
+
+            <pre><code># 백업 파일 암호화
+mysqldump -u healing_backup -p healing_hands | \
+    gzip | \
+    openssl enc -aes-256-cbc -salt -pbkdf2 -out backup_encrypted.sql.gz.enc
+
+# 복호화 및 복구
+openssl enc -d -aes-256-cbc -pbkdf2 -in backup_encrypted.sql.gz.enc | \
+    gunzip | \
+    mysql -u root -p healing_hands</code></pre>
+
+            <pre><code># 백업 파일 권한 설정
+chmod 600 /var/backups/mysql/*.sql.gz
+chown root:root /var/backups/mysql/*.sql.gz</code></pre>
+
+            <hr>
+
+            <h2>복구 계획 (DR Plan)</h2>
+
+            <pre class="file-tree">재해 복구 계획
+│
+├── RPO (Recovery Point Objective)
+│   └── 허용 가능한 데이터 손실량
+│   └── 예: 최대 1시간 데이터 손실
+│
+├── RTO (Recovery Time Objective)
+│   └── 복구까지 허용 시간
+│   └── 예: 최대 4시간 내 복구
+│
+└── 복구 절차
+    ├── 1. 장애 확인
+    ├── 2. 담당자 연락
+    ├── 3. 최신 백업 확인
+    ├── 4. 복구 실행
+    └── 5. 서비스 재개</pre>
+
+            <hr>
+
+            <h2>백업 체크리스트</h2>
+
+            <table>
+                <tr>
+                    <th>항목</th>
+                    <th>확인</th>
+                </tr>
+                <tr>
+                    <td>일일 자동 백업 설정</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>원격지 백업 (3-2-1 규칙)</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>백업 암호화</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>정기적 복구 테스트</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>백업 보관 기간 설정</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>복구 절차 문서화</td>
+                    <td>☐</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li><strong>3-2-1 규칙</strong>: 3개 복사본, 2가지 매체, 1개 원격</li>
+                <li><strong>mysqldump</strong>로 손쉽게 백업</li>
+                <li><strong>자동화</strong>로 백업 누락 방지</li>
+                <li>백업은 반드시 <strong>복구 테스트</strong></li>
+                <li><strong>암호화</strong>로 백업 파일 보호</li>
+            </ul>
+
+            <blockquote>다음 장에서는 전체 보안 체크리스트를 정리합니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

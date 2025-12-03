@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>7장: 비밀번호 안전하게 저장 - 물리치료사를 위한 DB 5권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "5"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>🛡️ 5권: 보안 편</h1>
+                <p>DB & 서버 보안</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">비밀번호 안전하게 저장</h1>
+
+            <h2>절대 하면 안 되는 것</h2>
+
+            <pre><code># ❌ 평문 저장 - 최악!
+INSERT INTO users (username, password)
+VALUES ('admin', 'mypassword123');
+
+# DB가 유출되면 모든 비밀번호 노출!</code></pre>
+
+            <pre><code># ❌ 단순 해시 - 위험!
+import hashlib
+
+password_hash = hashlib.sha256('mypassword123'.encode()).hexdigest()
+# 레인보우 테이블 공격에 취약!</code></pre>
+
+            <hr>
+
+            <h2>해시란?</h2>
+
+            <pre class="file-tree">해시 함수 특징
+│
+├── 단방향: 해시 → 원본 복원 불가
+│
+├── 고정 길이: 입력 크기와 무관
+│
+├── 결정적: 같은 입력 → 같은 출력
+│
+└── 눈사태 효과: 1글자 변경 → 완전히 다른 해시</pre>
+
+            <pre><code>import hashlib
+
+# 같은 입력 → 같은 해시
+hashlib.sha256('password'.encode()).hexdigest()
+# '5e884898da28047d9...'
+
+# 1글자 변경 → 완전히 다른 해시
+hashlib.sha256('Password'.encode()).hexdigest()
+# '48c8947f69c054a5c...'</code></pre>
+
+            <hr>
+
+            <h2>왜 단순 해시가 위험한가?</h2>
+
+            <h3>1. 레인보우 테이블 공격</h3>
+            <p>미리 계산된 해시-비밀번호 매핑 테이블입니다.</p>
+
+            <pre><code># 레인보우 테이블 예시
+{
+    '5e884898...': 'password',
+    '8d969eef...': '123456',
+    'e10adc39...': '123456789',
+    ...
+}
+
+# 해시값만 있으면 원본 비밀번호를 찾을 수 있음!</code></pre>
+
+            <h3>2. 같은 비밀번호 = 같은 해시</h3>
+            <pre><code>users 테이블:
+| username | password_hash          |
+|----------|------------------------|
+| user1    | 5e884898da28047d9...   |
+| user2    | 5e884898da28047d9...   |  ← 같은 해시!
+| user3    | 5e884898da28047d9...   |  ← 같은 해시!
+
+→ 여러 사용자가 같은 비밀번호를 사용한다는 것을 알 수 있음</code></pre>
+
+            <hr>
+
+            <h2>해결책: 솔팅 (Salting)</h2>
+
+            <p>비밀번호에 랜덤 문자열(솔트)을 추가해서 해시합니다.</p>
+
+            <pre><code>import os
+import hashlib
+
+def hash_with_salt(password):
+    # 16바이트 랜덤 솔트 생성
+    salt = os.urandom(16)
+
+    # 비밀번호 + 솔트를 함께 해시
+    password_hash = hashlib.pbkdf2_hmac(
+        'sha256',
+        password.encode(),
+        salt,
+        100000  # 반복 횟수
+    )
+
+    # 솔트와 해시를 함께 저장
+    return salt + password_hash</code></pre>
+
+            <p>솔트 효과:</p>
+            <pre><code># 같은 비밀번호라도 다른 해시!
+user1: salt=abc123... → hash=x7k9p2...
+user2: salt=def456... → hash=m3n8q1...
+
+→ 레인보우 테이블 무력화!</code></pre>
+
+            <hr>
+
+            <h2>최선의 방법: bcrypt</h2>
+
+            <p>bcrypt는 비밀번호 해싱을 위해 설계된 알고리즘입니다.</p>
+
+            <pre><code>import bcrypt
+
+def hash_password(password):
+    """비밀번호 해싱"""
+    # 솔트 자동 생성, work factor=12 (2^12 반복)
+    password_bytes = password.encode('utf-8')
+    salt = bcrypt.gensalt(rounds=12)
+    return bcrypt.hashpw(password_bytes, salt).decode('utf-8')
+
+def verify_password(password, password_hash):
+    """비밀번호 검증"""
+    password_bytes = password.encode('utf-8')
+    hash_bytes = password_hash.encode('utf-8')
+    return bcrypt.checkpw(password_bytes, hash_bytes)
+
+# 사용 예시
+hashed = hash_password('mypassword123')
+print(hashed)
+# $2b$12$LQv3c1yqBWVHxkd0LHAkCO...
+
+# 검증
+verify_password('mypassword123', hashed)  # True
+verify_password('wrongpassword', hashed)  # False</code></pre>
+
+            <h3>bcrypt 해시 구조</h3>
+            <pre><code>$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz0...
+ │  │  │                    │
+ │  │  │                    └── 해시값
+ │  │  └── 솔트
+ │  └── work factor (2^12 = 4096번 반복)
+ └── 알고리즘 버전</code></pre>
+
+            <hr>
+
+            <h2>회원가입 구현</h2>
+
+            <pre><code>@app.route('/register', methods=['POST'])
+def register():
+    data = request.get_json()
+
+    username = data['username']
+    password = data['password']
+
+    # 비밀번호 정책 검증
+    if len(password) < 8:
+        return {'error': '비밀번호는 8자 이상이어야 합니다'}, 400
+
+    # 이미 존재하는 사용자 확인
+    if get_user(username):
+        return {'error': '이미 존재하는 사용자입니다'}, 400
+
+    # 비밀번호 해싱
+    password_hash = hash_password(password)
+
+    # DB에 저장
+    cursor.execute("""
+        INSERT INTO users (username, password_hash, created_at)
+        VALUES (%s, %s, NOW())
+    """, (username, password_hash))
+    conn.commit()
+
+    return {'success': True}</code></pre>
+
+            <hr>
+
+            <h2>로그인 구현</h2>
+
+            <pre><code>@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+
+    username = data['username']
+    password = data['password']
+
+    # 사용자 조회
+    user = get_user(username)
+
+    if not user:
+        # 타이밍 공격 방지: 사용자 없어도 같은 시간 소요
+        bcrypt.checkpw(b'dummy', b'$2b$12$' + b'0' * 53)
+        return {'error': '아이디 또는 비밀번호가 틀렸습니다'}, 401
+
+    # 비밀번호 검증
+    if not verify_password(password, user['password_hash']):
+        return {'error': '아이디 또는 비밀번호가 틀렸습니다'}, 401
+
+    # 로그인 성공
+    session['user_id'] = user['id']
+    return {'success': True}</code></pre>
+
+            <div class="warning">
+                <strong>보안 팁</strong><br>
+                "아이디가 없습니다" vs "비밀번호가 틀렸습니다"를 구분하지 마세요!<br>
+                공격자에게 유효한 아이디 정보를 주게 됩니다.
+            </div>
+
+            <hr>
+
+            <h2>비밀번호 정책</h2>
+
+            <pre><code>import re
+
+def validate_password(password):
+    """비밀번호 정책 검증"""
+    errors = []
+
+    if len(password) < 8:
+        errors.append('8자 이상이어야 합니다')
+
+    if not re.search(r'[A-Z]', password):
+        errors.append('대문자를 포함해야 합니다')
+
+    if not re.search(r'[a-z]', password):
+        errors.append('소문자를 포함해야 합니다')
+
+    if not re.search(r'\d', password):
+        errors.append('숫자를 포함해야 합니다')
+
+    if not re.search(r'[!@#$%^&*]', password):
+        errors.append('특수문자를 포함해야 합니다')
+
+    # 흔한 비밀번호 차단
+    common_passwords = ['password', '123456', 'qwerty', ...]
+    if password.lower() in common_passwords:
+        errors.append('너무 흔한 비밀번호입니다')
+
+    return errors</code></pre>
+
+            <hr>
+
+            <h2>비밀번호 변경</h2>
+
+            <pre><code>@app.route('/change-password', methods=['POST'])
+@login_required
+def change_password():
+    data = request.get_json()
+
+    current_password = data['current_password']
+    new_password = data['new_password']
+
+    user = get_user_by_id(session['user_id'])
+
+    # 현재 비밀번호 확인
+    if not verify_password(current_password, user['password_hash']):
+        return {'error': '현재 비밀번호가 틀렸습니다'}, 401
+
+    # 새 비밀번호 정책 검증
+    errors = validate_password(new_password)
+    if errors:
+        return {'errors': errors}, 400
+
+    # 이전 비밀번호와 같은지 확인
+    if verify_password(new_password, user['password_hash']):
+        return {'error': '이전과 다른 비밀번호를 사용하세요'}, 400
+
+    # 새 비밀번호 저장
+    new_hash = hash_password(new_password)
+    cursor.execute("""
+        UPDATE users SET password_hash = %s WHERE id = %s
+    """, (new_hash, session['user_id']))
+    conn.commit()
+
+    return {'success': True}</code></pre>
+
+            <hr>
+
+            <h2>DB 테이블 설계</h2>
+
+            <pre><code>CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password_hash VARCHAR(60) NOT NULL,  -- bcrypt는 60자
+    role ENUM('admin', 'therapist', 'staff') DEFAULT 'staff',
+    failed_attempts INT DEFAULT 0,
+    locked_until DATETIME NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);</code></pre>
+
+            <hr>
+
+            <h2>비밀번호 저장 체크리스트</h2>
+
+            <table>
+                <tr>
+                    <th>항목</th>
+                    <th>확인</th>
+                </tr>
+                <tr>
+                    <td>bcrypt 또는 argon2 사용</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>평문 저장 안 함</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>비밀번호 정책 적용</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>로그인 실패 메시지 일반화</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>이전 비밀번호 재사용 금지</td>
+                    <td>☐</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li>비밀번호를 <strong>평문으로 저장하면 안 됩니다</strong></li>
+                <li>단순 해시는 <strong>레인보우 테이블</strong>에 취약</li>
+                <li><strong>솔팅</strong>으로 같은 비밀번호도 다른 해시 생성</li>
+                <li><strong>bcrypt</strong>는 비밀번호용으로 설계된 알고리즘</li>
+                <li><strong>비밀번호 정책</strong>으로 약한 비밀번호 방지</li>
+            </ul>
+
+            <blockquote>다음 장에서는 DB 사용자 권한 관리를 배웁니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

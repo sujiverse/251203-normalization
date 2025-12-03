@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>12장: HTTPS 적용하기 - 물리치료사를 위한 DB 5권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "5"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>🛡️ 5권: 보안 편</h1>
+                <p>DB & 서버 보안</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">HTTPS 적용하기</h1>
+
+            <h2>HTTPS가 필요한 이유</h2>
+
+            <pre class="file-tree">HTTP (평문 통신)
+│
+├── 클라이언트 → [로그인: admin/password123] → 서버
+│                        ↑
+│                    공격자가 볼 수 있음!
+│
+HTTPS (암호화 통신)
+│
+├── 클라이언트 → [암호화된 데이터] → 서버
+│                        ↑
+│                    해독 불가!</pre>
+
+            <table>
+                <tr>
+                    <th>위협</th>
+                    <th>HTTP</th>
+                    <th>HTTPS</th>
+                </tr>
+                <tr>
+                    <td>도청</td>
+                    <td>가능</td>
+                    <td>불가</td>
+                </tr>
+                <tr>
+                    <td>데이터 변조</td>
+                    <td>가능</td>
+                    <td>불가</td>
+                </tr>
+                <tr>
+                    <td>피싱</td>
+                    <td>쉬움</td>
+                    <td>어려움</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>SSL/TLS 인증서</h2>
+
+            <pre class="file-tree">인증서 종류
+│
+├── DV (Domain Validation)
+│   ├── 도메인 소유 확인만
+│   ├── 가장 빠름 (몇 분)
+│   └── Let's Encrypt (무료)
+│
+├── OV (Organization Validation)
+│   ├── 조직 정보 확인
+│   └── 며칠 소요
+│
+└── EV (Extended Validation)
+    ├── 엄격한 심사
+    ├── 주소창에 회사명 표시
+    └── 금융기관 등 사용</pre>
+
+            <hr>
+
+            <h2>Let's Encrypt로 무료 인증서 발급</h2>
+
+            <h3>1. Certbot 설치</h3>
+            <pre><code># Ubuntu/Debian
+sudo apt update
+sudo apt install certbot python3-certbot-nginx
+
+# CentOS/RHEL
+sudo yum install epel-release
+sudo yum install certbot python3-certbot-nginx</code></pre>
+
+            <h3>2. 인증서 발급</h3>
+            <pre><code># Nginx 사용 시 (자동 설정)
+sudo certbot --nginx -d healing-hands.com -d www.healing-hands.com
+
+# 독립 실행 (수동 설정)
+sudo certbot certonly --standalone -d healing-hands.com</code></pre>
+
+            <h3>3. 인증서 위치</h3>
+            <pre><code>/etc/letsencrypt/live/healing-hands.com/
+├── fullchain.pem    # 인증서 + 체인
+├── privkey.pem      # 개인키
+├── cert.pem         # 인증서만
+└── chain.pem        # 중간 인증서</code></pre>
+
+            <hr>
+
+            <h2>Nginx SSL 설정</h2>
+
+            <pre><code># /etc/nginx/sites-available/healing-hands
+
+server {
+    listen 80;
+    server_name healing-hands.com www.healing-hands.com;
+
+    # HTTP → HTTPS 리다이렉트
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name healing-hands.com www.healing-hands.com;
+
+    # 인증서 경로
+    ssl_certificate /etc/letsencrypt/live/healing-hands.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/healing-hands.com/privkey.pem;
+
+    # SSL 설정 (보안 강화)
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256;
+
+    # SSL 세션 캐시
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+
+    # OCSP Stapling
+    ssl_stapling on;
+    ssl_stapling_verify on;
+    resolver 8.8.8.8 8.8.4.4 valid=300s;
+
+    # HSTS (HTTP Strict Transport Security)
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    # 나머지 설정...
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}</code></pre>
+
+            <hr>
+
+            <h2>인증서 자동 갱신</h2>
+
+            <p>Let's Encrypt 인증서는 90일마다 갱신이 필요합니다.</p>
+
+            <pre><code># 갱신 테스트
+sudo certbot renew --dry-run
+
+# Cron으로 자동 갱신 설정
+sudo crontab -e
+
+# 매일 새벽 3시에 갱신 시도
+0 3 * * * /usr/bin/certbot renew --quiet --post-hook "systemctl reload nginx"</code></pre>
+
+            <hr>
+
+            <h2>Flask에서 HTTPS 처리</h2>
+
+            <pre><code>from flask import Flask, redirect, request
+
+app = Flask(__name__)
+
+# HTTPS 강제 (프록시 뒤에서)
+@app.before_request
+def force_https():
+    # X-Forwarded-Proto 헤더 확인 (Nginx가 설정)
+    if request.headers.get('X-Forwarded-Proto') == 'http':
+        url = request.url.replace('http://', 'https://', 1)
+        return redirect(url, code=301)
+
+# 또는 Flask-Talisman 사용
+from flask_talisman import Talisman
+
+talisman = Talisman(
+    app,
+    force_https=True,
+    strict_transport_security=True,
+    strict_transport_security_max_age=31536000
+)</code></pre>
+
+            <hr>
+
+            <h2>Mixed Content 문제</h2>
+
+            <p>HTTPS 페이지에서 HTTP 리소스를 로드하면 보안 경고가 발생합니다.</p>
+
+            <pre><code>&lt;!-- ❌ Mixed Content 에러 --&gt;
+&lt;script src="http://example.com/script.js"&gt;&lt;/script&gt;
+&lt;img src="http://example.com/image.png"&gt;
+
+&lt;!-- ✅ HTTPS 또는 프로토콜 상대 경로 --&gt;
+&lt;script src="https://example.com/script.js"&gt;&lt;/script&gt;
+&lt;script src="//example.com/script.js"&gt;&lt;/script&gt;
+&lt;img src="/static/image.png"&gt;</code></pre>
+
+            <hr>
+
+            <h2>SSL Labs 테스트</h2>
+
+            <p>SSL 설정이 올바른지 확인합니다.</p>
+
+            <pre><code># https://www.ssllabs.com/ssltest/
+
+테스트 결과:
+├── A+ : 최고 등급 (목표!)
+├── A  : 우수
+├── B  : 양호 (개선 필요)
+├── C~F: 보안 취약</code></pre>
+
+            <h3>A+ 등급을 위한 설정</h3>
+            <pre><code># TLS 1.0, 1.1 비활성화
+ssl_protocols TLSv1.2 TLSv1.3;
+
+# 약한 암호화 제외
+ssl_ciphers 'ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384';
+
+# HSTS 활성화
+add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload";</code></pre>
+
+            <hr>
+
+            <h2>개발 환경에서 HTTPS</h2>
+
+            <pre><code># 자체 서명 인증서 생성 (개발용)
+openssl req -x509 -newkey rsa:4096 \
+    -keyout key.pem -out cert.pem \
+    -days 365 -nodes \
+    -subj "/CN=localhost"
+
+# Flask 개발 서버에서 사용
+if __name__ == '__main__':
+    app.run(ssl_context=('cert.pem', 'key.pem'))</code></pre>
+
+            <div class="warning">
+                <strong>주의</strong><br>
+                자체 서명 인증서는 브라우저 경고가 발생합니다.<br>
+                개발/테스트 환경에서만 사용하세요.
+            </div>
+
+            <hr>
+
+            <h2>HTTPS 체크리스트</h2>
+
+            <table>
+                <tr>
+                    <th>항목</th>
+                    <th>확인</th>
+                </tr>
+                <tr>
+                    <td>유효한 SSL 인증서 설치</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>HTTP → HTTPS 리다이렉트</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>TLS 1.2 이상만 허용</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>HSTS 헤더 설정</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>인증서 자동 갱신 설정</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>SSL Labs A 등급 이상</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>Mixed Content 없음</td>
+                    <td>☐</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li><strong>HTTPS</strong>는 통신 구간을 암호화</li>
+                <li><strong>Let's Encrypt</strong>로 무료 인증서 발급</li>
+                <li>인증서는 <strong>90일마다 자동 갱신</strong> 설정</li>
+                <li><strong>HSTS</strong>로 HTTPS 강제</li>
+                <li><strong>SSL Labs</strong>에서 설정 검증</li>
+            </ul>
+
+            <blockquote>다음 장에서는 로깅과 모니터링을 배웁니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

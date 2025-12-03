@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>19장: DB → Luckysheet 표시 - 물리치료사를 위한 DB 4권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "4"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📕 물리치료사를 위한</h1>
+                <p>웹 앱 만들기 (4권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">DB → Luckysheet 표시</h1>
+
+            <h2>전체 데이터 흐름</h2>
+
+            <div class="file-tree">
+1. 페이지 로드
+      ↓
+2. JavaScript: API 호출
+      ↓
+3. Flask: SQL 실행
+      ↓
+4. MySQL: 데이터 반환
+      ↓
+5. Flask: JSON 응답
+      ↓
+6. JavaScript: celldata 변환
+      ↓
+7. Luckysheet: 화면 표시
+            </div>
+
+            <hr>
+
+            <h2>백엔드 API (복습)</h2>
+
+            <pre><code># app.py
+
+@app.route('/api/reservations/sheet')
+def get_reservations_for_sheet():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 환자 목록
+        cursor.execute("""
+            SELECT patient_id, name
+            FROM patients
+            ORDER BY name
+        """)
+        patients = cursor.fetchall()
+
+        # 예약 데이터
+        cursor.execute("""
+            SELECT
+                ts.patient_id,
+                ts.session_date,
+                TIME_FORMAT(ts.start_time, '%H:%i') as start_time,
+                t.name as therapist_name
+            FROM treatment_sessions ts
+            JOIN therapists t ON ts.therapist_id = t.therapist_id
+            WHERE ts.session_date BETWEEN %s AND %s
+              AND ts.status != '취소'
+        """, (start_date, end_date))
+
+        reservations_raw = cursor.fetchall()
+
+        # 환자별, 날짜별로 그룹화
+        reservations = {}
+        for r in reservations_raw:
+            pid = r['patient_id']
+            date = str(r['session_date'])
+
+            if pid not in reservations:
+                reservations[pid] = {}
+
+            reservations[pid][date] = {
+                'time': r['start_time'],
+                'therapist': r['therapist_name']
+            }
+
+        return jsonify({
+            'success': True,
+            'patients': patients,
+            'reservations': reservations
+        })
+    finally:
+        conn.close()</code></pre>
+
+            <hr>
+
+            <h2>프론트엔드 전체 코드</h2>
+
+            <pre><code>// static/js/sheet.js
+
+// 치료사별 색상
+const THERAPIST_COLORS = {
+    '김치료': { bg: '#dbeafe', fc: '#1e40af' },
+    '이치료': { bg: '#fef3c7', fc: '#92400e' },
+    '박치료': { bg: '#dcfce7', fc: '#166534' },
+    '최치료': { bg: '#f3e8ff', fc: '#6b21a8' }
+};
+
+// 날짜 범위 생성
+function getDateRange(startDate, days) {
+    const dates = [];
+    const start = new Date(startDate);
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+
+    for (let i = 0; i < days; i++) {
+        const date = new Date(start);
+        date.setDate(start.getDate() + i);
+
+        dates.push({
+            date: date.toISOString().split('T')[0],
+            display: `${date.getMonth() + 1}/${date.getDate()}(${dayNames[date.getDay()]})`,
+            day: date.getDay()
+        });
+    }
+    return dates;
+}
+
+// 헤더 행 생성
+function createHeaderCells(dates) {
+    const cells = [{
+        r: 0, c: 0,
+        v: { v: '환자명', m: '환자명', bg: '#1e293b', fc: '#fff', bl: 1, ht: 1 }
+    }];
+
+    dates.forEach((d, i) => {
+        let bg = '#f1f5f9';
+        let fc = '#334155';
+
+        if (d.day === 0) { bg = '#fef2f2'; fc = '#dc2626'; }
+        if (d.day === 6) { bg = '#eff6ff'; fc = '#2563eb'; }
+
+        cells.push({
+            r: 0, c: i + 1,
+            v: { v: d.date, m: d.display, bg, fc, bl: 1, ht: 1 }
+        });
+    });
+
+    return cells;
+}
+
+// 환자 행 생성
+function createPatientCells(patients) {
+    return patients.map((p, i) => ({
+        r: i + 1,
+        c: 0,
+        v: {
+            v: p.patient_id,
+            m: p.name,
+            bg: '#fee2e2',
+            fc: '#991b1b',
+            bl: 1
+        }
+    }));
+}
+
+// 예약 셀 생성
+function createReservationCells(patients, dates, reservations) {
+    const cells = [];
+
+    patients.forEach((patient, rowIdx) => {
+        const patientRes = reservations[patient.patient_id] || {};
+
+        dates.forEach((d, colIdx) => {
+            const res = patientRes[d.date];
+            if (res) {
+                const colors = THERAPIST_COLORS[res.therapist] || { bg: '#f5f5f5', fc: '#333' };
+                cells.push({
+                    r: rowIdx + 1,
+                    c: colIdx + 1,
+                    v: {
+                        v: `${res.time}|${res.therapist}`,  // 실제값: 시간|치료사
+                        m: res.time,                        // 표시값: 시간만
+                        bg: colors.bg,
+                        fc: colors.fc,
+                        ht: 1
+                    }
+                });
+            }
+        });
+    });
+
+    return cells;
+}
+
+// 메인 초기화 함수
+async function initSheet(startDateStr, days = 14) {
+    const startDate = startDateStr || new Date().toISOString().split('T')[0];
+    const dates = getDateRange(startDate, days);
+
+    const endDate = dates[dates.length - 1].date;
+
+    // API 호출
+    const response = await fetch(
+        `/api/reservations/sheet?start_date=${startDate}&end_date=${endDate}`
+    );
+    const { patients, reservations } = await response.json();
+
+    // 셀 데이터 생성
+    const celldata = [
+        ...createHeaderCells(dates),
+        ...createPatientCells(patients),
+        ...createReservationCells(patients, dates, reservations)
+    ];
+
+    // 기존 시트 제거
+    if (window.luckysheet && luckysheet.destroy) {
+        luckysheet.destroy();
+    }
+
+    // Luckysheet 생성
+    luckysheet.create({
+        container: 'luckysheet',
+        title: '예약 현황',
+        lang: 'ko',
+        showtoolbar: false,
+        showsheetbar: false,
+        showstatisticBar: false,
+        allowEdit: true,
+        enableAddRow: false,
+        data: [{
+            name: '예약',
+            celldata: celldata,
+            row: patients.length + 1,
+            column: dates.length + 1,
+            frozen: {
+                type: 'rangeBoth',
+                range: { row_focus: 0, column_focus: 0 }
+            },
+            config: {
+                columnlen: { 0: 100 }
+            }
+        }]
+    });
+
+    // 전역 변수에 저장 (나중에 수정할 때 사용)
+    window.sheetData = { patients, dates, reservations };
+}
+
+// 페이지 로드 시 실행
+document.addEventListener('DOMContentLoaded', () => {
+    initSheet();
+});</code></pre>
+
+            <hr>
+
+            <h2>HTML 템플릿</h2>
+
+            <pre><code>&lt;!-- templates/reservations.html --&gt;
+{% extends "base.html" %}
+
+{% block title %}예약 관리{% endblock %}
+
+{% block content %}
+&lt;div class="sheet-container"&gt;
+    &lt;div class="sheet-header"&gt;
+        &lt;h1&gt;예약 현황&lt;/h1&gt;
+        &lt;div class="controls"&gt;
+            &lt;input type="date" id="startDate"&gt;
+            &lt;select id="days"&gt;
+                &lt;option value="7"&gt;1주&lt;/option&gt;
+                &lt;option value="14" selected&gt;2주&lt;/option&gt;
+                &lt;option value="30"&gt;1개월&lt;/option&gt;
+            &lt;/select&gt;
+            &lt;button onclick="reloadSheet()"&gt;적용&lt;/button&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class="legend" id="legend"&gt;&lt;/div&gt;
+
+    &lt;div id="luckysheet" style="width: 100%; height: calc(100vh - 200px);"&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;script&gt;
+function reloadSheet() {
+    const start = document.getElementById('startDate').value;
+    const days = parseInt(document.getElementById('days').value);
+    initSheet(start, days);
+}
+&lt;/script&gt;
+{% endblock %}</code></pre>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li>DB → API → JavaScript → Luckysheet 흐름을 구현했습니다</li>
+                <li>환자, 날짜, 예약 데이터를 celldata로 변환합니다</li>
+                <li>날짜 범위 컨트롤로 표시 기간을 조절합니다</li>
+            </ul>
+
+            <blockquote>다음 장에서는 셀 편집을 감지하는 방법을 배웁니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

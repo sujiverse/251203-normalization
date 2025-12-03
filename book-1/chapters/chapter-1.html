@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[1권] 데이터베이스 기초 개념 - 물리치료사를 위한 DB</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "1"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📗 1권: 정규화 편</h1>
+                <p>데이터베이스 기초 개념</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">[1권] 데이터베이스 기초 개념</h1>
+
+            <h2>🤯 이런 경험 있으시죠?</h2>
+            <p>물리치료실에서 흔히 겪는 상황들...</p>
+
+            <h3>상황 1: 끝없는 엑셀 파일</h3>
+            <pre><code>📁 내 문서
+├── 환자명단_2023.xlsx
+├── 환자명단_2024.xlsx
+├── 환자명단_최종.xlsx
+├── 환자명단_진짜최종.xlsx
+├── 환자명단_이게진짜.xlsx
+├── 1월_치료기록.xlsx
+├── 2월_치료기록.xlsx
+├── 매출정산_1월.xlsx
+├── 치료사별_실적.xlsx
+└── 통계용_복사본.xlsx</code></pre>
+            <p><strong>어떤 파일이 최신인지 모르겠고, 같은 데이터가 여러 파일에 흩어져 있어요.</strong></p>
+
+            <h3>상황 2: 매달 반복되는 표 만들기</h3>
+            <pre><code>"이번 달 치료사별 실적 정리해주세요"
+→ 새 시트 만들고
+→ 이름 복붙하고
+→ VLOOKUP 걸고
+→ 수식 에러 나고
+→ 결국 수작업으로 세고...
+
+다음 달에 또 처음부터 반복! 😫</code></pre>
+
+            <h3>상황 3: 데이터가 안 맞아요</h3>
+            <pre><code>원장님: "김철수 환자 총 몇 회 치료받았어요?"
+
+치료기록 파일: 12회
+수납 파일: 10회
+환자카드: 11회
+
+→ 뭐가 맞는 거죠...? 🤷</code></pre>
+
+            <h3>상황 4: 정보 찾기가 너무 어려워요</h3>
+            <pre><code>"박물리 선생님이 이번 달에 도수치료 몇 건 했어요?"
+
+→ 치료기록 파일 열고
+→ 필터 걸고
+→ 아 이건 1월 파일이네
+→ 2월 파일 다시 열고
+→ 수작업으로 세기...
+
+30분 후: "87건이요!" (맞는지 확신 없음)</code></pre>
+            <hr>
+
+            <h2>왜 이런 일이 생길까요?</h2>
+            <h3>엑셀의 근본적인 한계</h3>
+            <table>
+                <tr><th>문제</th><th>엑셀에서 일어나는 일</th></tr>
+                <tr><td><strong>데이터 중복</strong></td><td>김철수 연락처가 10개 파일에 각각 저장됨</td></tr>
+                <tr><td><strong>연결 안 됨</strong></td><td>환자 파일과 치료 파일이 따로 놀아요</td></tr>
+                <tr><td><strong>버전 관리 불가</strong></td><td>누가 언제 뭘 바꿨는지 모름</td></tr>
+                <tr><td><strong>동시 작업 불가</strong></td><td>"다른 사용자가 편집 중입니다"</td></tr>
+                <tr><td><strong>데이터 검증 없음</strong></td><td>전화번호에 이름이 들어가도 저장됨</td></tr>
+            </table>
+
+            <h3>핵심 문제: "표"를 계속 새로 만든다</h3>
+            <pre><code>[엑셀 방식]
+필요할 때마다 → 새 표 만들기 → 데이터 복붙 → 또 새 표...
+
+    ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+    │ 환자명단    │     │ 치료기록    │     │ 매출정산    │
+    │ (복사본1)   │     │ (복사본2)   │     │ (복사본3)   │
+    └─────────────┘     └─────────────┘     └─────────────┘
+         ↑                    ↑                    ↑
+       같은 데이터가 여러 곳에 따로따로!</code></pre>
+
+            <pre><code>[데이터베이스 방식]
+데이터는 한 곳에 → 필요할 때 꺼내서 보기
+
+    ┌─────────────────────────────────────┐
+    │            데이터베이스              │
+    │  ┌────────┐ ┌────────┐ ┌────────┐  │
+    │  │ 환자   │ │ 치료   │ │ 청구   │  │
+    │  └────────┘ └────────┘ └────────┘  │
+    └─────────────────────────────────────┘
+              ↓         ↓         ↓
+         필요한 정보만 조합해서 조회!</code></pre>
+            <hr>
+
+            <h2>엑셀 vs 데이터베이스 비교</h2>
+            <table>
+                <tr><th>상황</th><th>엑셀</th><th>데이터베이스</th></tr>
+                <tr><td>김철수 연락처 변경</td><td>10개 파일 찾아서 각각 수정</td><td><strong>1번만 수정하면 끝!</strong></td></tr>
+                <tr><td>이번 달 박물리 실적</td><td>파일 열고, 필터, 수작업 계산</td><td><strong>쿼리 한 줄로 즉시 조회</strong></td></tr>
+                <tr><td>잘못된 데이터 입력</td><td>나중에 발견... 이미 늦음</td><td><strong>입력 시점에 차단</strong></td></tr>
+                <tr><td>3명이 동시 작업</td><td>"파일 사용 중" 에러</td><td><strong>동시 작업 가능</strong></td></tr>
+                <tr><td>작년 1월 데이터 찾기</td><td>폴더 뒤지기... 어디 있지?</td><td><strong>날짜 조건만 바꾸면 끝</strong></td></tr>
+            </table>
+            <hr>
+
+            <h2>데이터베이스의 핵심 원칙</h2>
+            <blockquote><strong>💡 "데이터는 한 번만 저장하고, 여러 방식으로 조회한다"</strong></blockquote>
+
+            <h3>엑셀: 보여주고 싶은 대로 저장</h3>
+            <pre><code>[월간 실적표.xlsx] - 보고용으로 예쁘게 만든 표
+치료사 | 1월 도수 | 1월 운동 | 2월 도수 | 2월 운동 | 합계
+박물리 | 52       | 35       | 48       | 40       | 175
+이재활 | 25       | 40       | 30       | 38       | 133
+
+→ 3월 되면? 컬럼 추가하고 수식 수정하고...
+→ 환자별로 보고 싶으면? 새 표 만들어야 함</code></pre>
+
+            <h3>데이터베이스: 있는 그대로 저장</h3>
+            <pre><code>[치료기록] 테이블 - 사실 그대로 저장
+세션ID | 환자ID | 치료사ID | 날짜       | 치료종류
+1      | P001   | T001     | 2024-01-15 | 도수치료
+2      | P001   | T001     | 2024-01-17 | 운동치료
+3      | P002   | T002     | 2024-01-15 | 도수치료
+...
+
+→ 치료사별 월간 실적? 쿼리로 조회!
+→ 환자별 치료 이력? 쿼리로 조회!
+→ 3월 데이터? 그냥 추가만 하면 됨!</code></pre>
+            <hr>
+
+            <h2>실제로 어떻게 달라지나요?</h2>
+            <h3>Before: 엑셀 시절</h3>
+            <pre><code>원장님: "박물리 선생님 1월 도수치료 몇 건이에요?"
+
+1. 2024년_치료기록.xlsx 파일 찾기
+2. 1월 시트로 이동
+3. 치료사 컬럼 필터 → 박물리
+4. 치료종류 컬럼 필터 → 도수치료
+5. 행 수 세기... 또는 COUNTIFS 수식 작성
+6. 다른 파일에도 있나? 확인...
+
+⏱️ 소요시간: 5~10분 (파일 찾는 시간 제외)</code></pre>
+
+            <h3>After: 데이터베이스</h3>
+            <pre><code>원장님: "박물리 선생님 1월 도수치료 몇 건이에요?"
+
+SELECT COUNT(*)
+FROM 치료기록
+WHERE 치료사 = '박물리'
+  AND 치료종류 = '도수치료'
+  AND 날짜 BETWEEN '2024-01-01' AND '2024-01-31';
+
+결과: 52건
+
+⏱️ 소요시간: 10초</code></pre>
+
+            <p><strong>그리고 이 쿼리는 저장해뒀다가 날짜만 바꿔서 매달 재사용!</strong></p>
+            <hr>
+
+            <h2>용어 번역표</h2>
+            <p>엑셀에서 쓰던 용어를 데이터베이스 용어로 바꿔볼게요.</p>
+            <table>
+                <tr><th>엑셀 용어</th><th>DB 용어</th><th>쉽게 말하면</th></tr>
+                <tr><td>파일 (.xlsx)</td><td>데이터베이스</td><td>정보 창고 전체</td></tr>
+                <tr><td>시트 (Sheet)</td><td>테이블 (Table)</td><td>한 종류의 정보를 담는 표</td></tr>
+                <tr><td>행 (Row)</td><td>레코드 (Record)</td><td>정보 한 건</td></tr>
+                <tr><td>열 (Column)</td><td>필드/컬럼</td><td>정보의 항목</td></tr>
+                <tr><td>VLOOKUP</td><td>JOIN</td><td>다른 표에서 값 가져오기</td></tr>
+                <tr><td>필터</td><td>WHERE 조건</td><td>원하는 것만 골라보기</td></tr>
+                <tr><td>COUNTIF, SUMIF</td><td>COUNT, SUM + GROUP BY</td><td>집계/통계</td></tr>
+            </table>
+            <hr>
+
+            <h2>기본키 (Primary Key)</h2>
+            <p>각 레코드를 <strong>유일하게 구분</strong>하는 값입니다.</p>
+            <pre><code>환자번호(PK) | 이름   | 연락처
+P001         | 김철수 | 010-1234-5678
+P002         | 김철수 | 010-9999-8888  ← 동명이인도 구분 가능!</code></pre>
+            <h3>좋은 기본키의 조건</h3>
+            <ol>
+                <li><strong>유일해야 함</strong> - 중복 불가</li>
+                <li><strong>바뀌지 않아야 함</strong> - 안정적인 값</li>
+                <li><strong>비어있으면 안 됨</strong> - NULL 불가</li>
+            </ol>
+            <hr>
+
+            <h2>외래키와 관계</h2>
+            <p><strong>외래키(FK)</strong>: 다른 테이블의 기본키를 참조하는 컬럼</p>
+            <pre><code>[환자] 테이블
+환자번호(PK) | 이름   | 연락처
+P001         | 김철수 | 010-1234
+
+[치료세션] 테이블
+세션번호(PK) | 환자번호(FK) | 치료일     | 치료내용
+S001         | P001         | 2024-01-15 | 도수치료
+S002         | P001         | 2024-01-17 | 운동치료</code></pre>
+            <p>김철수 연락처가 바뀌면? <strong>[환자] 테이블에서 딱 한 번만</strong> 수정하면 끝!</p>
+            <p>이게 바로 엑셀에서 10개 파일 수정하던 것과의 차이예요.</p>
+            <hr>
+
+            <h2>관계의 종류</h2>
+            <h3>1:N (일대다) - 가장 흔함!</h3>
+            <ul>
+                <li>환자 1명 : 치료세션 여러 개</li>
+                <li>치료사 1명 : 치료세션 여러 개</li>
+            </ul>
+            <h3>N:M (다대다)</h3>
+            <ul>
+                <li>환자 : 진단 = N:M (한 환자가 여러 진단, 하나의 진단이 여러 환자)</li>
+                <li><strong>연결 테이블</strong>로 풀어야 함</li>
+            </ul>
+            <hr>
+
+            <h2>💡 핵심 정리</h2>
+            <blockquote>
+                <strong>엑셀의 문제</strong>: 같은 데이터가 여러 파일에 중복 → 불일치, 수정 지옥<br><br>
+                <strong>DB의 해결</strong>: 데이터는 한 곳에만 저장 → 연결해서 조회<br><br>
+                <strong>결과</strong>: 표를 새로 만들 필요 없이, 쿼리만 바꿔서 원하는 정보 즉시 조회!
+            </blockquote>
+
+            <div class="nav-buttons">
+                <a href="../index.html" class="nav-btn">← 이전</a>
+                <span class="page-num">1 / 12</span>
+                <a href="chapter-2.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/nav.js"></script>
+</body>
+</html>

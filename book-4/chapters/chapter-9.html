@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>9장: 예약 조회 API - 물리치료사를 위한 DB 4권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "4"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📕 물리치료사를 위한</h1>
+                <p>웹 앱 만들기 (4권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">예약 조회 API</h1>
+
+            <h2>예약 데이터 구조</h2>
+
+            <p>3권에서 만든 <code>treatment_sessions</code> 테이블을 사용합니다.</p>
+
+            <table>
+                <tr>
+                    <th>컬럼</th>
+                    <th>설명</th>
+                </tr>
+                <tr>
+                    <td>session_id</td>
+                    <td>세션 ID (PK)</td>
+                </tr>
+                <tr>
+                    <td>patient_id</td>
+                    <td>환자 ID (FK)</td>
+                </tr>
+                <tr>
+                    <td>therapist_id</td>
+                    <td>치료사 ID (FK)</td>
+                </tr>
+                <tr>
+                    <td>session_date</td>
+                    <td>예약 날짜</td>
+                </tr>
+                <tr>
+                    <td>start_time</td>
+                    <td>시작 시간</td>
+                </tr>
+                <tr>
+                    <td>status</td>
+                    <td>상태 (예약/완료/취소)</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>날짜별 예약 조회</h2>
+
+            <pre><code>@app.route('/api/reservations')
+def get_reservations():
+    date = request.args.get('date')  # 2024-12-01 형식
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        sql = """
+            SELECT
+                ts.session_id,
+                ts.session_date,
+                ts.start_time,
+                ts.status,
+                p.patient_id,
+                p.name as patient_name,
+                t.therapist_id,
+                t.name as therapist_name
+            FROM treatment_sessions ts
+            JOIN patients p ON ts.patient_id = p.patient_id
+            JOIN therapists t ON ts.therapist_id = t.therapist_id
+            WHERE 1=1
+        """
+        params = []
+
+        if date:
+            sql += " AND ts.session_date = %s"
+            params.append(date)
+
+        sql += " ORDER BY ts.session_date, ts.start_time"
+
+        cursor.execute(sql, params)
+        reservations = cursor.fetchall()
+
+        return jsonify({
+            'success': True,
+            'data': reservations,
+            'count': len(reservations)
+        })
+    finally:
+        conn.close()</code></pre>
+
+            <h3>테스트</h3>
+            <ul>
+                <li><code>/api/reservations</code> → 전체 예약</li>
+                <li><code>/api/reservations?date=2024-12-01</code> → 특정 날짜</li>
+            </ul>
+
+            <hr>
+
+            <h2>날짜 범위 조회</h2>
+
+            <p>Luckysheet에서 여러 날짜의 예약을 한번에 가져와야 합니다.</p>
+
+            <pre><code>@app.route('/api/reservations')
+def get_reservations():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    therapist_id = request.args.get('therapist_id', type=int)
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        sql = """
+            SELECT
+                ts.session_id,
+                ts.session_date,
+                TIME_FORMAT(ts.start_time, '%H:%i') as start_time,
+                ts.status,
+                p.patient_id,
+                p.name as patient_name,
+                t.therapist_id,
+                t.name as therapist_name
+            FROM treatment_sessions ts
+            JOIN patients p ON ts.patient_id = p.patient_id
+            JOIN therapists t ON ts.therapist_id = t.therapist_id
+            WHERE 1=1
+        """
+        params = []
+
+        if start_date:
+            sql += " AND ts.session_date >= %s"
+            params.append(start_date)
+
+        if end_date:
+            sql += " AND ts.session_date <= %s"
+            params.append(end_date)
+
+        if therapist_id:
+            sql += " AND ts.therapist_id = %s"
+            params.append(therapist_id)
+
+        sql += " ORDER BY ts.session_date, ts.start_time"
+
+        cursor.execute(sql, params)
+        reservations = cursor.fetchall()
+
+        return jsonify({
+            'success': True,
+            'data': reservations,
+            'count': len(reservations),
+            'filters': {
+                'start_date': start_date,
+                'end_date': end_date,
+                'therapist_id': therapist_id
+            }
+        })
+    finally:
+        conn.close()</code></pre>
+
+            <h3>테스트</h3>
+            <ul>
+                <li><code>/api/reservations?start_date=2024-12-01&end_date=2024-12-07</code></li>
+                <li><code>/api/reservations?therapist_id=1</code></li>
+            </ul>
+
+            <hr>
+
+            <h2>시트용 데이터 형식</h2>
+
+            <p>Luckysheet에서 쉽게 사용할 수 있는 형태로 변환합니다.</p>
+
+            <pre><code>@app.route('/api/reservations/sheet')
+def get_reservations_for_sheet():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 환자 목록 (행 데이터)
+        cursor.execute("SELECT patient_id, name FROM patients ORDER BY name")
+        patients = cursor.fetchall()
+
+        # 예약 데이터
+        cursor.execute("""
+            SELECT
+                ts.patient_id,
+                ts.session_date,
+                TIME_FORMAT(ts.start_time, '%H:%i') as start_time,
+                t.name as therapist_name
+            FROM treatment_sessions ts
+            JOIN therapists t ON ts.therapist_id = t.therapist_id
+            WHERE ts.session_date BETWEEN %s AND %s
+              AND ts.status != '취소'
+            ORDER BY ts.session_date, ts.start_time
+        """, (start_date, end_date))
+        reservations = cursor.fetchall()
+
+        # 날짜별로 그룹화
+        # {patient_id: {date: {time, therapist}, ...}, ...}
+        sheet_data = {}
+        for res in reservations:
+            pid = res['patient_id']
+            date = str(res['session_date'])
+
+            if pid not in sheet_data:
+                sheet_data[pid] = {}
+
+            sheet_data[pid][date] = {
+                'time': res['start_time'],
+                'therapist': res['therapist_name']
+            }
+
+        return jsonify({
+            'success': True,
+            'patients': patients,
+            'reservations': sheet_data,
+            'date_range': {
+                'start': start_date,
+                'end': end_date
+            }
+        })
+    finally:
+        conn.close()</code></pre>
+
+            <hr>
+
+            <h2>응답 예시</h2>
+
+            <pre><code>{
+    "success": true,
+    "patients": [
+        {"patient_id": 1, "name": "김철수"},
+        {"patient_id": 2, "name": "이영희"}
+    ],
+    "reservations": {
+        "1": {
+            "2024-12-01": {"time": "10:00", "therapist": "박치료"},
+            "2024-12-03": {"time": "14:00", "therapist": "김치료"}
+        },
+        "2": {
+            "2024-12-02": {"time": "11:00", "therapist": "이치료"}
+        }
+    }
+}</code></pre>
+
+            <p>이 형식이면 Luckysheet에서:</p>
+            <ul>
+                <li>patients → 행 헤더 (첫 열)</li>
+                <li>날짜 → 열 헤더 (첫 행)</li>
+                <li>reservations → 셀 내용</li>
+            </ul>
+
+            <hr>
+
+            <h2>치료사 목록 API</h2>
+
+            <p>드롭다운이나 색상 지정용으로 필요합니다.</p>
+
+            <pre><code>@app.route('/api/therapists')
+def get_therapists():
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT therapist_id, name, specialty
+            FROM therapists
+            WHERE is_active = 1
+            ORDER BY name
+        """)
+        therapists = cursor.fetchall()
+
+        return jsonify({
+            'success': True,
+            'data': therapists
+        })
+    finally:
+        conn.close()</code></pre>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li>날짜별/범위별 예약 조회 API를 만들었습니다</li>
+                <li>Luckysheet용 데이터 형식을 설계했습니다</li>
+                <li>JOIN으로 환자명, 치료사명을 함께 가져옵니다</li>
+            </ul>
+
+            <blockquote>다음 장에서는 예약 생성/수정/삭제 API를 만듭니다. CRUD 완성!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

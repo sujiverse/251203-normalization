@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>9장: DB 접근 제어 - 물리치료사를 위한 DB 5권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "5"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>🛡️ 5권: 보안 편</h1>
+                <p>DB & 서버 보안</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">DB 접근 제어</h1>
+
+            <h2>네트워크 수준의 보안</h2>
+
+            <p>DB 권한 외에도 네트워크 레벨에서 접근을 제어해야 합니다.</p>
+
+            <pre class="file-tree">접근 제어 계층
+│
+├── 1. 방화벽 (Firewall)
+│   └── 허용된 IP만 3306 포트 접근
+│
+├── 2. MySQL 호스트 제한
+│   └── 사용자별 접속 IP 제한
+│
+├── 3. MySQL 권한
+│   └── 테이블/칼럼 단위 권한
+│
+└── 4. 앱 레벨 접근 제어
+    └── 사용자 역할별 기능 제한</pre>
+
+            <hr>
+
+            <h2>MySQL 바인드 주소 설정</h2>
+
+            <p>MySQL이 어떤 네트워크 인터페이스에서 접속을 받을지 설정합니다.</p>
+
+            <pre><code># my.cnf 또는 my.ini
+
+[mysqld]
+# 로컬에서만 접속 허용 (가장 안전)
+bind-address = 127.0.0.1
+
+# 특정 IP에서만 접속 허용
+bind-address = 192.168.1.10
+
+# 모든 IP에서 접속 허용 (위험!)
+bind-address = 0.0.0.0</code></pre>
+
+            <div class="warning">
+                <strong>주의</strong><br>
+                bind-address = 0.0.0.0은 외부 공격에 노출됩니다!<br>
+                반드시 방화벽과 함께 사용하세요.
+            </div>
+
+            <hr>
+
+            <h2>리눅스 방화벽 (iptables)</h2>
+
+            <pre><code># 현재 규칙 확인
+sudo iptables -L -n
+
+# MySQL 포트(3306) - 특정 IP만 허용
+sudo iptables -A INPUT -p tcp --dport 3306 -s 192.168.1.100 -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport 3306 -s 192.168.1.101 -j ACCEPT
+
+# 나머지 IP는 차단
+sudo iptables -A INPUT -p tcp --dport 3306 -j DROP
+
+# 규칙 저장 (Ubuntu)
+sudo netfilter-persistent save</code></pre>
+
+            <hr>
+
+            <h2>리눅스 방화벽 (firewalld)</h2>
+
+            <pre><code># CentOS/RHEL에서 사용
+
+# 현재 상태 확인
+sudo firewall-cmd --list-all
+
+# MySQL 포트 열기 (특정 IP만)
+sudo firewall-cmd --permanent --add-rich-rule='
+    rule family="ipv4"
+    source address="192.168.1.100"
+    port protocol="tcp" port="3306"
+    accept'
+
+# 적용
+sudo firewall-cmd --reload</code></pre>
+
+            <hr>
+
+            <h2>리눅스 방화벽 (ufw)</h2>
+
+            <pre><code># Ubuntu에서 사용
+
+# ufw 활성화
+sudo ufw enable
+
+# SSH 허용 (먼저!)
+sudo ufw allow ssh
+
+# MySQL - 특정 IP만 허용
+sudo ufw allow from 192.168.1.100 to any port 3306
+sudo ufw allow from 192.168.1.101 to any port 3306
+
+# 상태 확인
+sudo ufw status</code></pre>
+
+            <hr>
+
+            <h2>윈도우 방화벽</h2>
+
+            <pre><code># PowerShell (관리자 권한)
+
+# MySQL 포트 열기 (특정 IP만)
+New-NetFirewallRule -DisplayName "MySQL Allow" `
+    -Direction Inbound `
+    -Protocol TCP `
+    -LocalPort 3306 `
+    -RemoteAddress 192.168.1.100,192.168.1.101 `
+    -Action Allow
+
+# 규칙 확인
+Get-NetFirewallRule -DisplayName "MySQL*"</code></pre>
+
+            <hr>
+
+            <h2>AWS 보안 그룹</h2>
+
+            <p>클라우드 환경에서는 보안 그룹으로 네트워크 접근을 제어합니다.</p>
+
+            <pre><code># AWS CLI로 보안 그룹 규칙 추가
+
+# RDS(MySQL)용 보안 그룹에 규칙 추가
+aws ec2 authorize-security-group-ingress \
+    --group-id sg-1234567890abcdef0 \
+    --protocol tcp \
+    --port 3306 \
+    --source-group sg-0987654321fedcba0  # 앱 서버 보안 그룹</code></pre>
+
+            <pre class="file-tree">AWS 권장 구성
+│
+├── 웹 서버 (Public Subnet)
+│   └── 보안 그룹: 80, 443 허용
+│
+└── DB 서버 (Private Subnet)
+    └── 보안 그룹: 웹 서버 보안 그룹에서만 3306 허용
+    └── 인터넷에서 직접 접근 불가!</pre>
+
+            <hr>
+
+            <h2>VPN을 통한 접근</h2>
+
+            <p>관리자가 외부에서 DB에 접근해야 할 때는 VPN을 사용합니다.</p>
+
+            <pre class="file-tree">VPN 접근 구성
+│
+├── 관리자 PC
+│   └── VPN 클라이언트
+│
+├── VPN 서버 (회사 네트워크 내)
+│   └── 인증된 사용자만 접속
+│
+└── DB 서버
+    └── VPN 서버 IP만 허용</pre>
+
+            <hr>
+
+            <h2>SSH 터널링</h2>
+
+            <p>SSH를 통해 암호화된 터널을 만들어 DB에 접근합니다.</p>
+
+            <pre><code># 로컬 포트 포워딩
+# 로컬 3307 → 서버의 localhost:3306
+
+ssh -L 3307:localhost:3306 user@db-server.com
+
+# 다른 터미널에서 접속
+mysql -h 127.0.0.1 -P 3307 -u healing_app -p</code></pre>
+
+            <pre><code># Python에서 SSH 터널 사용
+from sshtunnel import SSHTunnelForwarder
+import mysql.connector
+
+# SSH 터널 생성
+tunnel = SSHTunnelForwarder(
+    ('db-server.com', 22),
+    ssh_username='user',
+    ssh_pkey='/path/to/private_key',
+    remote_bind_address=('127.0.0.1', 3306)
+)
+tunnel.start()
+
+# 터널을 통해 DB 연결
+conn = mysql.connector.connect(
+    host='127.0.0.1',
+    port=tunnel.local_bind_port,
+    user='healing_app',
+    password='password',
+    database='healing_hands'
+)
+
+# 사용 후 정리
+conn.close()
+tunnel.stop()</code></pre>
+
+            <hr>
+
+            <h2>MySQL 연결 로그</h2>
+
+            <p>누가 언제 접속했는지 기록합니다.</p>
+
+            <pre><code># my.cnf
+
+[mysqld]
+# 일반 쿼리 로그 (성능 영향 있음)
+general_log = 1
+general_log_file = /var/log/mysql/general.log
+
+# 연결 로그
+log_error = /var/log/mysql/error.log</code></pre>
+
+            <pre><code>-- 현재 연결 확인
+SHOW PROCESSLIST;
+
+-- 연결 이력 (performance_schema)
+SELECT * FROM performance_schema.events_statements_summary_by_user_by_event_name
+WHERE EVENT_NAME LIKE '%connect%';</code></pre>
+
+            <hr>
+
+            <h2>접속 실패 시 잠금</h2>
+
+            <pre><code># my.cnf
+
+[mysqld]
+# 연결 실패 시 계정 잠금 (MySQL 8.0+)
+# 3번 실패 시 2일 잠금
+CREATE USER 'healing_app'@'localhost'
+IDENTIFIED BY 'password'
+FAILED_LOGIN_ATTEMPTS 3
+PASSWORD_LOCK_TIME 2;</code></pre>
+
+            <hr>
+
+            <h2>힐링손 시스템 네트워크 구성</h2>
+
+            <pre class="file-tree">권장 구성
+│
+├── 웹 서버 (192.168.1.10)
+│   ├── Flask 앱 실행
+│   ├── 방화벽: 80, 443 외부 허용
+│   └── DB 접속: 192.168.1.20:3306
+│
+└── DB 서버 (192.168.1.20)
+    ├── MySQL 실행
+    ├── bind-address: 192.168.1.20
+    └── 방화벽: 3306은 192.168.1.10만 허용</pre>
+
+            <hr>
+
+            <h2>접근 제어 체크리스트</h2>
+
+            <table>
+                <tr>
+                    <th>항목</th>
+                    <th>확인</th>
+                </tr>
+                <tr>
+                    <td>MySQL bind-address 설정</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>방화벽으로 3306 포트 제한</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>DB 사용자 호스트 제한</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>원격 접속 시 VPN/SSH 터널 사용</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>연결 로그 활성화</td>
+                    <td>☐</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li><strong>bind-address</strong>로 MySQL 접속 인터페이스 제한</li>
+                <li><strong>방화벽</strong>으로 네트워크 레벨 접근 제어</li>
+                <li>클라우드에서는 <strong>보안 그룹</strong> 활용</li>
+                <li>외부 접근은 <strong>VPN</strong> 또는 <strong>SSH 터널</strong> 사용</li>
+                <li><strong>연결 로그</strong>로 접속 기록 관리</li>
+            </ul>
+
+            <blockquote>다음 장에서는 민감 데이터 암호화를 배웁니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

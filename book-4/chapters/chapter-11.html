@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>11장: HTML 구조 잡기 - 물리치료사를 위한 DB 4권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "4"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📕 물리치료사를 위한</h1>
+                <p>웹 앱 만들기 (4권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">HTML 구조 잡기</h1>
+
+            <h2>HTML이란?</h2>
+
+            <p>HTML(HyperText Markup Language)은 웹 페이지의 <strong>뼈대</strong>입니다.</p>
+
+            <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+    &lt;title&gt;페이지 제목&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    여기에 내용이 들어갑니다
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+
+            <hr>
+
+            <h2>기본 태그들</h2>
+
+            <table>
+                <tr>
+                    <th>태그</th>
+                    <th>용도</th>
+                    <th>예시</th>
+                </tr>
+                <tr>
+                    <td><code>&lt;h1&gt;~&lt;h6&gt;</code></td>
+                    <td>제목</td>
+                    <td>&lt;h1&gt;큰 제목&lt;/h1&gt;</td>
+                </tr>
+                <tr>
+                    <td><code>&lt;p&gt;</code></td>
+                    <td>문단</td>
+                    <td>&lt;p&gt;본문 텍스트&lt;/p&gt;</td>
+                </tr>
+                <tr>
+                    <td><code>&lt;div&gt;</code></td>
+                    <td>영역 구분</td>
+                    <td>&lt;div&gt;박스&lt;/div&gt;</td>
+                </tr>
+                <tr>
+                    <td><code>&lt;span&gt;</code></td>
+                    <td>인라인 영역</td>
+                    <td>&lt;span&gt;텍스트&lt;/span&gt;</td>
+                </tr>
+                <tr>
+                    <td><code>&lt;a&gt;</code></td>
+                    <td>링크</td>
+                    <td>&lt;a href="..."&gt;클릭&lt;/a&gt;</td>
+                </tr>
+                <tr>
+                    <td><code>&lt;button&gt;</code></td>
+                    <td>버튼</td>
+                    <td>&lt;button&gt;클릭&lt;/button&gt;</td>
+                </tr>
+                <tr>
+                    <td><code>&lt;input&gt;</code></td>
+                    <td>입력 필드</td>
+                    <td>&lt;input type="text"&gt;</td>
+                </tr>
+                <tr>
+                    <td><code>&lt;table&gt;</code></td>
+                    <td>표</td>
+                    <td>&lt;table&gt;...&lt;/table&gt;</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>프로젝트 폴더 구조</h2>
+
+            <pre class="file-tree">healing-hands-app/
+├── app.py
+├── config.py
+├── templates/           ← HTML 파일
+│   ├── base.html       ← 공통 레이아웃
+│   ├── index.html      ← 메인 페이지
+│   └── reservations.html
+└── static/             ← CSS, JS, 이미지
+    ├── css/
+    │   └── style.css
+    └── js/
+        └── main.js</pre>
+
+            <hr>
+
+            <h2>기본 레이아웃 (base.html)</h2>
+
+            <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html lang="ko"&gt;
+&lt;head&gt;
+    &lt;meta charset="UTF-8"&gt;
+    &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+    &lt;title&gt;{% block title %}힐링손{% endblock %}&lt;/title&gt;
+    &lt;link rel="stylesheet" href="/static/css/style.css"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;nav class="navbar"&gt;
+        &lt;div class="nav-brand"&gt;힐링손 물리치료센터&lt;/div&gt;
+        &lt;div class="nav-menu"&gt;
+            &lt;a href="/"&gt;홈&lt;/a&gt;
+            &lt;a href="/reservations"&gt;예약 관리&lt;/a&gt;
+            &lt;a href="/patients"&gt;환자 관리&lt;/a&gt;
+        &lt;/div&gt;
+    &lt;/nav&gt;
+
+    &lt;main class="container"&gt;
+        {% block content %}{% endblock %}
+    &lt;/main&gt;
+
+    &lt;script src="/static/js/main.js"&gt;&lt;/script&gt;
+    {% block scripts %}{% endblock %}
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+
+            <div class="tip"><strong>💡 Jinja2 템플릿</strong><br>
+            <code>{% block %}</code>은 Flask의 템플릿 문법입니다. 다른 페이지에서 이 부분을 채워넣을 수 있습니다.</div>
+
+            <hr>
+
+            <h2>메인 페이지 (index.html)</h2>
+
+            <pre><code>{% extends "base.html" %}
+
+{% block title %}홈 - 힐링손{% endblock %}
+
+{% block content %}
+&lt;div class="dashboard"&gt;
+    &lt;h1&gt;대시보드&lt;/h1&gt;
+
+    &lt;div class="stats-grid"&gt;
+        &lt;div class="stat-card"&gt;
+            &lt;h3&gt;오늘 예약&lt;/h3&gt;
+            &lt;p class="stat-number" id="todayCount"&gt;-&lt;/p&gt;
+        &lt;/div&gt;
+        &lt;div class="stat-card"&gt;
+            &lt;h3&gt;전체 환자&lt;/h3&gt;
+            &lt;p class="stat-number" id="patientCount"&gt;-&lt;/p&gt;
+        &lt;/div&gt;
+        &lt;div class="stat-card"&gt;
+            &lt;h3&gt;이번 달 매출&lt;/h3&gt;
+            &lt;p class="stat-number" id="monthRevenue"&gt;-&lt;/p&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;h2&gt;오늘의 예약&lt;/h2&gt;
+    &lt;table id="todayReservations"&gt;
+        &lt;thead&gt;
+            &lt;tr&gt;
+                &lt;th&gt;시간&lt;/th&gt;
+                &lt;th&gt;환자&lt;/th&gt;
+                &lt;th&gt;치료사&lt;/th&gt;
+                &lt;th&gt;상태&lt;/th&gt;
+            &lt;/tr&gt;
+        &lt;/thead&gt;
+        &lt;tbody&gt;
+            &lt;!-- JavaScript로 채워짐 --&gt;
+        &lt;/tbody&gt;
+    &lt;/table&gt;
+&lt;/div&gt;
+{% endblock %}</code></pre>
+
+            <hr>
+
+            <h2>Flask에서 템플릿 렌더링</h2>
+
+            <pre><code>from flask import Flask, render_template
+
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/reservations')
+def reservations():
+    return render_template('reservations.html')
+
+@app.route('/patients')
+def patients():
+    return render_template('patients.html')</code></pre>
+
+            <hr>
+
+            <h2>입력 폼 만들기</h2>
+
+            <pre><code>&lt;form id="patientForm"&gt;
+    &lt;div class="form-group"&gt;
+        &lt;label for="name"&gt;이름&lt;/label&gt;
+        &lt;input type="text" id="name" name="name" required&gt;
+    &lt;/div&gt;
+
+    &lt;div class="form-group"&gt;
+        &lt;label for="phone"&gt;연락처&lt;/label&gt;
+        &lt;input type="tel" id="phone" name="phone"
+               placeholder="010-0000-0000"&gt;
+    &lt;/div&gt;
+
+    &lt;div class="form-group"&gt;
+        &lt;label for="birth"&gt;생년월일&lt;/label&gt;
+        &lt;input type="date" id="birth" name="birth"&gt;
+    &lt;/div&gt;
+
+    &lt;div class="form-group"&gt;
+        &lt;label for="gender"&gt;성별&lt;/label&gt;
+        &lt;select id="gender" name="gender"&gt;
+            &lt;option value=""&gt;선택&lt;/option&gt;
+            &lt;option value="M"&gt;남성&lt;/option&gt;
+            &lt;option value="F"&gt;여성&lt;/option&gt;
+        &lt;/select&gt;
+    &lt;/div&gt;
+
+    &lt;button type="submit"&gt;등록&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+
+            <hr>
+
+            <h2>테이블 구조</h2>
+
+            <pre><code>&lt;table class="data-table"&gt;
+    &lt;thead&gt;
+        &lt;tr&gt;
+            &lt;th&gt;번호&lt;/th&gt;
+            &lt;th&gt;이름&lt;/th&gt;
+            &lt;th&gt;연락처&lt;/th&gt;
+            &lt;th&gt;관리&lt;/th&gt;
+        &lt;/tr&gt;
+    &lt;/thead&gt;
+    &lt;tbody&gt;
+        &lt;tr&gt;
+            &lt;td&gt;1&lt;/td&gt;
+            &lt;td&gt;김철수&lt;/td&gt;
+            &lt;td&gt;010-1234-5678&lt;/td&gt;
+            &lt;td&gt;
+                &lt;button class="btn-edit"&gt;수정&lt;/button&gt;
+                &lt;button class="btn-delete"&gt;삭제&lt;/button&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+    &lt;/tbody&gt;
+&lt;/table&gt;</code></pre>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li>HTML은 웹 페이지의 구조를 정의합니다</li>
+                <li>templates/ 폴더에 HTML 파일을 저장합니다</li>
+                <li>base.html로 공통 레이아웃을 만들고 상속합니다</li>
+                <li><code>render_template()</code>로 HTML을 렌더링합니다</li>
+            </ul>
+
+            <blockquote>다음 장에서는 CSS로 스타일을 입힙니다. 예쁘게 만들어봅시다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

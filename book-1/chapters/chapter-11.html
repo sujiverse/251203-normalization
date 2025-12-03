@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[부록] DB 영어 용어집 - 물리치료사를 위한 DB</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "1"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📗 1권: 정규화 편</h1>
+                <p>데이터베이스 기초 개념</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">[부록] 데이터베이스 영어 용어집</h1>
+            <p>개발자와 소통하거나 영어 문서 읽을 때 필요한 핵심 용어들!</p>
+            <hr>
+
+            <h2>기본 구조 용어</h2>
+            <table>
+                <tr><th>영어</th><th>한글</th><th>설명</th></tr>
+                <tr><td><strong>Database (DB)</strong></td><td>데이터베이스</td><td>데이터 저장소 전체</td></tr>
+                <tr><td><strong>Table</strong></td><td>테이블</td><td>데이터를 담는 표</td></tr>
+                <tr><td><strong>Row / Record</strong></td><td>행 / 레코드</td><td>데이터 한 건</td></tr>
+                <tr><td><strong>Column / Field</strong></td><td>열 / 필드 / 컬럼</td><td>데이터 항목</td></tr>
+                <tr><td><strong>Schema</strong></td><td>스키마</td><td>DB 전체 구조 설계도</td></tr>
+                <tr><td><strong>Entity</strong></td><td>엔티티</td><td>테이블로 표현되는 대상 (환자, 치료사 등)</td></tr>
+                <tr><td><strong>Attribute</strong></td><td>속성</td><td>엔티티의 특성 (이름, 연락처 등)</td></tr>
+            </table>
+            <hr>
+
+            <h2>키 (Key) 관련</h2>
+            <table>
+                <tr><th>영어</th><th>한글</th><th>설명</th></tr>
+                <tr><td><strong>Primary Key (PK)</strong></td><td>기본키</td><td>레코드를 유일하게 식별하는 키</td></tr>
+                <tr><td><strong>Foreign Key (FK)</strong></td><td>외래키</td><td>다른 테이블의 PK를 참조</td></tr>
+                <tr><td><strong>Candidate Key</strong></td><td>후보키</td><td>PK가 될 수 있는 키들</td></tr>
+                <tr><td><strong>Composite Key</strong></td><td>복합키</td><td>2개 이상 컬럼으로 만든 키</td></tr>
+                <tr><td><strong>Unique Key</strong></td><td>유니크키</td><td>중복 불가 (NULL은 가능)</td></tr>
+                <tr><td><strong>Index</strong></td><td>인덱스</td><td>검색 속도 향상용 색인</td></tr>
+            </table>
+            <hr>
+
+            <h2>정규화 (Normalization)</h2>
+            <table>
+                <tr><th>영어</th><th>한글</th><th>설명</th></tr>
+                <tr><td><strong>Normalization</strong></td><td>정규화</td><td>테이블을 체계적으로 분리하는 과정</td></tr>
+                <tr><td><strong>Denormalization</strong></td><td>비정규화/역정규화</td><td>성능을 위해 정규화를 푸는 것</td></tr>
+                <tr><td><strong>1NF (First Normal Form)</strong></td><td>제1정규형</td><td>원자값만 저장</td></tr>
+                <tr><td><strong>2NF (Second Normal Form)</strong></td><td>제2정규형</td><td>부분 종속 제거</td></tr>
+                <tr><td><strong>3NF (Third Normal Form)</strong></td><td>제3정규형</td><td>이행 종속 제거</td></tr>
+                <tr><td><strong>BCNF (Boyce-Codd NF)</strong></td><td>보이스-코드 정규형</td><td>결정자가 모두 후보키</td></tr>
+                <tr><td><strong>Anomaly</strong></td><td>이상 현상</td><td>삽입/갱신/삭제 이상</td></tr>
+                <tr><td><strong>Redundancy</strong></td><td>중복</td><td>같은 데이터가 여러 곳에</td></tr>
+            </table>
+            <hr>
+
+            <h2>종속성 (Dependency)</h2>
+            <table>
+                <tr><th>영어</th><th>한글</th><th>설명</th></tr>
+                <tr><td><strong>Functional Dependency</strong></td><td>함수 종속</td><td>A → B (A가 B를 결정)</td></tr>
+                <tr><td><strong>Partial Dependency</strong></td><td>부분 종속</td><td>복합키 일부에만 종속</td></tr>
+                <tr><td><strong>Transitive Dependency</strong></td><td>이행 종속</td><td>A → B → C 연쇄 종속</td></tr>
+                <tr><td><strong>Multi-valued Dependency</strong></td><td>다치 종속</td><td>독립적인 여러 값 집합</td></tr>
+                <tr><td><strong>Determinant</strong></td><td>결정자</td><td>다른 값을 결정하는 속성</td></tr>
+            </table>
+            <hr>
+
+            <h2>관계 (Relationship)</h2>
+            <table>
+                <tr><th>영어</th><th>한글</th><th>설명</th></tr>
+                <tr><td><strong>One-to-One (1:1)</strong></td><td>일대일</td><td>1개 : 1개</td></tr>
+                <tr><td><strong>One-to-Many (1:N)</strong></td><td>일대다</td><td>1개 : 여러 개</td></tr>
+                <tr><td><strong>Many-to-Many (N:M)</strong></td><td>다대다</td><td>여러 개 : 여러 개</td></tr>
+                <tr><td><strong>Junction Table</strong></td><td>연결 테이블 / 중간 테이블</td><td>N:M 관계를 풀어주는 테이블</td></tr>
+                <tr><td><strong>ERD (Entity Relationship Diagram)</strong></td><td>개체 관계도</td><td>테이블 관계를 그린 다이어그램</td></tr>
+                <tr><td><strong>Cardinality</strong></td><td>카디널리티</td><td>관계의 수적 표현 (1:N 등)</td></tr>
+            </table>
+            <hr>
+
+            <h2>SQL 명령어</h2>
+            <table>
+                <tr><th>영어</th><th>한글</th><th>용도</th></tr>
+                <tr><td><strong>SELECT</strong></td><td>선택/조회</td><td>데이터 가져오기</td></tr>
+                <tr><td><strong>INSERT</strong></td><td>삽입</td><td>데이터 추가</td></tr>
+                <tr><td><strong>UPDATE</strong></td><td>갱신/수정</td><td>데이터 변경</td></tr>
+                <tr><td><strong>DELETE</strong></td><td>삭제</td><td>데이터 제거</td></tr>
+                <tr><td><strong>CREATE</strong></td><td>생성</td><td>테이블/DB 만들기</td></tr>
+                <tr><td><strong>DROP</strong></td><td>삭제</td><td>테이블/DB 제거</td></tr>
+                <tr><td><strong>ALTER</strong></td><td>변경</td><td>테이블 구조 수정</td></tr>
+                <tr><td><strong>JOIN</strong></td><td>조인/결합</td><td>테이블 연결 조회</td></tr>
+                <tr><td><strong>WHERE</strong></td><td>조건절</td><td>필터링 조건</td></tr>
+                <tr><td><strong>GROUP BY</strong></td><td>그룹화</td><td>집계 기준</td></tr>
+                <tr><td><strong>ORDER BY</strong></td><td>정렬</td><td>결과 순서 지정</td></tr>
+                <tr><td><strong>HAVING</strong></td><td>그룹 조건</td><td>GROUP BY 결과 필터링</td></tr>
+            </table>
+            <hr>
+
+            <h2>JOIN 종류</h2>
+            <table>
+                <tr><th>영어</th><th>한글</th><th>설명</th></tr>
+                <tr><td><strong>INNER JOIN</strong></td><td>내부 조인</td><td>양쪽 다 있는 것만</td></tr>
+                <tr><td><strong>LEFT JOIN</strong></td><td>왼쪽 조인</td><td>왼쪽 테이블 기준 전체</td></tr>
+                <tr><td><strong>RIGHT JOIN</strong></td><td>오른쪽 조인</td><td>오른쪽 테이블 기준 전체</td></tr>
+                <tr><td><strong>FULL OUTER JOIN</strong></td><td>완전 외부 조인</td><td>양쪽 테이블 전체</td></tr>
+                <tr><td><strong>CROSS JOIN</strong></td><td>교차 조인</td><td>모든 조합 (곱집합)</td></tr>
+                <tr><td><strong>SELF JOIN</strong></td><td>셀프 조인</td><td>같은 테이블끼리 조인</td></tr>
+            </table>
+            <hr>
+
+            <h2>데이터 타입</h2>
+            <table>
+                <tr><th>영어</th><th>한글</th><th>예시</th></tr>
+                <tr><td><strong>VARCHAR</strong></td><td>가변 문자열</td><td>이름, 주소</td></tr>
+                <tr><td><strong>CHAR</strong></td><td>고정 문자열</td><td>성별 (M/F)</td></tr>
+                <tr><td><strong>INT / INTEGER</strong></td><td>정수</td><td>나이, 금액</td></tr>
+                <tr><td><strong>DECIMAL / NUMERIC</strong></td><td>소수</td><td>ROM 각도</td></tr>
+                <tr><td><strong>DATE</strong></td><td>날짜</td><td>2024-01-15</td></tr>
+                <tr><td><strong>TIME</strong></td><td>시간</td><td>14:30:00</td></tr>
+                <tr><td><strong>DATETIME / TIMESTAMP</strong></td><td>날짜+시간</td><td>등록일시</td></tr>
+                <tr><td><strong>BOOLEAN / BOOL</strong></td><td>참/거짓</td><td>TRUE/FALSE</td></tr>
+                <tr><td><strong>TEXT</strong></td><td>긴 문자열</td><td>SOAP 기록</td></tr>
+                <tr><td><strong>BLOB</strong></td><td>바이너리</td><td>이미지, 파일</td></tr>
+                <tr><td><strong>NULL</strong></td><td>널/없음</td><td>값이 없는 상태</td></tr>
+            </table>
+            <hr>
+
+            <h2>제약조건 (Constraints)</h2>
+            <table>
+                <tr><th>영어</th><th>한글</th><th>설명</th></tr>
+                <tr><td><strong>NOT NULL</strong></td><td>필수값</td><td>NULL 불가</td></tr>
+                <tr><td><strong>UNIQUE</strong></td><td>유일</td><td>중복 불가</td></tr>
+                <tr><td><strong>DEFAULT</strong></td><td>기본값</td><td>값 없으면 자동 지정</td></tr>
+                <tr><td><strong>CHECK</strong></td><td>체크</td><td>값 범위 제한</td></tr>
+                <tr><td><strong>AUTO_INCREMENT</strong></td><td>자동 증가</td><td>1, 2, 3... 자동 부여</td></tr>
+                <tr><td><strong>REFERENCES</strong></td><td>참조</td><td>외래키 지정</td></tr>
+            </table>
+            <hr>
+
+            <h2>💡 개발자와 대화할 때</h2>
+            <blockquote>
+                <strong>"이 테이블의 PK가 뭐예요?"</strong><br>
+                → 기본키가 뭔지 물어보는 것<br><br>
+                <strong>"FK로 연결해주세요"</strong><br>
+                → 외래키로 다른 테이블 참조하게 해달라는 것<br><br>
+                <strong>"N:M 관계라서 Junction Table이 필요해요"</strong><br>
+                → 다대다라서 중간 테이블 만들어야 한다는 것<br><br>
+                <strong>"3NF까지 정규화 해주세요"</strong><br>
+                → 제3정규형까지 테이블 분리해달라는 것<br><br>
+                <strong>"이 컬럼 NOT NULL로 해주세요"</strong><br>
+                → 필수 입력값으로 만들어달라는 것
+            </blockquote>
+
+            <div class="nav-buttons">
+                <a href="chapter-10.html" class="nav-btn">← 이전</a>
+                <span class="page-num">11 / 12</span>
+                <a href="chapter-12.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/nav.js"></script>
+</body>
+</html>

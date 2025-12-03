@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3장: 개발 환경 세팅 - 물리치료사를 위한 DB 4권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "4"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📕 물리치료사를 위한</h1>
+                <p>웹 앱 만들기 (4권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">개발 환경 세팅</h1>
+
+            <h2>설치할 것들</h2>
+
+            <table>
+                <tr>
+                    <th>도구</th>
+                    <th>용도</th>
+                    <th>비용</th>
+                </tr>
+                <tr>
+                    <td>Python 3.8+</td>
+                    <td>백엔드 개발</td>
+                    <td>무료</td>
+                </tr>
+                <tr>
+                    <td>VS Code</td>
+                    <td>코드 편집기</td>
+                    <td>무료</td>
+                </tr>
+                <tr>
+                    <td>Flask</td>
+                    <td>웹 프레임워크</td>
+                    <td>무료</td>
+                </tr>
+                <tr>
+                    <td>MySQL (3권)</td>
+                    <td>데이터베이스</td>
+                    <td>이미 설치됨</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>1. Python 설치</h2>
+
+            <h3>Windows</h3>
+            <ol>
+                <li>python.org 접속</li>
+                <li>Downloads → Windows 클릭</li>
+                <li>최신 버전 다운로드 (3.11 이상 권장)</li>
+                <li><strong>중요!</strong> 설치 시 "Add Python to PATH" 체크</li>
+                <li>Install Now 클릭</li>
+            </ol>
+
+            <h3>Mac</h3>
+            <ol>
+                <li>python.org 접속</li>
+                <li>Downloads → macOS 클릭</li>
+                <li>최신 버전 다운로드</li>
+                <li>설치 진행</li>
+            </ol>
+
+            <h3>설치 확인</h3>
+            <pre><code># 터미널/명령 프롬프트에서
+python --version
+# 또는
+python3 --version
+
+# 결과 예시
+Python 3.11.5</code></pre>
+
+            <div class="warning"><strong>⚠️ python이 안 되면 python3로!</strong><br>
+            Mac에서는 <code>python</code> 대신 <code>python3</code>를 사용해야 할 수 있습니다.</div>
+
+            <hr>
+
+            <h2>2. VS Code 설치</h2>
+
+            <ol>
+                <li>code.visualstudio.com 접속</li>
+                <li>Download for Windows/Mac 클릭</li>
+                <li>설치 파일 실행</li>
+                <li>기본 옵션으로 설치</li>
+            </ol>
+
+            <h3>추천 확장 프로그램</h3>
+            <p>VS Code 실행 후 왼쪽 Extensions 아이콘 클릭, 검색해서 설치:</p>
+            <ul>
+                <li><strong>Python</strong> - Python 지원</li>
+                <li><strong>Pylance</strong> - Python 자동완성</li>
+                <li><strong>Live Server</strong> - HTML 미리보기</li>
+            </ul>
+
+            <hr>
+
+            <h2>3. 프로젝트 폴더 만들기</h2>
+
+            <p>작업할 폴더를 만듭니다.</p>
+
+            <pre><code># 원하는 위치에 폴더 생성
+mkdir healing-hands-app
+cd healing-hands-app</code></pre>
+
+            <h3>폴더 구조 (최종 모습)</h3>
+            <pre class="file-tree">healing-hands-app/
+├── app.py              ← Flask 서버 (백엔드)
+├── templates/          ← HTML 파일들
+│   ├── index.html
+│   └── reservations.html
+├── static/             ← CSS, JS, 이미지
+│   ├── css/
+│   ├── js/
+│   └── lib/            ← Luckysheet 등 라이브러리
+└── venv/               ← Python 가상환경</pre>
+
+            <hr>
+
+            <h2>4. 가상환경 만들기</h2>
+
+            <p>프로젝트별로 독립된 Python 환경을 만듭니다.</p>
+
+            <pre><code># 가상환경 생성
+python -m venv venv
+
+# 가상환경 활성화 (Windows)
+venv\Scripts\activate
+
+# 가상환경 활성화 (Mac/Linux)
+source venv/bin/activate
+
+# 활성화되면 프롬프트에 (venv) 표시됨
+(venv) C:\healing-hands-app></code></pre>
+
+            <div class="tip"><strong>💡 왜 가상환경을 쓰나요?</strong><br>
+            프로젝트마다 필요한 라이브러리 버전이 다를 수 있습니다. 가상환경을 쓰면 프로젝트 간 충돌을 방지합니다.</div>
+
+            <hr>
+
+            <h2>5. Flask 설치</h2>
+
+            <p>가상환경이 활성화된 상태에서:</p>
+
+            <pre><code># Flask 설치
+pip install flask
+
+# MySQL 연결 라이브러리도 설치
+pip install flask-mysqldb
+# 또는
+pip install pymysql</code></pre>
+
+            <h3>설치 확인</h3>
+            <pre><code>pip list
+# Flask, pymysql 등이 보이면 성공!</code></pre>
+
+            <hr>
+
+            <h2>6. 테스트: Hello World</h2>
+
+            <p>모든 게 잘 설치됐는지 확인해봅시다.</p>
+
+            <h3>app.py 파일 생성</h3>
+            <pre><code># app.py
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route('/')
+def hello():
+    return '안녕하세요! Flask가 작동합니다!'
+
+if __name__ == '__main__':
+    app.run(debug=True)</code></pre>
+
+            <h3>실행</h3>
+            <pre><code>python app.py</code></pre>
+
+            <h3>확인</h3>
+            <p>웹 브라우저에서 <code>http://127.0.0.1:5000</code> 접속</p>
+            <p>"안녕하세요! Flask가 작동합니다!" 가 보이면 성공!</p>
+
+            <div class="tip"><strong>💡 서버 종료 방법</strong><br>
+            터미널에서 <code>Ctrl + C</code>를 누르면 Flask 서버가 종료됩니다.</div>
+
+            <hr>
+
+            <h2>체크리스트</h2>
+
+            <table>
+                <tr>
+                    <th>항목</th>
+                    <th>확인</th>
+                </tr>
+                <tr>
+                    <td>Python 설치됨</td>
+                    <td><code>python --version</code> 동작</td>
+                </tr>
+                <tr>
+                    <td>VS Code 설치됨</td>
+                    <td>실행 가능</td>
+                </tr>
+                <tr>
+                    <td>프로젝트 폴더 생성</td>
+                    <td>healing-hands-app/</td>
+                </tr>
+                <tr>
+                    <td>가상환경 활성화</td>
+                    <td>(venv) 표시됨</td>
+                </tr>
+                <tr>
+                    <td>Flask 설치됨</td>
+                    <td>pip list에서 확인</td>
+                </tr>
+                <tr>
+                    <td>Hello World 동작</td>
+                    <td>브라우저에서 확인</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li>Python, VS Code, Flask를 설치했습니다</li>
+                <li>가상환경을 만들어 프로젝트를 독립시켰습니다</li>
+                <li>Hello World로 Flask 동작을 확인했습니다</li>
+            </ul>
+
+            <blockquote>다음 장부터 본격적으로 Flask를 배웁니다. 라우팅, URL, 응답 등 기초를 익혀봅시다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

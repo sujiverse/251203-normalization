@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>14장: API 호출하기 - 물리치료사를 위한 DB 4권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "4"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📕 물리치료사를 위한</h1>
+                <p>웹 앱 만들기 (4권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">API 호출하기</h1>
+
+            <h2>fetch() 기본</h2>
+
+            <p><code>fetch()</code>는 JavaScript에서 HTTP 요청을 보내는 함수입니다.</p>
+
+            <pre><code>// 기본 GET 요청
+fetch('/api/patients')
+    .then(response => response.json())
+    .then(data => {
+        console.log(data);
+    })
+    .catch(error => {
+        console.error('에러:', error);
+    });</code></pre>
+
+            <hr>
+
+            <h2>async/await 방식 (권장)</h2>
+
+            <pre><code>async function getPatients() {
+    try {
+        const response = await fetch('/api/patients');
+
+        if (!response.ok) {
+            throw new Error('서버 에러');
+        }
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('에러:', error);
+        alert('데이터를 불러오지 못했습니다');
+    }
+}</code></pre>
+
+            <hr>
+
+            <h2>GET 요청 (조회)</h2>
+
+            <pre><code>// 전체 목록
+async function getPatients() {
+    const response = await fetch('/api/patients');
+    return await response.json();
+}
+
+// 검색
+async function searchPatients(name) {
+    const response = await fetch(`/api/patients?name=${encodeURIComponent(name)}`);
+    return await response.json();
+}
+
+// 상세 조회
+async function getPatient(id) {
+    const response = await fetch(`/api/patients/${id}`);
+    return await response.json();
+}</code></pre>
+
+            <hr>
+
+            <h2>POST 요청 (생성)</h2>
+
+            <pre><code>async function createPatient(patientData) {
+    const response = await fetch('/api/patients', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(patientData)
+    });
+
+    return await response.json();
+}
+
+// 사용
+const newPatient = {
+    name: '홍길동',
+    phone: '010-9999-8888',
+    birth_date: '1995-05-05'
+};
+
+createPatient(newPatient).then(result => {
+    if (result.success) {
+        alert('등록 완료!');
+    }
+});</code></pre>
+
+            <hr>
+
+            <h2>PUT 요청 (수정)</h2>
+
+            <pre><code>async function updatePatient(id, data) {
+    const response = await fetch(`/api/patients/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    });
+
+    return await response.json();
+}
+
+// 사용
+updatePatient(1, { phone: '010-1111-2222' })
+    .then(result => {
+        if (result.success) {
+            alert('수정 완료!');
+        }
+    });</code></pre>
+
+            <hr>
+
+            <h2>DELETE 요청 (삭제)</h2>
+
+            <pre><code>async function deletePatient(id) {
+    const response = await fetch(`/api/patients/${id}`, {
+        method: 'DELETE'
+    });
+
+    return await response.json();
+}
+
+// 사용
+if (confirm('정말 삭제하시겠습니까?')) {
+    deletePatient(1).then(result => {
+        if (result.success) {
+            alert('삭제 완료!');
+            loadPatientTable();  // 테이블 새로고침
+        }
+    });
+}</code></pre>
+
+            <hr>
+
+            <h2>폼 데이터 처리</h2>
+
+            <pre><code>// HTML
+&lt;form id="patientForm"&gt;
+    &lt;input name="name" id="name"&gt;
+    &lt;input name="phone" id="phone"&gt;
+    &lt;button type="submit"&gt;등록&lt;/button&gt;
+&lt;/form&gt;
+
+// JavaScript
+document.getElementById('patientForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const formData = {
+        name: document.getElementById('name').value,
+        phone: document.getElementById('phone').value
+    };
+
+    const result = await createPatient(formData);
+
+    if (result.success) {
+        alert('등록되었습니다!');
+        e.target.reset();  // 폼 초기화
+        loadPatientTable();
+    } else {
+        alert('에러: ' + result.error);
+    }
+});</code></pre>
+
+            <hr>
+
+            <h2>API 모듈화</h2>
+
+            <p>API 호출 함수들을 하나의 파일로 정리합니다.</p>
+
+            <pre><code>// static/js/api.js
+
+const API = {
+    // 환자
+    patients: {
+        getAll: () => fetch('/api/patients').then(r => r.json()),
+        get: (id) => fetch(`/api/patients/${id}`).then(r => r.json()),
+        create: (data) => fetch('/api/patients', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        }).then(r => r.json()),
+        update: (id, data) => fetch(`/api/patients/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        }).then(r => r.json()),
+        delete: (id) => fetch(`/api/patients/${id}`, {
+            method: 'DELETE'
+        }).then(r => r.json())
+    },
+
+    // 예약
+    reservations: {
+        getAll: (params) => {
+            const query = new URLSearchParams(params).toString();
+            return fetch(`/api/reservations?${query}`).then(r => r.json());
+        },
+        create: (data) => fetch('/api/reservations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        }).then(r => r.json())
+    }
+};</code></pre>
+
+            <h3>사용 예시</h3>
+            <pre><code>// 환자 목록 가져오기
+const patients = await API.patients.getAll();
+
+// 예약 조회
+const reservations = await API.reservations.getAll({
+    start_date: '2024-12-01',
+    end_date: '2024-12-07'
+});</code></pre>
+
+            <hr>
+
+            <h2>로딩 표시</h2>
+
+            <pre><code>async function loadDataWithSpinner() {
+    const spinner = document.getElementById('spinner');
+    const content = document.getElementById('content');
+
+    spinner.style.display = 'block';
+    content.style.display = 'none';
+
+    try {
+        const data = await API.patients.getAll();
+        // 데이터 표시...
+    } finally {
+        spinner.style.display = 'none';
+        content.style.display = 'block';
+    }
+}</code></pre>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li><code>fetch()</code>로 API를 호출합니다</li>
+                <li><code>async/await</code>로 깔끔하게 작성합니다</li>
+                <li>POST/PUT은 <code>body</code>에 JSON을 담습니다</li>
+                <li>API 함수들을 모듈화하면 관리가 편합니다</li>
+            </ul>
+
+            <blockquote>Part 4 완료! 다음 Part에서는 Luckysheet를 설치하고 사용합니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

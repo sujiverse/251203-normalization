@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[14장] 질적/혼합 연구 - 연구 데이터 설계</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>📊</span> 연구 데이터 설계</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+            <a href="../../book-6/index.html" class="top-nav-link book-6 active">6권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📘 6권: 연구 데이터 설계</h1><p>변수부터 회귀분석까지</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <div class="part-header">3부: 연구 형태별 DB 설계</div>
+            <h1 class="title">[14장] 질적/혼합 연구 (Qualitative/Mixed)</h1>
+
+            <div class="intro-box">
+                <p>이 장에서는 <strong>질적 연구 데이터</strong>의 저장과 <strong>혼합 연구</strong>에서의 통합 전략을 배웁니다.</p>
+            </div>
+
+            <hr>
+
+            <h2>1. 질적 연구 데이터의 특성</h2>
+
+            <div class="concept-box">
+                <h3>💡 질적 데이터란</h3>
+                <p>숫자가 아닌 <strong>언어, 이미지, 행동</strong> 등으로 표현되는 데이터입니다.</p>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>유형</th>
+                            <th>예시</th>
+                            <th>수집 방법</th>
+                        </tr>
+                        <tr>
+                            <td><strong>텍스트</strong></td>
+                            <td>인터뷰 전사본, 일지, 개방형 응답</td>
+                            <td>심층 면담, 설문</td>
+                        </tr>
+                        <tr>
+                            <td><strong>이미지</strong></td>
+                            <td>동작 사진, 자세 분석 캡처</td>
+                            <td>사진 촬영, 스크린샷</td>
+                        </tr>
+                        <tr>
+                            <td><strong>영상</strong></td>
+                            <td>치료 세션 녹화, 보행 분석 영상</td>
+                            <td>비디오 녹화</td>
+                        </tr>
+                        <tr>
+                            <td><strong>음성</strong></td>
+                            <td>인터뷰 녹음 파일</td>
+                            <td>음성 녹음</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 질적 데이터의 특징</h3>
+                <ul>
+                    <li><strong>비구조화</strong>: 미리 정해진 형식이 없음</li>
+                    <li><strong>맥락 의존</strong>: 누가, 언제, 어떤 상황에서 말했는지가 중요</li>
+                    <li><strong>해석 필요</strong>: 연구자의 분석과 해석이 필수</li>
+                    <li><strong>용량 큼</strong>: 텍스트, 영상 파일은 용량이 클 수 있음</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 양적 vs 질적 연구 비교</h3>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>항목</th>
+                            <th>양적 연구</th>
+                            <th>질적 연구</th>
+                        </tr>
+                        <tr>
+                            <td>데이터 형태</td>
+                            <td>숫자</td>
+                            <td>텍스트, 이미지, 영상</td>
+                        </tr>
+                        <tr>
+                            <td>분석 방법</td>
+                            <td>통계 검정</td>
+                            <td>주제 분석, 근거이론 등</td>
+                        </tr>
+                        <tr>
+                            <td>표본 크기</td>
+                            <td>대규모 (검정력 확보)</td>
+                            <td>소규모 (포화까지)</td>
+                        </tr>
+                        <tr>
+                            <td>일반화</td>
+                            <td>모집단으로 일반화</td>
+                            <td>이론적 전이 가능성</td>
+                        </tr>
+                        <tr>
+                            <td>저장 구조</td>
+                            <td>정형 테이블</td>
+                            <td>텍스트 + 메타데이터</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <hr>
+
+            <h2>2. 인터뷰 전사 저장</h2>
+
+            <div class="concept-box">
+                <h3>💡 전사본(Transcript)이란</h3>
+                <p>녹음된 인터뷰를 <strong>텍스트로 변환</strong>한 문서입니다. 질적 분석의 기본 자료가 됩니다.</p>
+                <p><strong>전사의 수준:</strong></p>
+                <ul>
+                    <li><strong>축어적 전사</strong>: 모든 말을 그대로 기록 ("음...", "그러니까..." 포함)</li>
+                    <li><strong>깔끔한 전사</strong>: 군더더기 제거, 의미만 보존</li>
+                    <li><strong>요약 전사</strong>: 핵심 내용만 요약</li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 인터뷰 데이터 스키마</h3>
+                <pre><code>-- 인터뷰 세션 정보
+CREATE TABLE interviews (
+    interview_id INTEGER PRIMARY KEY,
+    participant_id INTEGER NOT NULL,
+    interviewer_id INTEGER,
+    interview_date DATE NOT NULL,
+    interview_location TEXT,
+    duration_minutes INTEGER,
+    audio_file_path TEXT,
+    transcript_status TEXT DEFAULT 'pending',  -- pending, in_progress, completed
+    FOREIGN KEY (participant_id) REFERENCES participants(participant_id)
+);
+
+-- 전사본 저장
+CREATE TABLE transcripts (
+    transcript_id INTEGER PRIMARY KEY,
+    interview_id INTEGER NOT NULL,
+    full_text TEXT NOT NULL,           -- 전체 전사 텍스트
+    transcriber_id INTEGER,
+    transcription_date DATE,
+    transcription_method TEXT,          -- manual, automated, hybrid
+    FOREIGN KEY (interview_id) REFERENCES interviews(interview_id)
+);</code></pre>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 대화 턴(Turn) 단위 저장</h3>
+                <p>분석을 위해 전사본을 <strong>발화 단위</strong>로 분리하면 유용합니다:</p>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>turn_id</th>
+                            <th>speaker</th>
+                            <th>timestamp</th>
+                            <th>content</th>
+                        </tr>
+                        <tr><td>1</td><td>면담자</td><td>00:00:15</td><td>치료를 시작하게 된 계기가 무엇인가요?</td></tr>
+                        <tr><td>2</td><td>참가자</td><td>00:00:22</td><td>허리가 너무 아파서요. 일도 못 할 정도였어요.</td></tr>
+                        <tr><td>3</td><td>면담자</td><td>00:00:35</td><td>구체적으로 어떤 활동이 어려우셨나요?</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 대화 턴 테이블</h3>
+                <pre><code>-- 발화 단위 저장
+CREATE TABLE transcript_turns (
+    turn_id INTEGER PRIMARY KEY,
+    transcript_id INTEGER NOT NULL,
+    turn_order INTEGER NOT NULL,
+    speaker_role TEXT NOT NULL,         -- interviewer, participant
+    timestamp_start TEXT,               -- HH:MM:SS 형식
+    timestamp_end TEXT,
+    content TEXT NOT NULL,
+    FOREIGN KEY (transcript_id) REFERENCES transcripts(transcript_id)
+);
+
+-- 특정 참가자의 발화만 조회
+SELECT
+    tt.turn_order,
+    tt.timestamp_start,
+    tt.content
+FROM transcript_turns tt
+JOIN transcripts t ON tt.transcript_id = t.transcript_id
+JOIN interviews i ON t.interview_id = i.interview_id
+WHERE i.participant_id = 1
+  AND tt.speaker_role = 'participant'
+ORDER BY tt.turn_order;</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>3. 코딩과 코드 테이블</h2>
+
+            <div class="concept-box">
+                <h3>💡 질적 코딩(Coding)이란</h3>
+                <p>텍스트 데이터에 <strong>의미 있는 레이블(코드)</strong>을 부여하는 분석 과정입니다.</p>
+                <p><strong>예시:</strong></p>
+                <ul>
+                    <li>"허리가 너무 아파서요" → <code>통증 경험</code></li>
+                    <li>"일도 못 할 정도였어요" → <code>일상생활 제한</code></li>
+                    <li>"치료 후 많이 나아졌어요" → <code>치료 효과 인식</code></li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 코딩의 유형</h3>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>유형</th>
+                            <th>설명</th>
+                            <th>예시</th>
+                        </tr>
+                        <tr>
+                            <td><strong>개방 코딩</strong></td>
+                            <td>처음 읽으면서 자유롭게 코드 생성</td>
+                            <td>통증, 제한, 기대, 불안...</td>
+                        </tr>
+                        <tr>
+                            <td><strong>축 코딩</strong></td>
+                            <td>코드 간 관계와 범주 형성</td>
+                            <td>통증→신체적 경험, 불안→심리적 경험</td>
+                        </tr>
+                        <tr>
+                            <td><strong>선택 코딩</strong></td>
+                            <td>핵심 범주 중심으로 통합</td>
+                            <td>"통증 관리 여정"</td>
+                        </tr>
+                        <tr>
+                            <td><strong>연역적 코딩</strong></td>
+                            <td>기존 이론/프레임워크 기반</td>
+                            <td>ICF 분류 코드 적용</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 코드 테이블 설계</h3>
+                <pre><code>-- 코드 정의
+CREATE TABLE codes (
+    code_id INTEGER PRIMARY KEY,
+    code_name TEXT NOT NULL UNIQUE,
+    code_description TEXT,
+    parent_code_id INTEGER,             -- 계층 구조를 위한 자기참조
+    created_date DATE DEFAULT CURRENT_DATE,
+    created_by INTEGER,
+    FOREIGN KEY (parent_code_id) REFERENCES codes(code_id)
+);
+
+-- 텍스트 세그먼트 (코딩된 텍스트 조각)
+CREATE TABLE segments (
+    segment_id INTEGER PRIMARY KEY,
+    transcript_id INTEGER NOT NULL,
+    start_position INTEGER NOT NULL,    -- 텍스트 시작 위치 (문자 인덱스)
+    end_position INTEGER NOT NULL,      -- 텍스트 끝 위치
+    segment_text TEXT NOT NULL,         -- 실제 텍스트 내용
+    turn_id INTEGER,                    -- 발화 단위 참조 (선택)
+    FOREIGN KEY (transcript_id) REFERENCES transcripts(transcript_id),
+    FOREIGN KEY (turn_id) REFERENCES transcript_turns(turn_id)
+);
+
+-- 세그먼트-코드 연결 (M:N 관계)
+CREATE TABLE segment_codes (
+    segment_code_id INTEGER PRIMARY KEY,
+    segment_id INTEGER NOT NULL,
+    code_id INTEGER NOT NULL,
+    coder_id INTEGER,                   -- 누가 코딩했는지
+    coding_date DATE DEFAULT CURRENT_DATE,
+    memo TEXT,                          -- 코딩 메모
+    FOREIGN KEY (segment_id) REFERENCES segments(segment_id),
+    FOREIGN KEY (code_id) REFERENCES codes(code_id),
+    UNIQUE(segment_id, code_id, coder_id)  -- 같은 코더가 중복 코딩 방지
+);</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 코드별 세그먼트 조회</h3>
+                <pre><code>-- 특정 코드가 적용된 모든 텍스트 조각 조회
+SELECT
+    c.code_name,
+    s.segment_text,
+    i.participant_id,
+    sc.memo
+FROM segment_codes sc
+JOIN codes c ON sc.code_id = c.code_id
+JOIN segments s ON sc.segment_id = s.segment_id
+JOIN transcripts t ON s.transcript_id = t.transcript_id
+JOIN interviews i ON t.interview_id = i.interview_id
+WHERE c.code_name = '통증 경험'
+ORDER BY i.participant_id;</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>4. 테마 계층 구조</h2>
+
+            <div class="concept-box">
+                <h3>💡 코드에서 테마로</h3>
+                <p>개별 코드들을 묶어 <strong>테마(Theme)</strong>를 형성합니다:</p>
+                <pre>
+코드 (Codes)           하위테마 (Sub-theme)      상위테마 (Theme)
+─────────────────────────────────────────────────────────────
+통증 강도            ─┬─ 신체적 경험           ─┬─ 치료 전 상태
+통증 부위            ─┘                         │
+일상생활 제한        ─┬─ 기능적 제한           ─┘
+직장 생활 어려움     ─┘
+
+치료 효과 인식       ─┬─ 긍정적 변화           ─┬─ 치료 경험
+자기관리 능력        ─┘                         │
+부작용 경험          ─── 부정적 경험           ─┘
+                </pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 계층 구조 저장 (parent_id 방식)</h3>
+                <pre><code>-- codes 테이블의 parent_code_id를 활용한 계층 구조
+INSERT INTO codes (code_id, code_name, parent_code_id) VALUES
+-- 상위테마 (레벨 1)
+(1, '치료 전 상태', NULL),
+(2, '치료 경험', NULL),
+
+-- 하위테마 (레벨 2)
+(10, '신체적 경험', 1),
+(11, '기능적 제한', 1),
+(20, '긍정적 변화', 2),
+(21, '부정적 경험', 2),
+
+-- 코드 (레벨 3)
+(100, '통증 강도', 10),
+(101, '통증 부위', 10),
+(110, '일상생활 제한', 11),
+(111, '직장 생활 어려움', 11),
+(200, '치료 효과 인식', 20),
+(201, '자기관리 능력', 20),
+(210, '부작용 경험', 21);</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 계층 구조 조회</h3>
+                <pre><code>-- 코드와 상위 테마 함께 조회
+SELECT
+    c.code_name AS code,
+    p1.code_name AS sub_theme,
+    p2.code_name AS theme
+FROM codes c
+LEFT JOIN codes p1 ON c.parent_code_id = p1.code_id
+LEFT JOIN codes p2 ON p1.parent_code_id = p2.code_id
+WHERE c.parent_code_id IS NOT NULL
+  AND p1.parent_code_id IS NOT NULL;
+
+-- 결과:
+-- code               | sub_theme      | theme
+-- 통증 강도          | 신체적 경험     | 치료 전 상태
+-- 통증 부위          | 신체적 경험     | 치료 전 상태
+-- 일상생활 제한      | 기능적 제한     | 치료 전 상태
+-- 치료 효과 인식     | 긍정적 변화     | 치료 경험</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 테마별 빈도 분석</h3>
+                <pre><code>-- 상위 테마별 코딩 빈도
+WITH RECURSIVE code_hierarchy AS (
+    -- 최상위 테마
+    SELECT code_id, code_name, code_id AS root_id, code_name AS theme_name
+    FROM codes
+    WHERE parent_code_id IS NULL
+
+    UNION ALL
+
+    -- 하위 코드들
+    SELECT c.code_id, c.code_name, ch.root_id, ch.theme_name
+    FROM codes c
+    JOIN code_hierarchy ch ON c.parent_code_id = ch.code_id
+)
+SELECT
+    ch.theme_name,
+    COUNT(sc.segment_code_id) AS code_count
+FROM code_hierarchy ch
+JOIN segment_codes sc ON ch.code_id = sc.code_id
+GROUP BY ch.theme_name
+ORDER BY code_count DESC;</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>5. 양적-질적 통합 전략</h2>
+
+            <div class="concept-box">
+                <h3>💡 혼합 연구 설계 유형</h3>
+                <p>John Creswell의 분류에 따른 주요 혼합 연구 설계:</p>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>설계</th>
+                            <th>순서</th>
+                            <th>목적</th>
+                        </tr>
+                        <tr>
+                            <td><strong>설명적 순차 설계</strong><br>(Explanatory Sequential)</td>
+                            <td>QUAN → qual</td>
+                            <td>양적 결과를 질적으로 설명/해석</td>
+                        </tr>
+                        <tr>
+                            <td><strong>탐색적 순차 설계</strong><br>(Exploratory Sequential)</td>
+                            <td>QUAL → quan</td>
+                            <td>질적 탐색으로 도구/이론 개발 후 양적 검증</td>
+                        </tr>
+                        <tr>
+                            <td><strong>수렴적 설계</strong><br>(Convergent)</td>
+                            <td>QUAN + QUAL 동시</td>
+                            <td>같은 현상을 두 방법으로 동시에 연구</td>
+                        </tr>
+                    </table>
+                </div>
+                <p><em>대문자는 우선순위를 나타냄 (QUAN = 양적 중심, QUAL = 질적 중심)</em></p>
+            </div>
+
+            <div class="example-box">
+                <h3>📋 예시: 설명적 순차 설계</h3>
+                <p><strong>연구 질문:</strong> 물리치료 후 통증 감소에 영향을 미치는 요인은 무엇인가?</p>
+                <ol>
+                    <li><strong>1단계 (양적)</strong>: 100명 환자에게 설문 조사 → 통증 감소와 관련된 변수 분석</li>
+                    <li><strong>2단계 (질적)</strong>: 통증 감소가 큰 10명, 적은 10명 선택 → 심층 인터뷰</li>
+                    <li><strong>통합</strong>: 양적 결과(변수 관계)를 질적 데이터(경험, 맥락)로 설명</li>
+                </ol>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 통합의 핵심: 공통 ID</h3>
+                <p>양적 데이터와 질적 데이터를 연결하는 열쇠는 <strong>participant_id</strong>입니다:</p>
+                <pre>
+┌─────────────────┐         ┌─────────────────┐
+│  양적 데이터     │         │  질적 데이터     │
+├─────────────────┤         ├─────────────────┤
+│ participants    │◄───────►│ interviews      │
+│ assessments     │         │ transcripts     │
+│ survey_responses│         │ segments        │
+│ measurements    │         │ segment_codes   │
+└─────────────────┘         └─────────────────┘
+        │                           │
+        └───────────┬───────────────┘
+                    │
+            participant_id로 연결
+                </pre>
+            </div>
+
+            <hr>
+
+            <h2>6. 혼합 연구 DB 설계</h2>
+
+            <div class="example-box">
+                <h3>📋 예시: 낙상 예방 프로그램 혼합 연구</h3>
+                <p>노인 낙상 예방 프로그램의 효과를 양적/질적으로 평가하는 연구입니다.</p>
+                <ul>
+                    <li><strong>양적</strong>: 균형 검사(BBS), 낙상 두려움 척도(FES-I), 낙상 발생 횟수</li>
+                    <li><strong>질적</strong>: 프로그램 참여 경험 심층 인터뷰</li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 통합 스키마</h3>
+                <pre><code>-- ========================================
+-- 혼합 연구: 낙상 예방 프로그램 평가
+-- ========================================
+
+-- 1. 공통: 참가자 정보
+CREATE TABLE participants (
+    participant_id INTEGER PRIMARY KEY,
+    participant_code TEXT UNIQUE NOT NULL,
+    age INTEGER,
+    sex TEXT CHECK(sex IN ('M', 'F')),
+    group_type TEXT CHECK(group_type IN ('intervention', 'control')),
+    enrollment_date DATE,
+    is_qualitative_sample INTEGER DEFAULT 0  -- 질적 연구 대상자 여부
+);
+
+-- ========================================
+-- 양적 데이터 테이블
+-- ========================================
+
+-- 2. 평가 시점
+CREATE TABLE assessment_waves (
+    wave_id INTEGER PRIMARY KEY,
+    wave_name TEXT NOT NULL,
+    wave_order INTEGER NOT NULL
+);
+
+INSERT INTO assessment_waves VALUES
+(1, 'baseline', 1),
+(2, 'post_intervention', 2),
+(3, 'follow_up_3m', 3);
+
+-- 3. 균형 검사 (BBS)
+CREATE TABLE balance_assessments (
+    assessment_id INTEGER PRIMARY KEY,
+    participant_id INTEGER NOT NULL,
+    wave_id INTEGER NOT NULL,
+    assessment_date DATE,
+    bbs_score INTEGER CHECK(bbs_score BETWEEN 0 AND 56),
+    tug_seconds REAL,                    -- Timed Up and Go
+    assessor_id INTEGER,
+    FOREIGN KEY (participant_id) REFERENCES participants(participant_id),
+    FOREIGN KEY (wave_id) REFERENCES assessment_waves(wave_id)
+);
+
+-- 4. 설문 응답 (FES-I 등)
+CREATE TABLE survey_responses (
+    response_id INTEGER PRIMARY KEY,
+    participant_id INTEGER NOT NULL,
+    wave_id INTEGER NOT NULL,
+    survey_name TEXT NOT NULL,
+    total_score REAL,
+    response_date DATE,
+    FOREIGN KEY (participant_id) REFERENCES participants(participant_id),
+    FOREIGN KEY (wave_id) REFERENCES assessment_waves(wave_id)
+);
+
+-- 5. 낙상 사건 기록
+CREATE TABLE fall_events (
+    event_id INTEGER PRIMARY KEY,
+    participant_id INTEGER NOT NULL,
+    fall_date DATE,
+    fall_location TEXT,
+    injury_occurred INTEGER DEFAULT 0,
+    injury_description TEXT,
+    reported_date DATE,
+    FOREIGN KEY (participant_id) REFERENCES participants(participant_id)
+);
+
+-- ========================================
+-- 질적 데이터 테이블
+-- ========================================
+
+-- 6. 인터뷰
+CREATE TABLE interviews (
+    interview_id INTEGER PRIMARY KEY,
+    participant_id INTEGER NOT NULL,
+    interview_type TEXT DEFAULT 'individual',  -- individual, focus_group
+    interview_date DATE,
+    duration_minutes INTEGER,
+    audio_file_path TEXT,
+    FOREIGN KEY (participant_id) REFERENCES participants(participant_id)
+);
+
+-- 7. 전사본
+CREATE TABLE transcripts (
+    transcript_id INTEGER PRIMARY KEY,
+    interview_id INTEGER NOT NULL,
+    full_text TEXT,
+    word_count INTEGER,
+    FOREIGN KEY (interview_id) REFERENCES interviews(interview_id)
+);
+
+-- 8. 코드
+CREATE TABLE codes (
+    code_id INTEGER PRIMARY KEY,
+    code_name TEXT NOT NULL,
+    code_description TEXT,
+    parent_code_id INTEGER,
+    code_type TEXT DEFAULT 'inductive',  -- inductive, deductive
+    FOREIGN KEY (parent_code_id) REFERENCES codes(code_id)
+);
+
+-- 9. 세그먼트
+CREATE TABLE segments (
+    segment_id INTEGER PRIMARY KEY,
+    transcript_id INTEGER NOT NULL,
+    segment_text TEXT NOT NULL,
+    start_char INTEGER,
+    end_char INTEGER,
+    FOREIGN KEY (transcript_id) REFERENCES transcripts(transcript_id)
+);
+
+-- 10. 세그먼트-코드 연결
+CREATE TABLE segment_codes (
+    id INTEGER PRIMARY KEY,
+    segment_id INTEGER NOT NULL,
+    code_id INTEGER NOT NULL,
+    coder_id INTEGER,
+    FOREIGN KEY (segment_id) REFERENCES segments(segment_id),
+    FOREIGN KEY (code_id) REFERENCES codes(code_id)
+);</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 통합 쿼리: 양적-질적 결합</h3>
+                <pre><code>-- 양적 결과와 질적 테마 빈도를 함께 조회
+SELECT
+    p.participant_code,
+    p.group_type,
+    -- 양적 데이터
+    ba_pre.bbs_score AS bbs_baseline,
+    ba_post.bbs_score AS bbs_post,
+    ba_post.bbs_score - ba_pre.bbs_score AS bbs_change,
+    sr.total_score AS fesi_post,
+    -- 질적 데이터
+    (SELECT COUNT(*) FROM segment_codes sc
+     JOIN segments s ON sc.segment_id = s.segment_id
+     JOIN transcripts t ON s.transcript_id = t.transcript_id
+     JOIN interviews i ON t.interview_id = i.interview_id
+     WHERE i.participant_id = p.participant_id) AS total_codes
+FROM participants p
+LEFT JOIN balance_assessments ba_pre
+    ON p.participant_id = ba_pre.participant_id AND ba_pre.wave_id = 1
+LEFT JOIN balance_assessments ba_post
+    ON p.participant_id = ba_post.participant_id AND ba_post.wave_id = 2
+LEFT JOIN survey_responses sr
+    ON p.participant_id = sr.participant_id
+    AND sr.wave_id = 2 AND sr.survey_name = 'FES-I'
+WHERE p.is_qualitative_sample = 1
+ORDER BY bbs_change DESC;</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 효과 높은/낮은 그룹별 테마 비교</h3>
+                <pre><code>-- 균형 향상 정도에 따른 그룹 분류 후 테마 빈도 비교
+WITH participant_improvement AS (
+    SELECT
+        p.participant_id,
+        ba_post.bbs_score - ba_pre.bbs_score AS improvement,
+        CASE
+            WHEN ba_post.bbs_score - ba_pre.bbs_score >= 4 THEN 'high_improver'
+            ELSE 'low_improver'
+        END AS improvement_group
+    FROM participants p
+    JOIN balance_assessments ba_pre
+        ON p.participant_id = ba_pre.participant_id AND ba_pre.wave_id = 1
+    JOIN balance_assessments ba_post
+        ON p.participant_id = ba_post.participant_id AND ba_post.wave_id = 2
+    WHERE p.is_qualitative_sample = 1
+)
+SELECT
+    pi.improvement_group,
+    c.code_name,
+    COUNT(sc.id) AS code_frequency
+FROM participant_improvement pi
+JOIN interviews i ON pi.participant_id = i.participant_id
+JOIN transcripts t ON i.interview_id = t.interview_id
+JOIN segments s ON t.transcript_id = s.transcript_id
+JOIN segment_codes sc ON s.segment_id = sc.segment_id
+JOIN codes c ON sc.code_id = c.code_id
+WHERE c.parent_code_id IS NOT NULL  -- 최하위 코드만
+GROUP BY pi.improvement_group, c.code_name
+ORDER BY pi.improvement_group, code_frequency DESC;</code></pre>
+            </div>
+
+            <div class="warning-box">
+                <h3>⚠️ 혼합 연구 DB 설계 시 주의사항</h3>
+                <ul>
+                    <li><strong>participant_id 일관성</strong>: 양적/질적 모두 동일한 ID 체계 사용</li>
+                    <li><strong>익명화 수준 통일</strong>: 질적 데이터에서 이름이 노출되지 않도록 주의</li>
+                    <li><strong>파일 참조</strong>: 오디오/비디오는 경로만 저장, 실제 파일은 별도 관리</li>
+                    <li><strong>코딩 신뢰도</strong>: 복수 코더 사용 시 coder_id로 누가 코딩했는지 추적</li>
+                </ul>
+            </div>
+
+            <div class="summary-box">
+                <h3>📝 이 장의 핵심 정리</h3>
+                <ol>
+                    <li><strong>질적 데이터</strong>: 텍스트, 이미지, 영상 등 비구조화된 데이터, 맥락이 중요</li>
+                    <li><strong>전사본 저장</strong>: 전체 텍스트 + 발화 단위(turn) 분리로 유연한 분석</li>
+                    <li><strong>코딩 구조</strong>: codes 테이블 + segments 테이블 + segment_codes로 M:N 연결</li>
+                    <li><strong>테마 계층</strong>: parent_code_id로 코드→하위테마→상위테마 구조화</li>
+                    <li><strong>혼합 설계</strong>: 순차적(QUAN→qual, QUAL→quan) 또는 수렴적(동시) 접근</li>
+                    <li><strong>통합 핵심</strong>: participant_id로 양적/질적 데이터 연결, 통합 쿼리 가능</li>
+                </ol>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-13.html" class="nav-btn">← 이전</a>
+                <span class="page-num">14 / 20</span>
+                <a href="chapter-15.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

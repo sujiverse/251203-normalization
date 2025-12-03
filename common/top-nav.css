@@ -1,0 +1,104 @@
+/* 상단 네비게이션 바 - 시리즈 간 이동 */
+.top-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50px;
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+.top-nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.top-nav-brand:hover {
+    opacity: 0.9;
+}
+
+.top-nav-brand span {
+    font-size: 18px;
+}
+
+.top-nav-links {
+    display: flex;
+    gap: 4px;
+}
+
+.top-nav-link {
+    padding: 8px 16px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s;
+    color: rgba(255,255,255,0.7);
+}
+
+.top-nav-link:hover {
+    background: rgba(255,255,255,0.1);
+    color: white;
+}
+
+.top-nav-link.active {
+    background: rgba(255,255,255,0.15);
+    color: white;
+}
+
+.top-nav-link.book-1 { border-bottom: 2px solid #22c55e; }
+.top-nav-link.book-2 { border-bottom: 2px solid #f97316; }
+.top-nav-link.book-3 { border-bottom: 2px solid #8b5cf6; }
+
+/* 상단 네비게이션 때문에 본문 여백 조정 */
+body.has-top-nav .sidebar {
+    top: 50px;
+    height: calc(100vh - 50px);
+}
+
+body.has-top-nav .main {
+    padding-top: 90px;
+}
+
+body.has-top-nav .menu-toggle {
+    top: 65px;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+    .top-nav {
+        padding: 0 12px;
+    }
+
+    .top-nav-brand {
+        font-size: 12px;
+    }
+
+    .top-nav-brand span {
+        font-size: 16px;
+    }
+
+    .top-nav-link {
+        padding: 6px 10px;
+        font-size: 11px;
+    }
+
+    body.has-top-nav .main {
+        padding-top: 120px;
+    }
+
+    body.has-top-nav .menu-toggle {
+        top: 60px;
+    }
+}

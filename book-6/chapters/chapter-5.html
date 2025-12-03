@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[5장] 척도의 4가지 수준 - 연구 데이터 설계</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>📊</span> 연구 데이터 설계</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+            <a href="../../book-6/index.html" class="top-nav-link book-6 active">6권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📘 6권: 연구 데이터 설계</h1><p>변수부터 회귀분석까지</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <div class="part-header">2부: 변수 유형과 저장 원칙</div>
+            <h1 class="title">[5장] 척도의 4가지 수준</h1>
+
+            <div class="intro-box">
+                <p>이 장에서는 <strong>측정 척도의 4가지 수준</strong>을 배웁니다. 척도 수준에 따라 가능한 분석 방법이 달라지므로, 이 분류를 정확히 이해하는 것이 중요합니다.</p>
+            </div>
+
+            <hr>
+
+            <h2>1. 명목 척도 (Nominal Scale)</h2>
+
+            <p>명목 척도는 단순히 <strong>분류</strong>만 하는 척도입니다. 범주 간에 순서나 크기가 없습니다.</p>
+
+            <div class="concept-box">
+                <h3>특성</h3>
+                <ul>
+                    <li><strong>분류 기능만 있음:</strong> 같다/다르다만 구분</li>
+                    <li><strong>순서 없음:</strong> 범주 간 크고 작음이 없음</li>
+                    <li><strong>숫자는 레이블일 뿐:</strong> 1=남, 2=여에서 2가 1보다 큰 것이 아님</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>예시</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>변수</th><th>범주</th><th>숫자 코딩</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>성별</td><td>남성, 여성</td><td>1, 2 (또는 M, F)</td></tr>
+                            <tr><td>혈액형</td><td>A, B, O, AB</td><td>1, 2, 3, 4</td></tr>
+                            <tr><td>결혼 상태</td><td>미혼, 기혼, 이혼</td><td>1, 2, 3</td></tr>
+                            <tr><td>진단명</td><td>요통, 경추통, 어깨통</td><td>LBP, NP, SP</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="concept-box">
+                <h3>가능한 연산과 분석</h3>
+                <ul>
+                    <li><strong>연산:</strong> = (같다), ≠ (다르다)</li>
+                    <li><strong>대표값:</strong> 최빈값(Mode)</li>
+                    <li><strong>분석:</strong>
+                        <ul>
+                            <li>빈도 분석 (Frequency)</li>
+                            <li>카이제곱 검정 (χ²)</li>
+                            <li>피셔 정확 검정</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <p><strong>DB 저장:</strong></p>
+                <pre>-- 방법 1: 텍스트로 저장
+gender TEXT CHECK(gender IN ('M', 'F'))
+
+-- 방법 2: 정수 코드 + 별도 레이블 테이블
+gender_code INTEGER,
+FOREIGN KEY (gender_code) REFERENCES gender_labels(code)
+
+-- 레이블 테이블
+CREATE TABLE gender_labels (
+    code INTEGER PRIMARY KEY,
+    label TEXT
+);
+INSERT INTO gender_labels VALUES (1, '남성'), (2, '여성');</pre>
+            </div>
+
+            <hr>
+
+            <h2>2. 서열 척도 (Ordinal Scale)</h2>
+
+            <p>서열 척도는 범주 간에 <strong>순서</strong>가 있지만, 간격이 균등하지 않습니다.</p>
+
+            <div class="concept-box">
+                <h3>특성</h3>
+                <ul>
+                    <li><strong>순서 있음:</strong> 크다/작다 비교 가능</li>
+                    <li><strong>간격 불균등:</strong> 1등과 2등의 차이 ≠ 2등과 3등의 차이</li>
+                    <li><strong>덧셈/뺄셈 의미 없음:</strong> 순위 간 거리를 알 수 없음</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>예시</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>변수</th><th>범주</th><th>순서</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>학력</td><td>초졸, 중졸, 고졸, 대졸, 대학원졸</td><td>1 < 2 < 3 < 4 < 5</td></tr>
+                            <tr><td>통증 등급</td><td>없음, 경미, 중등, 심각</td><td>0 < 1 < 2 < 3</td></tr>
+                            <tr><td>만족도</td><td>매우불만, 불만, 보통, 만족, 매우만족</td><td>1 < 2 < 3 < 4 < 5</td></tr>
+                            <tr><td>암 병기</td><td>Stage I, II, III, IV</td><td>I < II < III < IV</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="concept-box">
+                <h3>가능한 연산과 분석</h3>
+                <ul>
+                    <li><strong>연산:</strong> =, ≠, <, >, ≤, ≥</li>
+                    <li><strong>대표값:</strong> 중앙값(Median), 최빈값</li>
+                    <li><strong>산포도:</strong> 백분위수, 사분위 범위(IQR)</li>
+                    <li><strong>분석:</strong>
+                        <ul>
+                            <li>Mann-Whitney U 검정</li>
+                            <li>Wilcoxon 검정</li>
+                            <li>Kruskal-Wallis 검정</li>
+                            <li>스피어만 상관 (Spearman's ρ)</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <p><strong>DB 저장:</strong></p>
+                <pre>-- 순서를 반영하는 정수로 저장
+education_level INTEGER CHECK(education_level BETWEEN 1 AND 5)
+
+-- 의미 있는 텍스트와 순서를 함께 저장
+CREATE TABLE education_levels (
+    code INTEGER PRIMARY KEY,
+    label TEXT,
+    display_order INTEGER
+);
+
+INSERT INTO education_levels VALUES
+(1, '초등학교 졸업', 1),
+(2, '중학교 졸업', 2),
+(3, '고등학교 졸업', 3),
+(4, '대학교 졸업', 4),
+(5, '대학원 졸업', 5);</pre>
+            </div>
+
+            <hr>
+
+            <h2>3. 등간 척도 (Interval Scale)</h2>
+
+            <p>등간 척도는 범주 간 <strong>간격이 균등</strong>하지만, <strong>절대 영점이 없습니다</strong>.</p>
+
+            <div class="concept-box">
+                <h3>특성</h3>
+                <ul>
+                    <li><strong>간격 균등:</strong> 10°C와 20°C의 차이 = 20°C와 30°C의 차이</li>
+                    <li><strong>절대 0 없음:</strong> 0이 "없음"을 의미하지 않음</li>
+                    <li><strong>비율 무의미:</strong> 20°C가 10°C보다 "2배 덥다"고 할 수 없음</li>
+                    <li><strong>덧셈/뺄셈 가능:</strong> 차이 계산에 의미 있음</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>예시</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>변수</th><th>설명</th><th>0의 의미</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>섭씨 온도 (°C)</td><td>물의 어는 점을 0으로</td><td>임의의 기준점</td></tr>
+                            <tr><td>IQ 점수</td><td>평균 100, SD 15로 표준화</td><td>IQ 0은 없음</td></tr>
+                            <tr><td>연도 (AD)</td><td>기원후 연도</td><td>0년은 임의의 기준</td></tr>
+                            <tr><td>표준점수 (Z)</td><td>평균 0, SD 1로 변환</td><td>평균이 0일 뿐</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="concept-box">
+                <h3>가능한 연산과 분석</h3>
+                <ul>
+                    <li><strong>연산:</strong> =, ≠, <, >, +, −</li>
+                    <li><strong>대표값:</strong> 평균(Mean), 중앙값, 최빈값</li>
+                    <li><strong>산포도:</strong> 표준편차, 분산</li>
+                    <li><strong>분석:</strong>
+                        <ul>
+                            <li>t-검정</li>
+                            <li>분산분석(ANOVA)</li>
+                            <li>피어슨 상관(Pearson's r)</li>
+                            <li>회귀분석</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+
+            <hr>
+
+            <h2>4. 비율 척도 (Ratio Scale)</h2>
+
+            <p>비율 척도는 <strong>절대 영점</strong>이 있어서 비율 계산이 의미 있는 척도입니다.</p>
+
+            <div class="concept-box">
+                <h3>특성</h3>
+                <ul>
+                    <li><strong>절대 0 있음:</strong> 0이 "완전히 없음"을 의미</li>
+                    <li><strong>비율 의미 있음:</strong> 100kg은 50kg의 2배</li>
+                    <li><strong>모든 수학 연산 가능:</strong> +, −, ×, ÷</li>
+                    <li><strong>가장 높은 측정 수준</strong></li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>예시</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>변수</th><th>단위</th><th>0의 의미</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>키</td><td>cm</td><td>0cm = 키 없음</td></tr>
+                            <tr><td>체중</td><td>kg</td><td>0kg = 질량 없음</td></tr>
+                            <tr><td>반응 시간</td><td>ms</td><td>0ms = 즉각 반응</td></tr>
+                            <tr><td>소득</td><td>원</td><td>0원 = 소득 없음</td></tr>
+                            <tr><td>거리</td><td>m</td><td>0m = 거리 없음</td></tr>
+                            <tr><td>켈빈 온도</td><td>K</td><td>0K = 절대 영도</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="concept-box">
+                <h3>가능한 연산과 분석</h3>
+                <ul>
+                    <li><strong>연산:</strong> =, ≠, <, >, +, −, ×, ÷</li>
+                    <li><strong>대표값:</strong> 평균, 중앙값, 최빈값, 기하평균</li>
+                    <li><strong>산포도:</strong> 표준편차, 분산, 변이계수(CV)</li>
+                    <li><strong>분석:</strong> 모든 통계 분석 가능</li>
+                </ul>
+            </div>
+
+            <div class="explanation-box">
+                <h3>등간 vs 비율 척도 구분법</h3>
+                <p><strong>질문: "0이 '없음'을 의미하는가?"</strong></p>
+                <ul>
+                    <li>예 → 비율 척도 (예: 체중 0kg = 질량 없음)</li>
+                    <li>아니오 → 등간 척도 (예: 0°C = 그냥 차가움)</li>
+                </ul>
+            </div>
+
+            <hr>
+
+            <h2>5. 척도별 가능한 연산과 분석</h2>
+
+            <div class="comparison-table">
+                <h3>종합 비교표</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>특성</th>
+                            <th>명목</th>
+                            <th>서열</th>
+                            <th>등간</th>
+                            <th>비율</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>분류</td>
+                            <td>O</td>
+                            <td>O</td>
+                            <td>O</td>
+                            <td>O</td>
+                        </tr>
+                        <tr>
+                            <td>순서</td>
+                            <td>X</td>
+                            <td>O</td>
+                            <td>O</td>
+                            <td>O</td>
+                        </tr>
+                        <tr>
+                            <td>균등 간격</td>
+                            <td>X</td>
+                            <td>X</td>
+                            <td>O</td>
+                            <td>O</td>
+                        </tr>
+                        <tr>
+                            <td>절대 영점</td>
+                            <td>X</td>
+                            <td>X</td>
+                            <td>X</td>
+                            <td>O</td>
+                        </tr>
+                        <tr>
+                            <td>가능한 연산</td>
+                            <td>=, ≠</td>
+                            <td>=, ≠, <, ></td>
+                            <td>=, ≠, <, >, +, −</td>
+                            <td>모든 연산</td>
+                        </tr>
+                        <tr>
+                            <td>대표값</td>
+                            <td>최빈값</td>
+                            <td>중앙값</td>
+                            <td>평균</td>
+                            <td>평균, 기하평균</td>
+                        </tr>
+                        <tr>
+                            <td>대표 분석</td>
+                            <td>χ²</td>
+                            <td>Mann-Whitney</td>
+                            <td>t-test, ANOVA</td>
+                            <td>모든 분석</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="explanation-box">
+                <h3>상위 척도의 특권</h3>
+                <p>상위 척도는 하위 척도의 모든 분석이 가능합니다:</p>
+                <ul>
+                    <li>비율 척도 → 등간, 서열, 명목 분석 모두 가능</li>
+                    <li>등간 척도 → 서열, 명목 분석 가능</li>
+                    <li>서열 척도 → 명목 분석 가능</li>
+                </ul>
+                <p>그러나 하위 척도에 상위 척도의 분석을 적용하면 안 됩니다 (예: 명목 척도에 평균 계산).</p>
+            </div>
+
+            <hr>
+
+            <h2>6. 리커트 척도: 서열인가 등간인가?</h2>
+
+            <p>리커트 척도(Likert Scale)는 연구에서 가장 흔히 사용되는 척도입니다. 그러나 이것이 서열 척도인지 등간 척도인지에 대해 오랜 논쟁이 있습니다.</p>
+
+            <div class="concept-box">
+                <h3>리커트 척도란?</h3>
+                <p>동의 정도를 묻는 응답 형식입니다.</p>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>전혀 아니다</td><td>아니다</td><td>보통이다</td><td>그렇다</td><td>매우 그렇다</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="concept-box">
+                <h3>논쟁</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>서열 척도로 보는 견해</th><th>등간 척도로 보는 견해</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1→2와 4→5의 심리적 간격이 다를 수 있음</td>
+                                <td>응답자는 숫자를 균등 간격으로 인식</td>
+                            </tr>
+                            <tr>
+                                <td>엄밀히 순서만 보장됨</td>
+                                <td>실증 연구에서 등간으로 가정해도 결과 유사</td>
+                            </tr>
+                            <tr>
+                                <td>비모수 검정 사용해야</td>
+                                <td>중심극한정리로 모수 검정 가능</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="concept-box">
+                <h3>실무적 가이드라인</h3>
+                <ul>
+                    <li><strong>단일 문항 (Likert Item):</strong>
+                        <ul>
+                            <li>엄밀히는 서열 척도</li>
+                            <li>비모수 검정 권장 (중앙값, Mann-Whitney)</li>
+                        </ul>
+                    </li>
+                    <li><strong>합산 점수 (Likert Scale):</strong>
+                        <ul>
+                            <li>여러 문항의 합/평균</li>
+                            <li>등간 척도로 처리 가능</li>
+                            <li>모수 검정 사용 가능 (평균, t-test)</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="example-box">
+                <h3>예시: 우울 척도 PHQ-9</h3>
+                <ul>
+                    <li><strong>단일 문항:</strong> "기분이 가라앉거나 우울했다" → 0, 1, 2, 3 (서열)</li>
+                    <li><strong>총점:</strong> 9개 문항 합산 → 0~27 (등간으로 처리)</li>
+                </ul>
+            </div>
+
+            <hr>
+
+            <h2>7. DB 데이터 타입 매핑</h2>
+
+            <p>척도 수준에 따라 적절한 DB 데이터 타입을 선택해야 합니다.</p>
+
+            <div class="comparison-table">
+                <h3>척도 → DB 타입 대응표</h3>
+                <table>
+                    <thead>
+                        <tr><th>척도</th><th>권장 DB 타입</th><th>예시</th><th>이유</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>명목</td>
+                            <td>TEXT 또는 INTEGER + FK</td>
+                            <td>gender TEXT, blood_type_id INTEGER</td>
+                            <td>범주 표현, 코드 테이블 연결</td>
+                        </tr>
+                        <tr>
+                            <td>서열</td>
+                            <td>INTEGER</td>
+                            <td>education_level INTEGER</td>
+                            <td>순서 보존, 비교 연산 가능</td>
+                        </tr>
+                        <tr>
+                            <td>등간</td>
+                            <td>REAL 또는 DECIMAL</td>
+                            <td>iq_score REAL</td>
+                            <td>소수점 가능, 연산 지원</td>
+                        </tr>
+                        <tr>
+                            <td>비율</td>
+                            <td>REAL 또는 DECIMAL</td>
+                            <td>weight_kg REAL, height_cm REAL</td>
+                            <td>모든 연산 지원</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="sql-box">
+                <p><strong>종합 예시:</strong></p>
+                <pre>CREATE TABLE participants (
+    id INTEGER PRIMARY KEY,
+
+    -- 명목 척도
+    gender TEXT CHECK(gender IN ('M', 'F')),
+    diagnosis_code TEXT,
+
+    -- 서열 척도
+    education_level INTEGER CHECK(education_level BETWEEN 1 AND 5),
+    pain_grade INTEGER CHECK(pain_grade BETWEEN 0 AND 3),
+
+    -- 등간 척도 (또는 등간으로 처리)
+    depression_phq9 INTEGER,  -- 0-27, 합산 점수
+    iq_score REAL,
+
+    -- 비율 척도
+    age INTEGER,              -- 절대 0 있음
+    height_cm REAL,
+    weight_kg REAL,
+    reaction_time_ms REAL
+);
+
+-- 변수 메타데이터에 척도 수준 기록
+CREATE TABLE variable_metadata (
+    variable_name TEXT PRIMARY KEY,
+    scale_level TEXT CHECK(scale_level IN
+        ('nominal', 'ordinal', 'interval', 'ratio')),
+    description TEXT
+);
+
+INSERT INTO variable_metadata VALUES
+('gender', 'nominal', '성별'),
+('education_level', 'ordinal', '학력 수준'),
+('depression_phq9', 'interval', 'PHQ-9 우울 점수'),
+('weight_kg', 'ratio', '체중 (kg)');</pre>
+            </div>
+
+            <div class="summary-box">
+                <h3>📝 이 장의 핵심 정리</h3>
+                <table>
+                    <thead>
+                        <tr><th>척도</th><th>특징</th><th>예시</th><th>대표 분석</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>명목</td><td>분류만, 순서 없음</td><td>성별, 혈액형</td><td>χ², 빈도</td></tr>
+                        <tr><td>서열</td><td>순서 있음, 간격 불균등</td><td>학력, 등급</td><td>중앙값, Mann-Whitney</td></tr>
+                        <tr><td>등간</td><td>간격 균등, 절대 0 없음</td><td>온도(°C), IQ</td><td>평균, t-test</td></tr>
+                        <tr><td>비율</td><td>절대 0 있음, 비율 의미</td><td>키, 체중, 시간</td><td>모든 분석</td></tr>
+                    </tbody>
+                </table>
+                <p><strong>핵심:</strong> 리커트 단일 문항은 서열, 합산 점수는 등간으로 처리 가능</p>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-4.html" class="nav-btn">← 이전</a>
+                <span class="page-num">5 / 20</span>
+                <a href="chapter-6.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

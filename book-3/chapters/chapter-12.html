@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>12장: 매출 대시보드 - 물리치료사를 위한 데이터베이스 3권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "3"})
+
+    @@include('components/mobile-menu.html')
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📙 물리치료사를 위한</h1>
+                <p>실전 구축 & 대시보드 (3권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+<h1 class="title">매출 대시보드</h1>
+
+<h2>클릭 한 번으로 매출 현황을</h2>
+
+<p>김지훈 원장의 가장 큰 고민 중 하나는 매출 파악이었습니다. 엑셀 시절에는 월말에 반나절을 써서 정산했죠. 이제 데이터베이스가 있으니, 실시간으로 매출을 볼 수 있는 대시보드를 만들어봅시다.</p>
+
+<p>이번 장에서 만들 매출 대시보드에는 다음 내용이 포함됩니다:</p>
+
+<ul>
+<li>오늘/이번 주/이번 달 매출</li>
+<li>월별 매출 추이</li>
+<li>치료 항목별 매출 비중</li>
+<li>미수금 현황</li>
+<li>결제 수단별 비중</li>
+</ul>
+
+<hr>
+
+<h2>1. 대시보드 생성</h2>
+
+<p>먼저 빈 대시보드를 만듭니다.</p>
+
+<ol>
+<li>Metabase 상단 <strong>➕ 새로 만들기</strong> 클릭</li>
+<li><strong>대시보드</strong> 선택</li>
+<li>이름 입력: "📊 매출 대시보드"</li>
+<li>컬렉션: "힐링손 물리치료센터" 선택</li>
+<li><strong>만들기</strong> 클릭</li>
+</ol>
+
+<p>빈 대시보드가 생성되었습니다. 이제 여기에 카드(질문)를 하나씩 추가할 거예요.</p>
+
+<hr>
+
+<h2>2. 핵심 지표 카드 만들기</h2>
+
+<p>대시보드 상단에 한눈에 보이는 핵심 숫자들을 배치합니다.</p>
+
+<h3>카드 1: 오늘 매출</h3>
+
+<ol>
+<li>대시보드 우측 상단 <strong>연필 아이콘</strong> (편집 모드) 클릭</li>
+<li><strong>➕</strong> 버튼 → <strong>SQL 쿼리</strong></li>
+<li>다음 SQL 입력:</li>
+</ol>
+
+<pre><code>SELECT
+COALESCE(SUM(b.total_amount), 0) as 오늘매출
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+WHERE ts.session_date = CURDATE()
+AND b.payment_status = '완료';</code></pre>
+
+<ol start="4">
+<li><strong>실행</strong> 클릭</li>
+<li>시각화 → <strong>숫자</strong> 선택</li>
+<li>설정에서 접두사: "₩", 천 단위 구분 켜기</li>
+<li><strong>저장</strong> → 이름: "오늘 매출"</li>
+</ol>
+
+<div class="tip"><strong>💡 COALESCE 함수</strong><br>
+데이터가 없으면 NULL이 나오는데, COALESCE(값, 0)을 쓰면 NULL 대신 0이 표시됩니다. 대시보드에서 빈 칸보다 0이 더 보기 좋아요.</div>
+
+<h3>카드 2: 이번 주 매출</h3>
+
+<pre><code>SELECT
+COALESCE(SUM(b.total_amount), 0) as 이번주매출
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+WHERE YEARWEEK(ts.session_date, 1) = YEARWEEK(CURDATE(), 1)
+AND b.payment_status = '완료';</code></pre>
+
+<p>시각화: 숫자, 저장: "이번 주 매출"</p>
+
+<h3>카드 3: 이번 달 매출</h3>
+
+<pre><code>SELECT
+COALESCE(SUM(b.total_amount), 0) as 이번달매출
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+AND b.payment_status = '완료';</code></pre>
+
+<p>시각화: 숫자, 저장: "이번 달 매출"</p>
+
+<h3>카드 4: 미수금 총액</h3>
+
+<pre><code>SELECT
+COALESCE(SUM(total_amount), 0) as 미수금총액
+FROM billings
+WHERE payment_status = '대기'
+AND total_amount > 0;</code></pre>
+
+<p>시각화: 숫자, 색상을 빨간색으로 설정, 저장: "미수금 총액"</p>
+
+<hr>
+
+<h2>3. 월별 매출 추이 차트</h2>
+
+<p>시간에 따른 매출 변화를 보는 선 그래프입니다.</p>
+
+<h3>카드 5: 월별 매출 추이</h3>
+
+<pre><code>SELECT
+DATE_FORMAT(ts.session_date, '%Y-%m') as 월,
+SUM(b.total_amount) as 매출
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+WHERE b.payment_status = '완료'
+AND ts.session_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+GROUP BY DATE_FORMAT(ts.session_date, '%Y-%m')
+ORDER BY 월;</code></pre>
+
+<ol>
+<li>실행 후 시각화 → <strong>선형</strong> 선택</li>
+<li>X축: 월, Y축: 매출</li>
+<li>설정에서 "데이터 포인트 표시" 켜기</li>
+<li>저장: "월별 매출 추이"</li>
+</ol>
+
+<hr>
+
+<h2>4. 치료 항목별 매출 분석</h2>
+
+<p>어떤 치료가 매출에 가장 기여하는지 파악합니다.</p>
+
+<h3>카드 6: 항목별 매출 비중 (이번 달)</h3>
+
+<pre><code>SELECT
+f.fee_name as 항목,
+COUNT(*) as 건수,
+SUM(b.total_amount) as 매출
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+JOIN fee_items f ON b.fee_code = f.fee_code
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+AND b.payment_status = '완료'
+AND b.total_amount > 0
+GROUP BY f.fee_code, f.fee_name
+ORDER BY 매출 DESC;</code></pre>
+
+<ol>
+<li>시각화 → <strong>원형</strong> (Pie) 선택</li>
+<li>차원: 항목, 측정값: 매출</li>
+<li>설정에서 "백분율 표시" 켜기</li>
+<li>저장: "항목별 매출 비중"</li>
+</ol>
+
+<hr>
+
+<h2>5. 결제 수단 분석</h2>
+
+<h3>카드 7: 결제 수단별 비중</h3>
+
+<pre><code>SELECT
+COALESCE(b.payment_method, '미수금') as 결제수단,
+COUNT(*) as 건수,
+SUM(b.total_amount) as 금액
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+AND b.total_amount > 0
+GROUP BY b.payment_method
+ORDER BY 금액 DESC;</code></pre>
+
+<p>시각화: 원형 또는 도넛, 저장: "결제 수단별 비중"</p>
+
+<hr>
+
+<h2>6. 미수금 상세 현황</h2>
+
+<h3>카드 8: 미수금 목록</h3>
+
+<pre><code>SELECT
+p.name as 환자명,
+p.phone as 연락처,
+ts.session_date as 치료일,
+f.fee_name as 항목,
+b.total_amount as 미수금액,
+DATEDIFF(CURDATE(), ts.session_date) as 경과일
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+JOIN patients p ON ts.patient_id = p.patient_id
+JOIN fee_items f ON b.fee_code = f.fee_code
+WHERE b.payment_status = '대기'
+AND b.total_amount > 0
+ORDER BY ts.session_date;</code></pre>
+
+<p>시각화: 테이블, 저장: "미수금 상세 목록"</p>
+
+<hr>
+
+<h2>7. 대시보드 레이아웃 정리</h2>
+
+<p>모든 카드를 추가했으면, 보기 좋게 배치합니다.</p>
+
+<h3>권장 레이아웃</h3>
+
+<pre><code>┌─────────────────────────────────────────────────────────┐
+│ 📊 매출 대시보드                                         │
+├──────────┬──────────┬──────────┬──────────────────────────┤
+│ 오늘매출  │ 이번주    │ 이번달   │ 미수금                  │
+│ ₩160,000 │ ₩480,000 │ ₩2.4M   │ ₩360,000 (빨간색)       │
+├──────────────────────────────┬──────────────────────────┤
+│                              │                          │
+│   월별 매출 추이 (선그래프)    │   항목별 매출 (원형)       │
+│                              │                          │
+├──────────────────────────────┼──────────────────────────┤
+│                              │                          │
+│   일별 매출 (막대)            │   결제수단별 (도넛)        │
+│                              │                          │
+├──────────────────────────────┴──────────────────────────┤
+│                                                         │
+│   미수금 상세 목록 (테이블)                               │
+│                                                         │
+└─────────────────────────────────────────────────────────┘</code></pre>
+
+<h3>카드 크기 조절</h3>
+
+<ol>
+<li>편집 모드에서 카드 모서리를 드래그하면 크기 조절</li>
+<li>숫자 카드는 작게, 차트는 크게</li>
+<li>테이블은 넓게</li>
+</ol>
+
+<h3>저장</h3>
+
+<p>레이아웃 정리가 끝나면 우측 상단 <strong>저장</strong> 클릭!</p>
+
+<hr>
+
+<h2>8. 자동 새로고침 설정</h2>
+
+<p>대시보드를 실시간으로 업데이트하려면 자동 새로고침을 설정합니다.</p>
+
+<ol>
+<li>대시보드 우측 상단 <strong>시계 아이콘</strong> 클릭</li>
+<li>새로고침 간격 선택: 1분, 5분, 10분, 30분, 1시간</li>
+<li>클리닉 운영 중에는 5~10분 권장</li>
+</ol>
+
+<div class="tip"><strong>💡 TV에 대시보드 띄워놓기</strong><br>
+접수 데스크에 모니터나 TV를 두고 대시보드를 항상 띄워놓으면, 직원들이 실시간으로 현황을 파악할 수 있어요. 전체 화면 모드(F11)로 보면 더 깔끔합니다.</div>
+
+<hr>
+
+<h2>완성된 매출 대시보드</h2>
+
+<p>축하합니다! 매출 대시보드가 완성되었습니다.</p>
+
+<p>이 대시보드로 할 수 있는 것:</p>
+
+<ul>
+<li>✅ 실시간 매출 현황 파악</li>
+<li>✅ 월별 추이로 성장세 확인</li>
+<li>✅ 어떤 치료가 잘 나가는지 분석</li>
+<li>✅ 미수금 관리</li>
+<li>✅ 결제 수단별 현황 파악</li>
+</ul>
+
+<p>김지훈 원장은 이제 월말 정산에 반나절을 쓰지 않아도 됩니다. 대시보드를 한 번 보면 끝이니까요!</p>
+
+<hr>
+
+<h2>이번 장 요약</h2>
+
+<p>이번 장에서 만든 것:</p>
+
+<table>
+<tr><th>카드</th><th>내용</th><th>시각화</th></tr>
+<tr><td>1~4</td><td>오늘/이번주/이번달 매출, 미수금</td><td>숫자</td></tr>
+<tr><td>5</td><td>월별 매출 추이</td><td>선형</td></tr>
+<tr><td>6</td><td>항목별 매출</td><td>원형</td></tr>
+<tr><td>7</td><td>결제 수단별</td><td>도넛</td></tr>
+<tr><td>8</td><td>미수금 상세</td><td>테이블</td></tr>
+</table>
+
+<p>다음 장에서는 "운영 대시보드"를 만듭니다. 오늘 예약 현황, 해피콜 대상자, 이탈 위험 환자 등 일상 운영에 필요한 정보를 한 화면에서 볼 수 있게요!</p>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

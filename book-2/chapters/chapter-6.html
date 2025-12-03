@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[6장] 매출 & 수납 관리 - 물리치료사를 위한 DB 2권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>🏥</span> DB 완전정복</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2 active">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📙 2권: SQL 기초 편</h1><p>데이터베이스 활용</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <h1 class="title">[6장] 매출 & 수납 관리</h1>
+
+            <div class="intro-box">
+                <p>이번 장에서는 <strong>매출 현황과 수납 관리</strong> 쿼리를 배웁니다. 오늘 매출, 월간 매출, 미수금 현황 등 <strong>치료실 경영의 핵심 지표</strong>를 파악하는 방법을 알아보아요!</p>
+            </div>
+
+            <hr>
+
+            <!-- ===== 쿼리 1: 오늘 매출 현황 ===== -->
+            <h2>1. 오늘 매출 현황</h2>
+
+            <div class="concept-box">
+                <h3>🎯 이 쿼리가 필요한 상황</h3>
+                <p>"오늘 얼마 벌었어?" - 퇴근 전 오늘 하루 매출을 빠르게 확인합니다. 수납 완료된 금액과 아직 미수금인 금액을 구분해서 볼 수 있어요.</p>
+            </div>
+
+            <pre><code>SELECT
+    COUNT(DISTINCT ts.session_id) AS 치료건수,
+    SUM(b.total_amount) AS 총매출,
+    SUM(CASE WHEN b.payment_status = '완료' THEN b.total_amount ELSE 0 END) AS 수납완료,
+    SUM(CASE WHEN b.payment_status = '대기' THEN b.total_amount ELSE 0 END) AS 미수금
+FROM treatment_sessions ts
+JOIN billings b ON ts.session_id = b.session_id
+WHERE ts.session_date = CURDATE();</code></pre>
+
+            <div class="explanation-box">
+                <h3>📖 조건별 합계의 활용</h3>
+
+                <div class="line-explain">
+                    <div class="code-line">SUM(b.total_amount) AS 총매출</div>
+                    <div class="explain-text">
+                        오늘 발생한 <strong>모든 청구 금액의 합계</strong>입니다.<br>
+                        수납 여부와 관계없이 "오늘 치료로 발생한 총 금액"이에요.
+                    </div>
+                </div>
+
+                <div class="line-explain highlight-line">
+                    <div class="code-line">SUM(CASE WHEN b.payment_status = '완료' THEN b.total_amount ELSE 0 END)</div>
+                    <div class="explain-text">
+                        <strong>수납 완료된 금액만 합산</strong>하는 패턴입니다!<br><br>
+
+                        <strong>작동 원리:</strong>
+                        <table class="mini-table">
+                            <tr><th>금액</th><th>상태</th><th>CASE 결과</th></tr>
+                            <tr><td>50,000</td><td>완료</td><td>50,000 ✓</td></tr>
+                            <tr><td>30,000</td><td>대기</td><td>0</td></tr>
+                            <tr><td>50,000</td><td>완료</td><td>50,000 ✓</td></tr>
+                            <tr><td>40,000</td><td>대기</td><td>0</td></tr>
+                        </table>
+                        <p><br>SUM = 50,000 + 0 + 50,000 + 0 = <strong>100,000원</strong> (수납 완료)</p>
+                    </div>
+                </div>
+
+                <div class="line-explain">
+                    <div class="code-line">SUM(CASE WHEN b.payment_status = '대기' THEN b.total_amount ELSE 0 END)</div>
+                    <div class="explain-text">
+                        같은 원리로 <strong>미수금(아직 안 받은 돈)</strong>을 계산합니다.<br><br>
+
+                        <div class="analogy-box">
+                            <h4>🎭 비유로 이해하기</h4>
+                            <p>식당에서 하루 매출을 정산할 때:</p>
+                            <ul>
+                                <li><strong>총매출</strong>: 오늘 주문된 모든 음식 가격</li>
+                                <li><strong>수납완료</strong>: 계산 끝난 테이블 금액</li>
+                                <li><strong>미수금</strong>: 아직 계산 안 한 테이블 금액</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="why-box">
+                    <h4>❓ GROUP BY가 없는 이유?</h4>
+                    <p>이 쿼리는 "오늘 전체"를 하나로 집계하기 때문입니다.</p>
+                    <p>치료사별, 시간대별로 나누려면 GROUP BY가 필요하지만,<br>
+                    전체 합계만 보려면 GROUP BY 없이 SUM만 쓰면 됩니다!</p>
+                </div>
+            </div>
+
+            <div class="result-example">
+                <h4>📋 실행 결과 예시</h4>
+                <table class="result-table">
+                    <tr><th>치료건수</th><th>총매출</th><th>수납완료</th><th>미수금</th></tr>
+                    <tr><td>24</td><td>1,200,000</td><td>980,000</td><td>220,000</td></tr>
+                </table>
+                <p class="result-note">오늘 24건 치료, 총 120만원 중 98만원 수납 완료, 22만원 미수금!</p>
+            </div>
+
+            <hr>
+
+            <!-- ===== 쿼리 2: 월간 매출 집계 ===== -->
+            <h2>2. 월간 매출 집계</h2>
+
+            <div class="concept-box">
+                <h3>🎯 이 쿼리가 필요한 상황</h3>
+                <p>"이번 달 매출이 얼마야?" - 월 단위로 매출을 집계해서 경영 현황을 파악합니다. 월별 추이를 보면 성장세를 알 수 있어요!</p>
+            </div>
+
+            <pre><code>SELECT
+    DATE_FORMAT(ts.session_date, '%Y-%m') AS 월,
+    COUNT(DISTINCT ts.session_id) AS 총치료건,
+    SUM(b.total_amount) AS 총매출,
+    SUM(CASE WHEN b.payment_status = '완료' THEN b.total_amount ELSE 0 END) AS 수납완료,
+    SUM(CASE WHEN b.payment_status = '대기' THEN b.total_amount ELSE 0 END) AS 미수금
+FROM treatment_sessions ts
+JOIN billings b ON ts.session_id = b.session_id
+WHERE ts.session_date >= '2024-01-01'
+  AND ts.session_date < '2024-02-01'
+GROUP BY DATE_FORMAT(ts.session_date, '%Y-%m');</code></pre>
+
+            <div class="explanation-box">
+                <h3>📖 DATE_FORMAT으로 월별 그룹화</h3>
+
+                <div class="line-explain highlight-line">
+                    <div class="code-line">DATE_FORMAT(ts.session_date, '%Y-%m') AS 월</div>
+                    <div class="explain-text">
+                        날짜에서 <strong>"년-월" 형태만 추출</strong>합니다.<br><br>
+
+                        <table class="mini-table">
+                            <tr><th>원래 날짜</th><th>DATE_FORMAT 결과</th></tr>
+                            <tr><td>2024-01-05</td><td>2024-01</td></tr>
+                            <tr><td>2024-01-15</td><td>2024-01</td></tr>
+                            <tr><td>2024-01-28</td><td>2024-01</td></tr>
+                            <tr><td>2024-02-03</td><td>2024-02</td></tr>
+                        </table>
+                        <p><br>같은 월의 데이터가 하나로 묶이게 됩니다!</p>
+                    </div>
+                </div>
+
+                <div class="line-explain">
+                    <div class="code-line">GROUP BY DATE_FORMAT(ts.session_date, '%Y-%m')</div>
+                    <div class="explain-text">
+                        SELECT에서 사용한 <strong>DATE_FORMAT과 동일하게</strong> GROUP BY 해야 합니다.<br><br>
+
+                        <div class="tip-inline">
+                            <strong>GROUP BY 규칙</strong><br>
+                            SELECT에서 집계 함수(SUM, COUNT 등) 없이 쓴 컬럼은<br>
+                            반드시 GROUP BY에도 있어야 해요!
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-example">
+                <h4>📋 실행 결과 예시</h4>
+                <table class="result-table">
+                    <tr><th>월</th><th>총치료건</th><th>총매출</th><th>수납완료</th><th>미수금</th></tr>
+                    <tr><td>2024-01</td><td>312</td><td>15,600,000</td><td>14,200,000</td><td>1,400,000</td></tr>
+                </table>
+            </div>
+
+            <div class="tip">
+                <strong>💡 여러 달 비교하기</strong><br><br>
+                WHERE 조건을 바꾸면 여러 달을 한번에 볼 수 있어요!
+                <pre><code>WHERE ts.session_date >= '2024-01-01'
+  AND ts.session_date < '2024-04-01'  -- 1~3월</code></pre>
+                <table class="mini-table">
+                    <tr><th>월</th><th>총매출</th></tr>
+                    <tr><td>2024-01</td><td>15,600,000</td></tr>
+                    <tr><td>2024-02</td><td>16,800,000</td></tr>
+                    <tr><td>2024-03</td><td>18,200,000</td></tr>
+                </table>
+                <p>↑ 매출이 꾸준히 성장하고 있네요!</p>
+            </div>
+
+            <hr>
+
+            <!-- ===== 쿼리 3: 미수금 현황 ===== -->
+            <h2>3. 미수금 현황</h2>
+
+            <div class="concept-box">
+                <h3>🎯 이 쿼리가 필요한 상황</h3>
+                <p>"아직 수납 안 된 건이 얼마나 있지?" - 미수금 목록을 뽑아서 환자에게 연락하거나, 오래된 미수금을 관리합니다.</p>
+            </div>
+
+            <pre><code>SELECT
+    p.name AS 환자명,
+    p.phone AS 연락처,
+    ts.session_date AS 치료일,
+    b.total_amount AS 금액,
+    DATEDIFF(CURDATE(), ts.session_date) AS 경과일
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+JOIN patients p ON ts.patient_id = p.patient_id
+WHERE b.payment_status = '대기'
+ORDER BY ts.session_date ASC;</code></pre>
+
+            <div class="explanation-box">
+                <h3>📖 미수금 관리의 핵심</h3>
+
+                <div class="line-explain">
+                    <div class="code-line">WHERE b.payment_status = '대기'</div>
+                    <div class="explain-text">
+                        수납 상태가 <strong>'대기'인 건만 필터링</strong>합니다.<br><br>
+                        payment_status 값 예시:
+                        <ul>
+                            <li><code>'완료'</code>: 수납 완료</li>
+                            <li><code>'대기'</code>: 아직 미수납</li>
+                            <li><code>'취소'</code>: 취소된 건 (치료실마다 다를 수 있음)</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="line-explain">
+                    <div class="code-line">DATEDIFF(CURDATE(), ts.session_date) AS 경과일</div>
+                    <div class="explain-text">
+                        치료일로부터 <strong>며칠이나 지났는지</strong> 계산합니다.<br><br>
+
+                        <div class="why-box">
+                            <h4>❓ 경과일이 왜 중요할까요?</h4>
+                            <p>미수금도 "급한 것"과 "덜 급한 것"이 있어요!</p>
+                            <ul>
+                                <li><strong>1~7일</strong>: 다음 방문 때 수납 받으면 됨</li>
+                                <li><strong>8~14일</strong>: 연락해서 확인 필요</li>
+                                <li><strong>15일 이상</strong>: 적극적인 수금 조치 필요</li>
+                                <li><strong>30일 이상</strong>: 악성 미수금 관리 대상</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="line-explain">
+                    <div class="code-line">ORDER BY ts.session_date ASC</div>
+                    <div class="explain-text">
+                        <strong>오래된 미수금부터</strong> 보여줍니다.<br><br>
+                        ASC = 오름차순 = 날짜가 작은(오래된) 것부터<br>
+                        가장 오래된 미수금이 맨 위에 나와서 우선 처리할 수 있어요!
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-example">
+                <h4>📋 실행 결과 예시</h4>
+                <table class="result-table">
+                    <tr><th>환자명</th><th>연락처</th><th>치료일</th><th>금액</th><th>경과일</th></tr>
+                    <tr class="urgent-row"><td>박민수</td><td>010-3456-7890</td><td>2024-01-05</td><td>50,000</td><td>25</td></tr>
+                    <tr class="urgent-row"><td>최지영</td><td>010-4567-8901</td><td>2024-01-12</td><td>30,000</td><td>18</td></tr>
+                    <tr><td>이영희</td><td>010-2345-6789</td><td>2024-01-20</td><td>50,000</td><td>10</td></tr>
+                    <tr><td>김철수</td><td>010-1234-5678</td><td>2024-01-28</td><td>40,000</td><td>2</td></tr>
+                </table>
+                <p class="result-note">빨간색 표시된 건은 15일 이상 경과 - 빨리 연락하세요!</p>
+            </div>
+
+            <div class="tip">
+                <strong>💡 미수금 등급 표시 추가하기</strong><br>
+                <pre><code>SELECT
+    ...,
+    CASE
+        WHEN DATEDIFF(CURDATE(), ts.session_date) >= 30 THEN '🔴 악성'
+        WHEN DATEDIFF(CURDATE(), ts.session_date) >= 15 THEN '🟠 주의'
+        WHEN DATEDIFF(CURDATE(), ts.session_date) >= 7 THEN '🟡 관리'
+        ELSE '🟢 정상'
+    END AS 미수금등급
+...</code></pre>
+            </div>
+
+            <div class="summary-box">
+                <h3>📝 이번 장 핵심 정리</h3>
+                <table class="summary-table">
+                    <tr>
+                        <th>쿼리 유형</th>
+                        <th>핵심 문법</th>
+                        <th>활용</th>
+                    </tr>
+                    <tr>
+                        <td><strong>오늘 매출</strong></td>
+                        <td>WHERE = CURDATE()</td>
+                        <td>일일 마감 정산</td>
+                    </tr>
+                    <tr>
+                        <td><strong>월간 매출</strong></td>
+                        <td>GROUP BY DATE_FORMAT</td>
+                        <td>월별 추이 분석</td>
+                    </tr>
+                    <tr>
+                        <td><strong>조건별 합계</strong></td>
+                        <td>SUM(CASE WHEN...)</td>
+                        <td>수납완료/미수금 분리</td>
+                    </tr>
+                    <tr>
+                        <td><strong>미수금 관리</strong></td>
+                        <td>WHERE status = '대기'</td>
+                        <td>수금 대상 목록</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="practice-box">
+                <h3>🏋️ 응용 연습</h3>
+                <p><strong>Q. 미수금 총액과 건수를 한눈에 보려면?</strong></p>
+                <details>
+                    <summary>정답 보기</summary>
+                    <pre><code>SELECT
+    COUNT(*) AS 미수금건수,
+    SUM(b.total_amount) AS 미수금총액,
+    AVG(DATEDIFF(CURDATE(), ts.session_date)) AS 평균경과일
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+WHERE b.payment_status = '대기';</code></pre>
+                    <p>AVG()는 평균을 구하는 함수예요!</p>
+                </details>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-5.html" class="nav-btn">← 이전</a>
+                <span class="page-num">6 / 12</span>
+                <a href="chapter-7.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

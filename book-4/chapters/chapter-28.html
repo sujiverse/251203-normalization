@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>28장: 보안 체크리스트 - 물리치료사를 위한 DB 4권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "4"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📕 물리치료사를 위한</h1>
+                <p>웹 앱 만들기 (4권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">보안 체크리스트</h1>
+
+            <h2>왜 보안이 중요한가?</h2>
+
+            <ul>
+                <li><strong>환자 개인정보</strong>: 법적 보호 대상</li>
+                <li><strong>의료 정보</strong>: 민감 정보</li>
+                <li><strong>신뢰</strong>: 환자의 신뢰를 지켜야 함</li>
+            </ul>
+
+            <hr>
+
+            <h2>필수 보안 체크리스트</h2>
+
+            <h3>1. 비밀번호 보안</h3>
+
+            <table>
+                <tr>
+                    <th>항목</th>
+                    <th>확인</th>
+                </tr>
+                <tr>
+                    <td>비밀번호 해시 저장</td>
+                    <td>☐ generate_password_hash 사용</td>
+                </tr>
+                <tr>
+                    <td>최소 8자 이상 요구</td>
+                    <td>☐ 길이 검증 추가</td>
+                </tr>
+                <tr>
+                    <td>기본 비밀번호 변경</td>
+                    <td>☐ admin123 등 변경</td>
+                </tr>
+            </table>
+
+            <pre><code># 비밀번호 검증
+def validate_password(password):
+    if len(password) < 8:
+        return False, "8자 이상 입력하세요"
+    if not any(c.isdigit() for c in password):
+        return False, "숫자를 포함하세요"
+    return True, "OK"</code></pre>
+
+            <hr>
+
+            <h3>2. SQL 인젝션 방지</h3>
+
+            <pre><code># ❌ 위험한 코드
+cursor.execute(f"SELECT * FROM patients WHERE name = '{name}'")
+
+# ✅ 안전한 코드 (파라미터 바인딩)
+cursor.execute("SELECT * FROM patients WHERE name = %s", (name,))</code></pre>
+
+            <div class="warning"><strong>⚠️ 절대 금지</strong><br>
+            사용자 입력을 직접 SQL 문자열에 넣지 마세요!</div>
+
+            <hr>
+
+            <h3>3. XSS 방지</h3>
+
+            <pre><code># Jinja2는 기본적으로 이스케이프 적용
+{{ user_input }}  ← 자동으로 &lt;script&gt; 등 이스케이프
+
+# 주의: |safe 필터는 신뢰할 수 있는 데이터만
+{{ trusted_html|safe }}  ← 사용자 입력에는 절대 쓰지 마세요</code></pre>
+
+            <pre><code>// JavaScript에서도 주의
+// ❌ 위험
+element.innerHTML = userInput;
+
+// ✅ 안전
+element.textContent = userInput;</code></pre>
+
+            <hr>
+
+            <h3>4. 세션 보안</h3>
+
+            <pre><code># app.py
+
+import os
+
+app.secret_key = os.environ.get('SECRET_KEY')  # 환경변수에서 읽기
+
+# 세션 설정
+app.config.update(
+    SESSION_COOKIE_SECURE=True,      # HTTPS에서만 쿠키 전송
+    SESSION_COOKIE_HTTPONLY=True,    # JavaScript에서 쿠키 접근 불가
+    SESSION_COOKIE_SAMESITE='Lax'    # CSRF 방지
+)</code></pre>
+
+            <hr>
+
+            <h3>5. 접근 권한 확인</h3>
+
+            <pre><code># 모든 API에서 권한 확인
+
+@app.route('/api/patients/&lt;int:patient_id&gt;')
+@login_required
+def get_patient(patient_id):
+    # 권한 확인
+    if session['role'] not in ['admin', 'therapist']:
+        return jsonify({'error': '권한 없음'}), 403
+
+    # ...
+
+
+# 자신의 데이터만 수정 가능
+@app.route('/api/users/&lt;int:user_id&gt;', methods=['PUT'])
+@login_required
+def update_user(user_id):
+    # 본인 또는 관리자만
+    if session['user_id'] != user_id and session['role'] != 'admin':
+        return jsonify({'error': '권한 없음'}), 403
+
+    # ...</code></pre>
+
+            <hr>
+
+            <h3>6. 환경변수 관리</h3>
+
+            <pre><code># .env 파일 (절대 git에 올리지 마세요!)
+SECRET_KEY=your-super-secret-key-here
+DB_PASSWORD=database-password
+DB_HOST=localhost
+
+# .gitignore
+.env
+*.pyc
+__pycache__/
+
+# 사용법
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+app.secret_key = os.getenv('SECRET_KEY')
+db_password = os.getenv('DB_PASSWORD')</code></pre>
+
+            <hr>
+
+            <h3>7. 에러 메시지</h3>
+
+            <pre><code># 운영 환경에서는 상세 에러 숨기기
+
+@app.errorhandler(500)
+def internal_error(error):
+    # 로그에는 상세 정보 기록
+    app.logger.error(f'서버 오류: {error}')
+
+    # 사용자에게는 일반 메시지만
+    return jsonify({'error': '서버 오류가 발생했습니다'}), 500
+
+
+# DEBUG 모드 끄기
+app.run(debug=False)</code></pre>
+
+            <hr>
+
+            <h3>8. 입력값 검증</h3>
+
+            <pre><code># 모든 입력값 검증
+
+@app.route('/api/patients', methods=['POST'])
+@login_required
+def create_patient():
+    data = request.get_json()
+
+    # 필수 필드 확인
+    name = data.get('name', '').strip()
+    if not name:
+        return jsonify({'error': '이름을 입력하세요'}), 400
+
+    if len(name) > 100:
+        return jsonify({'error': '이름이 너무 깁니다'}), 400
+
+    # 전화번호 형식 확인
+    phone = data.get('phone', '')
+    if phone and not re.match(r'^010-\d{4}-\d{4}$', phone):
+        return jsonify({'error': '전화번호 형식 오류'}), 400
+
+    # 날짜 형식 확인
+    birth_date = data.get('birth_date')
+    if birth_date:
+        try:
+            datetime.strptime(birth_date, '%Y-%m-%d')
+        except ValueError:
+            return jsonify({'error': '날짜 형식 오류'}), 400
+
+    # ...</code></pre>
+
+            <hr>
+
+            <h3>9. 백업</h3>
+
+            <pre><code># 정기 백업 스크립트 (backup.bat)
+@echo off
+set DATE=%date:~0,4%%date:~5,2%%date:~8,2%
+set BACKUP_DIR=C:\backup
+
+mysqldump -u root -p healing_hands > %BACKUP_DIR%\healing_hands_%DATE%.sql
+
+echo 백업 완료: healing_hands_%DATE%.sql
+
+
+# 자동 백업 (작업 스케줄러로 매일 실행)</code></pre>
+
+            <hr>
+
+            <h3>10. 로깅</h3>
+
+            <pre><code>import logging
+from datetime import datetime
+
+# 로그 설정
+logging.basicConfig(
+    filename='app.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
+# 중요 작업 로깅
+@app.route('/api/patients/&lt;int:patient_id&gt;', methods=['DELETE'])
+@admin_required
+def delete_patient(patient_id):
+    logging.info(f"환자 삭제: {patient_id}, 삭제자: {session['username']}")
+    # ...
+
+# 로그인 시도 기록
+@app.route('/login', methods=['POST'])
+def login():
+    username = request.form.get('username')
+
+    # 실패 시
+    logging.warning(f"로그인 실패: {username}, IP: {request.remote_addr}")
+
+    # 성공 시
+    logging.info(f"로그인 성공: {username}")</code></pre>
+
+            <hr>
+
+            <h2>보안 체크리스트 요약</h2>
+
+            <table>
+                <tr>
+                    <th>분류</th>
+                    <th>항목</th>
+                    <th>확인</th>
+                </tr>
+                <tr>
+                    <td rowspan="3">인증</td>
+                    <td>비밀번호 해시 저장</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>세션 타임아웃 설정</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>로그인 실패 제한</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td rowspan="2">입력</td>
+                    <td>SQL 파라미터 바인딩</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>입력값 검증</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td rowspan="2">출력</td>
+                    <td>XSS 방지 (이스케이프)</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>에러 메시지 숨김</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td rowspan="2">설정</td>
+                    <td>DEBUG 모드 끄기</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>환경변수로 비밀 관리</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td rowspan="2">운영</td>
+                    <td>정기 백업</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>로그 기록</td>
+                    <td>☐</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li><strong>비밀번호</strong>: 반드시 해시로 저장</li>
+                <li><strong>SQL</strong>: 파라미터 바인딩 필수</li>
+                <li><strong>XSS</strong>: 사용자 입력 이스케이프</li>
+                <li><strong>권한</strong>: 모든 API에서 권한 확인</li>
+                <li><strong>환경변수</strong>: 비밀 정보는 코드에 넣지 않기</li>
+                <li><strong>백업</strong>: 정기적으로 데이터 백업</li>
+            </ul>
+
+            <blockquote>다음 장에서는 최종 완성과 운영 가이드입니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

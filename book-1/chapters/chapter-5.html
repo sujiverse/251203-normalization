@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[5권] 제3정규형 (3NF) - 물리치료사를 위한 DB</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "1"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📗 1권: 정규화 편</h1>
+                <p>데이터베이스 기초 개념</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">[5권] 제3정규형 (3NF)</h1>
+
+            <h2>이행 종속이란?</h2>
+            <p>A → B → C 형태로 종속이 연쇄되는 것</p>
+            <pre><code>환자번호 → 보험코드 → 보험회사명</code></pre>
+            <hr>
+
+            <h2>3NF 위반 사례</h2>
+            <pre><code>[환자] 테이블 - 3NF 위반!
+환자번호(PK) | 환자명 | 보험코드 | 보험회사명   | 보험회사연락처
+P001         | 김철수 | INS001   | 국민건강보험 | 1577-1000
+P002         | 이영희 | INS002   | 삼성화재     | 1588-5114
+P003         | 박민수 | INS001   | 국민건강보험 | 1577-1000  ← 중복!</code></pre>
+            <hr>
+
+            <h2 class="success">해결: 이행 종속 분리</h2>
+            <pre><code>[환자] 테이블
+환자번호(PK) | 환자명 | 보험코드(FK)
+P001         | 김철수 | INS001
+P002         | 이영희 | INS002
+
+[보험] 테이블
+보험코드(PK) | 보험회사명   | 보험회사연락처
+INS001       | 국민건강보험 | 1577-1000  ← 한 번만!
+INS002       | 삼성화재     | 1588-5114</code></pre>
+            <hr>
+
+            <h2>정규화 총정리</h2>
+            <table>
+                <tr><th>정규형</th><th>규칙</th><th>판별 질문</th></tr>
+                <tr><td><strong>1NF</strong></td><td>원자값만</td><td>"한 칸에 값이 여러 개인가?"</td></tr>
+                <tr><td><strong>2NF</strong></td><td>부분 종속 제거</td><td>"복합키의 일부만 알면 결정되나?"</td></tr>
+                <tr><td><strong>3NF</strong></td><td>이행 종속 제거</td><td>"기본키 아닌 컬럼이 다른 컬럼을 결정하나?"</td></tr>
+            </table>
+
+            <div class="nav-buttons">
+                <a href="chapter-4.html" class="nav-btn">← 이전</a>
+                <span class="page-num">5 / 12</span>
+                <a href="chapter-6.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/nav.js"></script>
+</body>
+</html>

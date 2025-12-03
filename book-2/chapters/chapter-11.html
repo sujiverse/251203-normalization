@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[11장] 백업과 안전 관리 - 물리치료사를 위한 DB 2권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>🏥</span> DB 완전정복</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2 active">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📙 2권: SQL 기초 편</h1><p>데이터베이스 활용</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <h1 class="title">[11장] 백업과 안전 관리</h1>
+
+            <div class="intro-box">
+                <p>데이터베이스에서 가장 중요한 건 뭘까요? 바로 <strong>데이터를 잃지 않는 것</strong>입니다! 이번 장에서는 <strong>백업의 중요성</strong>과 <strong>실수를 방지하는 방법</strong>을 배웁니다.</p>
+            </div>
+
+            <div class="danger">
+                <strong>🚨 백업 없이 일어날 수 있는 재앙</strong><br><br>
+                • 실수로 <code>DELETE</code> WHERE 없이 실행 → <strong>전체 환자 데이터 삭제</strong><br>
+                • 컴퓨터 고장 → <strong>수년간의 치료 기록 소실</strong><br>
+                • 랜섬웨어 감염 → <strong>모든 데이터 암호화되어 접근 불가</strong><br><br>
+                <strong>백업은 선택이 아니라 필수입니다!</strong>
+            </div>
+
+            <hr>
+
+            <!-- ===== 1. mysqldump 백업 ===== -->
+            <h2>1. MySQL 백업 기본 (mysqldump)</h2>
+
+            <div class="concept-box">
+                <h3>🎯 mysqldump란?</h3>
+                <p>MySQL에서 제공하는 <strong>공식 백업 도구</strong>예요. 데이터베이스 전체를 <strong>SQL 파일로 저장</strong>합니다. 이 파일만 있으면 언제든 데이터를 복원할 수 있어요!</p>
+            </div>
+
+            <div class="explanation-box">
+                <h3>📖 백업 명령어</h3>
+
+                <h4>Windows에서 백업하기</h4>
+                <pre><code># 기본 백업
+mysqldump -u root -p pt_clinic > C:\백업\pt_clinic_backup.sql
+
+# 날짜 포함 백업 (권장!)
+mysqldump -u root -p pt_clinic > C:\백업\pt_clinic_%date:~0,4%%date:~5,2%%date:~8,2%.sql</code></pre>
+
+                <h4>Mac/Linux에서 백업하기</h4>
+                <pre><code># 기본 백업
+mysqldump -u root -p pt_clinic > ~/백업/pt_clinic_backup.sql
+
+# 날짜 포함 백업 (권장!)
+mysqldump -u root -p pt_clinic > ~/백업/pt_clinic_$(date +%Y%m%d).sql</code></pre>
+
+                <div class="line-explain">
+                    <div class="code-line">mysqldump -u root -p pt_clinic</div>
+                    <div class="explain-text">
+                        <strong>백업 명령어 분석</strong><br><br>
+                        <ul>
+                            <li><code>mysqldump</code>: 백업 프로그램</li>
+                            <li><code>-u root</code>: root 계정으로 접속</li>
+                            <li><code>-p</code>: 비밀번호 입력 (실행 시 물어봄)</li>
+                            <li><code>pt_clinic</code>: 백업할 데이터베이스 이름</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="line-explain highlight-line">
+                    <div class="code-line">> C:\백업\파일명.sql</div>
+                    <div class="explain-text">
+                        <strong>저장 위치 지정</strong><br><br>
+                        <code>></code> 기호는 "결과를 파일로 저장해라"는 의미예요.<br>
+                        화면에 출력하는 대신 지정한 파일에 저장합니다.
+                    </div>
+                </div>
+
+                <div class="why-box">
+                    <h4>❓ 왜 날짜를 파일명에 넣을까요?</h4>
+                    <p>백업을 여러 개 보관하려면 <strong>언제 만든 건지 구분</strong>해야 해요!</p>
+                    <ul>
+                        <li><code>pt_clinic_20240115.sql</code> - 1월 15일 백업</li>
+                        <li><code>pt_clinic_20240122.sql</code> - 1월 22일 백업</li>
+                    </ul>
+                    <p>문제 발생 시 특정 날짜로 되돌릴 수 있어요.</p>
+                </div>
+            </div>
+
+            <div class="tip">
+                <strong>💡 백업 파일 확인하기</strong><br><br>
+                백업 파일(.sql)을 메모장으로 열어보면 SQL 문들이 들어있어요:<br>
+                • <code>CREATE TABLE ...</code> - 테이블 구조<br>
+                • <code>INSERT INTO ...</code> - 실제 데이터<br><br>
+                이 SQL을 실행하면 데이터베이스가 복원됩니다!
+            </div>
+
+            <hr>
+
+            <!-- ===== 2. DBeaver에서 백업 ===== -->
+            <h2>2. DBeaver에서 백업하기</h2>
+
+            <div class="concept-box">
+                <h3>🎯 GUI로 백업하기</h3>
+                <p>명령어가 어렵다면 DBeaver의 <strong>클릭 인터페이스</strong>로도 백업할 수 있어요!</p>
+            </div>
+
+            <div class="explanation-box">
+                <h3>📖 DBeaver 백업 방법</h3>
+
+                <div class="step-box">
+                    <div class="step-item">
+                        <span class="step-num">1단계</span>
+                        <span class="step-desc">좌측 Database Navigator에서 <code>pt_clinic</code> <strong>우클릭</strong></span>
+                    </div>
+                    <div class="step-item">
+                        <span class="step-num">2단계</span>
+                        <span class="step-desc"><strong>Tools → Dump Database</strong> 선택</span>
+                    </div>
+                    <div class="step-item">
+                        <span class="step-num">3단계</span>
+                        <span class="step-desc">Output folder에서 <strong>저장 위치</strong> 선택</span>
+                    </div>
+                    <div class="step-item">
+                        <span class="step-num">4단계</span>
+                        <span class="step-desc">Objects에서 <strong>백업할 테이블</strong> 선택 (전체 또는 일부)</span>
+                    </div>
+                    <div class="step-item">
+                        <span class="step-num">5단계</span>
+                        <span class="step-desc"><strong>Start</strong> 클릭!</span>
+                    </div>
+                </div>
+
+                <div class="analogy-box">
+                    <h4>🎭 비유로 이해하기</h4>
+                    <p>DBeaver 백업은 <strong>"내보내기 마법사"</strong>와 같아요:</p>
+                    <ol>
+                        <li>뭘 백업할지 선택하고</li>
+                        <li>어디에 저장할지 선택하고</li>
+                        <li>시작 버튼만 누르면 끝!</li>
+                    </ol>
+                </div>
+            </div>
+
+            <hr>
+
+            <!-- ===== 3. 복원하기 ===== -->
+            <h2>3. 백업에서 복원하기</h2>
+
+            <div class="concept-box">
+                <h3>🎯 복원은 언제 할까요?</h3>
+                <p>실수로 데이터를 삭제했거나, 새 컴퓨터로 이전하거나, 테스트 환경을 만들 때 <strong>백업 파일에서 데이터를 복원</strong>합니다.</p>
+            </div>
+
+            <div class="explanation-box">
+                <h3>📖 복원 명령어</h3>
+
+                <pre><code># Windows
+mysql -u root -p pt_clinic < C:\백업\pt_clinic_20240115.sql
+
+# Mac/Linux
+mysql -u root -p pt_clinic < ~/백업/pt_clinic_20240115.sql</code></pre>
+
+                <div class="line-explain highlight-line">
+                    <div class="code-line">mysql ... < 파일명.sql</div>
+                    <div class="explain-text">
+                        <strong>복원은 백업의 반대!</strong><br><br>
+                        • 백업: <code>mysqldump ... > 파일</code> (DB → 파일로 출력)<br>
+                        • 복원: <code>mysql ... < 파일</code> (파일 → DB로 입력)<br><br>
+                        화살표 방향이 반대예요!
+                    </div>
+                </div>
+
+                <div class="warning">
+                    <strong>⚠️ 복원 전 주의사항</strong><br><br>
+                    • 복원하면 <strong>현재 데이터가 덮어씌워질 수 있어요!</strong><br>
+                    • 복원 전에 현재 상태도 백업해두세요<br>
+                    • 가능하면 <strong>테스트 DB에서 먼저</strong> 복원 테스트
+                </div>
+            </div>
+
+            <hr>
+
+            <!-- ===== 4. 3-2-1 백업 전략 ===== -->
+            <h2>4. 백업 전략: 3-2-1 규칙</h2>
+
+            <div class="concept-box">
+                <h3>🎯 3-2-1 규칙이란?</h3>
+                <p>전문가들이 추천하는 <strong>백업의 황금 규칙</strong>입니다. 이 규칙만 따르면 웬만한 재해에도 데이터를 지킬 수 있어요!</p>
+            </div>
+
+            <div class="explanation-box">
+                <h3>📖 3-2-1 규칙 설명</h3>
+
+                <table class="result-table">
+                    <tr>
+                        <th>규칙</th>
+                        <th>의미</th>
+                        <th>예시</th>
+                    </tr>
+                    <tr class="highlight-row">
+                        <td><strong>3</strong>개 복사본</td>
+                        <td>최소 3개의 데이터 복사본 유지</td>
+                        <td>원본 + 백업1 + 백업2</td>
+                    </tr>
+                    <tr class="highlight-row">
+                        <td><strong>2</strong>가지 매체</td>
+                        <td>서로 다른 저장 매체 사용</td>
+                        <td>PC 하드 + 외장하드</td>
+                    </tr>
+                    <tr class="highlight-row">
+                        <td><strong>1</strong>개 외부 보관</td>
+                        <td>물리적으로 다른 장소에 보관</td>
+                        <td>클라우드 또는 다른 건물</td>
+                    </tr>
+                </table>
+
+                <div class="analogy-box">
+                    <h4>🎭 비유로 이해하기: 왜 3-2-1일까?</h4>
+                    <table class="mini-table">
+                        <tr><th>상황</th><th>3개 복사본</th><th>2가지 매체</th><th>1개 외부</th></tr>
+                        <tr><td>파일 실수로 삭제</td><td>백업에서 복원 가능</td><td>-</td><td>-</td></tr>
+                        <tr><td>하드디스크 고장</td><td>-</td><td>다른 매체에 있음</td><td>-</td></tr>
+                        <tr><td>화재/도난</td><td>-</td><td>-</td><td>외부 백업으로 복원</td></tr>
+                    </table>
+                    <p>각 규칙이 <strong>다른 종류의 위험</strong>을 막아줘요!</p>
+                </div>
+
+                <div class="tip">
+                    <strong>💡 실제 구현 예시</strong><br><br>
+                    1. <strong>원본</strong>: 업무용 PC의 MySQL<br>
+                    2. <strong>백업1</strong>: 외장하드에 매일 백업<br>
+                    3. <strong>백업2</strong>: 구글 드라이브에 주 1회 업로드
+                </div>
+            </div>
+
+            <hr>
+
+            <!-- ===== 5. 트랜잭션으로 실수 방지 ===== -->
+            <h2>5. 실수 방지: 트랜잭션 사용</h2>
+
+            <div class="concept-box">
+                <h3>🎯 트랜잭션이란?</h3>
+                <p>위험한 작업을 하기 전에 <strong>"되돌리기 지점"</strong>을 만드는 거예요. 실수하면 ROLLBACK으로 원상복구!</p>
+            </div>
+
+            <pre><code>-- 1. 트랜잭션 시작 (되돌리기 지점 생성)
+START TRANSACTION;
+
+-- 2. 위험한 작업 실행
+DELETE FROM treatment_sessions
+WHERE session_date < '2020-01-01';
+
+-- 3. 결과 확인
+SELECT COUNT(*) FROM treatment_sessions;
+
+-- 4. 확인 후 선택
+COMMIT;    -- 문제없으면 확정 (되돌릴 수 없음!)
+-- 또는
+ROLLBACK;  -- 문제있으면 취소 (원래대로 되돌림)</code></pre>
+
+            <div class="explanation-box">
+                <h3>📖 트랜잭션 원리</h3>
+
+                <div class="line-explain">
+                    <div class="code-line">START TRANSACTION;</div>
+                    <div class="explain-text">
+                        <strong>"여기서부터 임시 작업이야"</strong><br><br>
+                        이 시점부터의 모든 변경사항은 <strong>아직 확정되지 않은 상태</strong>로 유지됩니다.<br>
+                        게임의 "세이브 포인트"와 같아요!
+                    </div>
+                </div>
+
+                <div class="line-explain">
+                    <div class="code-line">DELETE / UPDATE / INSERT ...</div>
+                    <div class="explain-text">
+                        실제 작업을 수행합니다.<br>
+                        이 변경사항은 아직 <strong>임시 상태</strong>예요.
+                    </div>
+                </div>
+
+                <div class="line-explain highlight-line">
+                    <div class="code-line">COMMIT;</div>
+                    <div class="explain-text">
+                        <strong>"이대로 확정해!"</strong><br><br>
+                        변경사항을 영구적으로 저장합니다.<br>
+                        <span class="danger-text">COMMIT 후에는 되돌릴 수 없어요!</span>
+                    </div>
+                </div>
+
+                <div class="line-explain highlight-line">
+                    <div class="code-line">ROLLBACK;</div>
+                    <div class="explain-text">
+                        <strong>"다 취소해!"</strong><br><br>
+                        START TRANSACTION 시점으로 <strong>모든 것을 되돌립니다</strong>.<br>
+                        마치 아무 일도 없었던 것처럼!
+                    </div>
+                </div>
+
+                <div class="analogy-box">
+                    <h4>🎭 비유로 이해하기: 포토샵의 히스토리</h4>
+                    <p>포토샵에서 작업할 때:</p>
+                    <ul>
+                        <li><code>START TRANSACTION</code> = 히스토리에 스냅샷 저장</li>
+                        <li>여러 편집 작업 수행...</li>
+                        <li><code>COMMIT</code> = 저장 (되돌릴 수 없음)</li>
+                        <li><code>ROLLBACK</code> = 스냅샷으로 되돌리기</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="warning">
+                <strong>⚠️ ROLLBACK 타이밍 주의!</strong><br><br>
+                • COMMIT <strong>하기 전에만</strong> ROLLBACK 가능해요<br>
+                • COMMIT 후에는 되돌릴 수 없습니다<br>
+                • 의심스러우면 <strong>COMMIT 전에 SELECT로 확인</strong>하세요!
+            </div>
+
+            <div class="tip">
+                <strong>💡 안전한 DELETE/UPDATE 습관</strong><br><br>
+                1. <code>START TRANSACTION;</code>으로 시작<br>
+                2. DELETE/UPDATE 실행<br>
+                3. <code>SELECT</code>로 결과 확인<br>
+                4. 맞으면 <code>COMMIT;</code>, 틀리면 <code>ROLLBACK;</code>
+            </div>
+
+            <hr>
+
+            <!-- ===== 6. 백업 체크리스트 ===== -->
+            <h2>6. 백업 체크리스트</h2>
+
+            <div class="explanation-box">
+                <h3>📋 정기 점검 체크리스트</h3>
+
+                <table class="result-table">
+                    <tr>
+                        <th>주기</th>
+                        <th>할 일</th>
+                        <th>확인 포인트</th>
+                    </tr>
+                    <tr>
+                        <td><strong>매일</strong></td>
+                        <td>자동 백업 실행 확인</td>
+                        <td>백업 파일이 생성됐는지</td>
+                    </tr>
+                    <tr>
+                        <td><strong>매주</strong></td>
+                        <td>외부 저장소 동기화</td>
+                        <td>클라우드 업로드 완료 확인</td>
+                    </tr>
+                    <tr>
+                        <td><strong>매월</strong></td>
+                        <td>백업 파일 용량/개수 확인</td>
+                        <td>저장 공간 여유 확인</td>
+                    </tr>
+                    <tr class="highlight-row">
+                        <td><strong>분기</strong></td>
+                        <td>복원 테스트!</td>
+                        <td>백업 파일로 실제 복원되는지</td>
+                    </tr>
+                    <tr>
+                        <td><strong>연간</strong></td>
+                        <td>백업 전략 검토</td>
+                        <td>3-2-1 규칙 준수 여부</td>
+                    </tr>
+                </table>
+
+                <div class="why-box">
+                    <h4>❓ 왜 복원 테스트가 중요할까요?</h4>
+                    <p>백업 파일이 있어도 <strong>복원이 안 되면 무용지물!</strong></p>
+                    <ul>
+                        <li>파일이 손상됐을 수 있음</li>
+                        <li>백업 설정이 잘못됐을 수 있음</li>
+                        <li>필요한 테이블이 누락됐을 수 있음</li>
+                    </ul>
+                    <p><strong>분기마다 테스트 DB에서 복원 연습</strong>을 하세요!</p>
+                </div>
+            </div>
+
+            <div class="summary-box">
+                <h3>📝 이번 장 핵심 정리</h3>
+                <table class="summary-table">
+                    <tr>
+                        <th>개념</th>
+                        <th>명령어/방법</th>
+                        <th>용도</th>
+                    </tr>
+                    <tr>
+                        <td><strong>백업</strong></td>
+                        <td><code>mysqldump > 파일</code></td>
+                        <td>DB를 SQL 파일로 저장</td>
+                    </tr>
+                    <tr>
+                        <td><strong>복원</strong></td>
+                        <td><code>mysql < 파일</code></td>
+                        <td>SQL 파일에서 DB 복원</td>
+                    </tr>
+                    <tr>
+                        <td><strong>3-2-1 규칙</strong></td>
+                        <td>3복사본, 2매체, 1외부</td>
+                        <td>안전한 백업 전략</td>
+                    </tr>
+                    <tr>
+                        <td><strong>트랜잭션</strong></td>
+                        <td>START → 작업 → COMMIT/ROLLBACK</td>
+                        <td>실수 방지 및 복구</td>
+                    </tr>
+                </table>
+            </div>
+
+            <blockquote class="golden-rule">
+                <strong>💎 백업의 황금률</strong><br><br>
+                "백업은 안 할 때 사고가 난다"<br><br>
+                아직 한 번도 데이터를 잃어본 적 없다고요?<br>
+                그건 <strong>운이 좋았을 뿐</strong>입니다.<br><br>
+                <strong>오늘부터 백업하세요!</strong>
+            </blockquote>
+
+            <div class="practice-box">
+                <h3>🏋️ 오늘 해볼 것</h3>
+                <ol>
+                    <li>백업 폴더 만들기 (예: C:\DB백업)</li>
+                    <li>mysqldump로 첫 번째 백업 만들기</li>
+                    <li>테스트 DB에서 복원 연습하기</li>
+                    <li>클라우드 백업 설정하기 (구글드라이브, 원드라이브 등)</li>
+                </ol>
+                <p class="result-note">백업은 미루면 안 돼요. 지금 바로 시작하세요!</p>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-10.html" class="nav-btn">← 이전</a>
+                <span class="page-num">11 / 12</span>
+                <a href="appendix.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

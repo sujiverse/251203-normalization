@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>5장: 라우팅과 URL - 물리치료사를 위한 DB 4권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "4"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📕 물리치료사를 위한</h1>
+                <p>웹 앱 만들기 (4권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">라우팅과 URL</h1>
+
+            <h2>라우팅이란?</h2>
+
+            <p>URL과 함수를 연결하는 것을 <strong>라우팅(routing)</strong>이라고 합니다.</p>
+
+            <div class="file-tree">
+URL 요청 → Flask가 해당 함수 찾기 → 함수 실행 → 결과 반환
+            </div>
+
+            <hr>
+
+            <h2>동적 URL 만들기</h2>
+
+            <p>환자 ID에 따라 다른 페이지를 보여주고 싶다면?</p>
+
+            <pre><code># 정적 URL (각각 만들어야 함)
+@app.route('/patient/1')
+@app.route('/patient/2')
+@app.route('/patient/3')
+# ... 수백 개?
+
+# 동적 URL (하나로 해결!)
+@app.route('/patient/&lt;int:patient_id&gt;')
+def patient_detail(patient_id):
+    return f'환자 번호: {patient_id}'</code></pre>
+
+            <h3>URL 변수 타입</h3>
+            <table>
+                <tr>
+                    <th>타입</th>
+                    <th>설명</th>
+                    <th>예시</th>
+                </tr>
+                <tr>
+                    <td><code>&lt;variable&gt;</code></td>
+                    <td>문자열 (기본)</td>
+                    <td>/user/kim</td>
+                </tr>
+                <tr>
+                    <td><code>&lt;int:variable&gt;</code></td>
+                    <td>정수</td>
+                    <td>/patient/1</td>
+                </tr>
+                <tr>
+                    <td><code>&lt;float:variable&gt;</code></td>
+                    <td>실수</td>
+                    <td>/price/29.99</td>
+                </tr>
+                <tr>
+                    <td><code>&lt;path:variable&gt;</code></td>
+                    <td>경로 (슬래시 포함)</td>
+                    <td>/file/docs/report.pdf</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>실습: 환자 상세 페이지</h2>
+
+            <pre><code>from flask import Flask
+
+app = Flask(__name__)
+
+# 환자 데이터 (임시)
+patients = {
+    1: {'name': '김철수', 'phone': '010-1234-5678'},
+    2: {'name': '이영희', 'phone': '010-2345-6789'},
+    3: {'name': '박민수', 'phone': '010-3456-7890'},
+}
+
+@app.route('/patients')
+def patient_list():
+    html = '&lt;h1&gt;환자 목록&lt;/h1&gt;&lt;ul&gt;'
+    for pid, info in patients.items():
+        html += f'&lt;li&gt;&lt;a href="/patients/{pid}"&gt;{info["name"]}&lt;/a&gt;&lt;/li&gt;'
+    html += '&lt;/ul&gt;'
+    return html
+
+@app.route('/patients/&lt;int:patient_id&gt;')
+def patient_detail(patient_id):
+    if patient_id in patients:
+        p = patients[patient_id]
+        return f'''
+        &lt;h1&gt;{p["name"]}&lt;/h1&gt;
+        &lt;p&gt;연락처: {p["phone"]}&lt;/p&gt;
+        &lt;a href="/patients"&gt;← 목록으로&lt;/a&gt;
+        '''
+    else:
+        return '&lt;h1&gt;환자를 찾을 수 없습니다&lt;/h1&gt;', 404
+
+if __name__ == '__main__':
+    app.run(debug=True)</code></pre>
+
+            <h3>확인해보기</h3>
+            <ul>
+                <li><code>/patients</code> → 환자 목록</li>
+                <li><code>/patients/1</code> → 김철수 상세</li>
+                <li><code>/patients/2</code> → 이영희 상세</li>
+                <li><code>/patients/999</code> → 404 에러</li>
+            </ul>
+
+            <hr>
+
+            <h2>HTTP 메서드</h2>
+
+            <p>같은 URL이라도 요청 방식에 따라 다른 동작을 할 수 있습니다.</p>
+
+            <table>
+                <tr>
+                    <th>메서드</th>
+                    <th>용도</th>
+                    <th>예시</th>
+                </tr>
+                <tr>
+                    <td><code>GET</code></td>
+                    <td>데이터 조회</td>
+                    <td>환자 목록 보기</td>
+                </tr>
+                <tr>
+                    <td><code>POST</code></td>
+                    <td>데이터 생성</td>
+                    <td>새 환자 등록</td>
+                </tr>
+                <tr>
+                    <td><code>PUT</code></td>
+                    <td>데이터 수정</td>
+                    <td>환자 정보 수정</td>
+                </tr>
+                <tr>
+                    <td><code>DELETE</code></td>
+                    <td>데이터 삭제</td>
+                    <td>환자 삭제</td>
+                </tr>
+            </table>
+
+            <h3>메서드 지정하기</h3>
+            <pre><code># GET만 허용 (기본값)
+@app.route('/patients')
+def get_patients():
+    return '환자 목록'
+
+# GET과 POST 허용
+@app.route('/patients', methods=['GET', 'POST'])
+def patients():
+    if request.method == 'POST':
+        return '환자 등록 처리'
+    return '환자 목록'
+
+# 여러 메서드 처리
+@app.route('/patients/&lt;int:id&gt;', methods=['GET', 'PUT', 'DELETE'])
+def patient(id):
+    if request.method == 'GET':
+        return f'환자 {id} 조회'
+    elif request.method == 'PUT':
+        return f'환자 {id} 수정'
+    elif request.method == 'DELETE':
+        return f'환자 {id} 삭제'</code></pre>
+
+            <hr>
+
+            <h2>쿼리 파라미터</h2>
+
+            <p>URL에 <code>?key=value</code> 형태로 데이터를 전달할 수 있습니다.</p>
+
+            <pre><code>from flask import Flask, request
+
+app = Flask(__name__)
+
+# /search?name=김철수
+@app.route('/search')
+def search():
+    name = request.args.get('name', '')  # 기본값 ''
+    return f'검색어: {name}'
+
+# /patients?page=2&limit=10
+@app.route('/patients')
+def patients():
+    page = request.args.get('page', 1, type=int)
+    limit = request.args.get('limit', 10, type=int)
+    return f'페이지: {page}, 표시 개수: {limit}'</code></pre>
+
+            <hr>
+
+            <h2>API URL 설계 예시</h2>
+
+            <p>우리 프로젝트에서 사용할 URL 구조입니다.</p>
+
+            <table>
+                <tr>
+                    <th>메서드</th>
+                    <th>URL</th>
+                    <th>기능</th>
+                </tr>
+                <tr>
+                    <td>GET</td>
+                    <td>/api/patients</td>
+                    <td>환자 목록</td>
+                </tr>
+                <tr>
+                    <td>GET</td>
+                    <td>/api/patients/1</td>
+                    <td>환자 상세</td>
+                </tr>
+                <tr>
+                    <td>POST</td>
+                    <td>/api/patients</td>
+                    <td>환자 등록</td>
+                </tr>
+                <tr>
+                    <td>PUT</td>
+                    <td>/api/patients/1</td>
+                    <td>환자 수정</td>
+                </tr>
+                <tr>
+                    <td>DELETE</td>
+                    <td>/api/patients/1</td>
+                    <td>환자 삭제</td>
+                </tr>
+                <tr>
+                    <td>GET</td>
+                    <td>/api/reservations</td>
+                    <td>예약 목록</td>
+                </tr>
+                <tr>
+                    <td>GET</td>
+                    <td>/api/reservations?date=2024-12-01</td>
+                    <td>특정 날짜 예약</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li><code>&lt;variable&gt;</code>로 동적 URL을 만듭니다</li>
+                <li><code>&lt;int:id&gt;</code>로 타입을 지정할 수 있습니다</li>
+                <li><code>methods=['GET', 'POST']</code>로 HTTP 메서드를 지정합니다</li>
+                <li><code>request.args.get()</code>으로 쿼리 파라미터를 받습니다</li>
+            </ul>
+
+            <blockquote>다음 장에서는 JSON 응답을 만드는 방법을 배웁니다. API의 핵심!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>15장: 보안 체크리스트 - 물리치료사를 위한 DB 5권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "5"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>🛡️ 5권: 보안 편</h1>
+                <p>DB & 서버 보안</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">보안 체크리스트</h1>
+
+            <h2>배포 전 최종 점검</h2>
+
+            <p>힐링손 시스템을 운영 환경에 배포하기 전에 반드시 확인하세요.</p>
+
+            <hr>
+
+            <h2>1. 웹 보안</h2>
+
+            <table>
+                <tr>
+                    <th>항목</th>
+                    <th>확인</th>
+                    <th>참고</th>
+                </tr>
+                <tr>
+                    <td>SQL 인젝션 방어</td>
+                    <td>☐</td>
+                    <td>모든 쿼리에 Prepared Statement</td>
+                </tr>
+                <tr>
+                    <td>XSS 방어</td>
+                    <td>☐</td>
+                    <td>출력 이스케이프, CSP 헤더</td>
+                </tr>
+                <tr>
+                    <td>CSRF 토큰</td>
+                    <td>☐</td>
+                    <td>모든 POST/PUT/DELETE 폼</td>
+                </tr>
+                <tr>
+                    <td>입력 검증</td>
+                    <td>☐</td>
+                    <td>모든 사용자 입력</td>
+                </tr>
+                <tr>
+                    <td>에러 메시지 일반화</td>
+                    <td>☐</td>
+                    <td>상세 에러는 로그에만</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>2. 인증/인가</h2>
+
+            <table>
+                <tr>
+                    <th>항목</th>
+                    <th>확인</th>
+                    <th>참고</th>
+                </tr>
+                <tr>
+                    <td>비밀번호 bcrypt 해싱</td>
+                    <td>☐</td>
+                    <td>평문 저장 금지</td>
+                </tr>
+                <tr>
+                    <td>비밀번호 정책</td>
+                    <td>☐</td>
+                    <td>8자 이상, 복잡성</td>
+                </tr>
+                <tr>
+                    <td>로그인 시도 제한</td>
+                    <td>☐</td>
+                    <td>5회 실패 시 잠금</td>
+                </tr>
+                <tr>
+                    <td>세션 쿠키 보안</td>
+                    <td>☐</td>
+                    <td>HttpOnly, Secure, SameSite</td>
+                </tr>
+                <tr>
+                    <td>권한 체크</td>
+                    <td>☐</td>
+                    <td>모든 보호된 엔드포인트</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>3. 데이터베이스</h2>
+
+            <table>
+                <tr>
+                    <th>항목</th>
+                    <th>확인</th>
+                    <th>참고</th>
+                </tr>
+                <tr>
+                    <td>root 계정 앱에서 미사용</td>
+                    <td>☐</td>
+                    <td>별도 앱 계정 생성</td>
+                </tr>
+                <tr>
+                    <td>최소 권한 부여</td>
+                    <td>☐</td>
+                    <td>필요한 권한만</td>
+                </tr>
+                <tr>
+                    <td>호스트 제한</td>
+                    <td>☐</td>
+                    <td>localhost 또는 특정 IP</td>
+                </tr>
+                <tr>
+                    <td>민감 데이터 암호화</td>
+                    <td>☐</td>
+                    <td>주민번호, 카드번호 등</td>
+                </tr>
+                <tr>
+                    <td>DB 연결 TLS</td>
+                    <td>☐</td>
+                    <td>통신 구간 암호화</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>4. 서버 보안</h2>
+
+            <table>
+                <tr>
+                    <th>항목</th>
+                    <th>확인</th>
+                    <th>참고</th>
+                </tr>
+                <tr>
+                    <td>디버그 모드 비활성화</td>
+                    <td>☐</td>
+                    <td>DEBUG=False</td>
+                </tr>
+                <tr>
+                    <td>WSGI 서버 사용</td>
+                    <td>☐</td>
+                    <td>Gunicorn/uWSGI</td>
+                </tr>
+                <tr>
+                    <td>리버스 프록시</td>
+                    <td>☐</td>
+                    <td>Nginx</td>
+                </tr>
+                <tr>
+                    <td>보안 헤더 설정</td>
+                    <td>☐</td>
+                    <td>X-Frame-Options 등</td>
+                </tr>
+                <tr>
+                    <td>Rate Limiting</td>
+                    <td>☐</td>
+                    <td>API 요청 제한</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>5. 네트워크 보안</h2>
+
+            <table>
+                <tr>
+                    <th>항목</th>
+                    <th>확인</th>
+                    <th>참고</th>
+                </tr>
+                <tr>
+                    <td>HTTPS 적용</td>
+                    <td>☐</td>
+                    <td>Let's Encrypt</td>
+                </tr>
+                <tr>
+                    <td>HTTP → HTTPS 리다이렉트</td>
+                    <td>☐</td>
+                    <td>301 리다이렉트</td>
+                </tr>
+                <tr>
+                    <td>HSTS 활성화</td>
+                    <td>☐</td>
+                    <td>max-age=31536000</td>
+                </tr>
+                <tr>
+                    <td>방화벽 설정</td>
+                    <td>☐</td>
+                    <td>필요한 포트만 허용</td>
+                </tr>
+                <tr>
+                    <td>TLS 1.2 이상</td>
+                    <td>☐</td>
+                    <td>TLS 1.0, 1.1 비활성화</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>6. 운영 보안</h2>
+
+            <table>
+                <tr>
+                    <th>항목</th>
+                    <th>확인</th>
+                    <th>참고</th>
+                </tr>
+                <tr>
+                    <td>환경변수로 비밀 관리</td>
+                    <td>☐</td>
+                    <td>.env 파일, Secrets Manager</td>
+                </tr>
+                <tr>
+                    <td>로깅 설정</td>
+                    <td>☐</td>
+                    <td>보안 이벤트 기록</td>
+                </tr>
+                <tr>
+                    <td>일일 백업</td>
+                    <td>☐</td>
+                    <td>자동화, 원격 저장</td>
+                </tr>
+                <tr>
+                    <td>백업 복구 테스트</td>
+                    <td>☐</td>
+                    <td>월 1회 이상</td>
+                </tr>
+                <tr>
+                    <td>보안 업데이트</td>
+                    <td>☐</td>
+                    <td>OS, 패키지 최신 유지</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>정기 점검 항목</h2>
+
+            <h3>매일</h3>
+            <ul>
+                <li>백업 성공 여부 확인</li>
+                <li>에러 로그 검토</li>
+                <li>비정상 접속 시도 확인</li>
+            </ul>
+
+            <h3>매주</h3>
+            <ul>
+                <li>보안 패치 확인 및 적용</li>
+                <li>로그인 실패 패턴 분석</li>
+                <li>디스크 용량 확인</li>
+            </ul>
+
+            <h3>매월</h3>
+            <ul>
+                <li>백업 복구 테스트</li>
+                <li>사용자 계정/권한 검토</li>
+                <li>인증서 만료일 확인</li>
+                <li>의존성 패키지 업데이트</li>
+            </ul>
+
+            <h3>분기별</h3>
+            <ul>
+                <li>취약점 스캔</li>
+                <li>침투 테스트 (가능시)</li>
+                <li>보안 정책 검토</li>
+                <li>재해 복구 훈련</li>
+            </ul>
+
+            <hr>
+
+            <h2>긴급 대응 절차</h2>
+
+            <h3>데이터 유출 의심 시</h3>
+            <pre class="file-tree">긴급 대응 절차
+│
+├── 1. 즉시 조치
+│   ├── 네트워크 격리 (필요시)
+│   ├── 증거 보존 (로그, 스냅샷)
+│   └── 담당자/경영진 보고
+│
+├── 2. 분석
+│   ├── 침입 경로 파악
+│   ├── 피해 범위 확인
+│   └── 유출 데이터 식별
+│
+├── 3. 복구
+│   ├── 취약점 패치
+│   ├── 비밀번호 초기화
+│   └── 서비스 복구
+│
+└── 4. 후속 조치
+    ├── 법적 신고 (개인정보보호위원회)
+    ├── 피해자 통지
+    └── 재발 방지 대책</pre>
+
+            <hr>
+
+            <h2>5권 전체 요약</h2>
+
+            <pre class="file-tree">힐링손 보안 체계
+│
+├── 웹 공격 방어
+│   ├── SQL 인젝션 → Prepared Statement
+│   ├── XSS → 이스케이프, CSP
+│   └── CSRF → 토큰, SameSite
+│
+├── 인증/인가
+│   ├── 비밀번호 → bcrypt
+│   ├── 세션 → HttpOnly, Secure
+│   └── 권한 → RBAC
+│
+├── DB 보안
+│   ├── 권한 → 최소 권한 원칙
+│   ├── 접근 → 방화벽, 호스트 제한
+│   └── 데이터 → 암호화
+│
+├── 서버 보안
+│   ├── WAS → Gunicorn + Nginx
+│   ├── HTTPS → Let's Encrypt
+│   └── 설정 → 보안 헤더, Rate Limit
+│
+└── 운영
+    ├── 로깅 → 보안 이벤트 기록
+    ├── 백업 → 3-2-1 규칙
+    └── 점검 → 정기 체크리스트</pre>
+
+            <hr>
+
+            <h2>마무리</h2>
+
+            <blockquote>
+                <strong>보안은 끝이 없는 여정입니다.</strong><br><br>
+                새로운 취약점은 계속 발견되고,<br>
+                공격 기법은 날로 진화합니다.<br><br>
+                이 책에서 배운 내용을 기반으로<br>
+                지속적으로 보안을 강화해 나가세요.<br><br>
+                환자 정보를 안전하게 지키는 것은<br>
+                의료인으로서의 책임입니다.
+            </blockquote>
+
+            <div class="success">
+                <strong>축하합니다!</strong><br>
+                5권 "DB & 서버 보안"을 모두 완료했습니다!<br><br>
+                이제 힐링손 시스템을 안전하게 운영할 준비가 되었습니다.
+            </div>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn" disabled>완료</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

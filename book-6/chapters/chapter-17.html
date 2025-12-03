@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[17장] 관계 분석 - 연구 데이터 설계</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>📊</span> 연구 데이터 설계</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+            <a href="../../book-6/index.html" class="top-nav-link book-6 active">6권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📘 6권: 연구 데이터 설계</h1><p>변수부터 회귀분석까지</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <div class="part-header">4부: 기술통계와 추론통계</div>
+            <h1 class="title">[17장] 관계 분석 (상관, 카이제곱)</h1>
+
+            <div class="intro-box">
+                <p>이 장에서는 <strong>변수 간 관계</strong>를 분석하는 상관분석과 카이제곱 검정의 개념과 데이터 구조를 배웁니다.</p>
+            </div>
+
+            <hr>
+
+            <h2>1. 상관분석의 기초</h2>
+
+            <div class="concept-box">
+                <h3>💡 상관(Correlation)이란?</h3>
+                <p>두 변수가 함께 <strong>변하는 경향</strong>을 나타내는 통계적 관계입니다.</p>
+                <ul>
+                    <li><strong>양의 상관</strong>: 한 변수가 증가하면 다른 변수도 증가</li>
+                    <li><strong>음의 상관</strong>: 한 변수가 증가하면 다른 변수는 감소</li>
+                    <li><strong>무상관</strong>: 두 변수 간에 체계적인 관계가 없음</li>
+                </ul>
+            </div>
+
+            <div class="warning-box">
+                <h3>⚠️ 상관은 인과가 아니다!</h3>
+                <p><strong>Correlation does not imply causation</strong></p>
+                <p>두 변수가 상관관계가 있다고 해서 한 변수가 다른 변수의 원인이라고 할 수 없습니다.</p>
+                <p><strong>예시:</strong></p>
+                <ul>
+                    <li>아이스크림 판매량과 익사 사고 수는 높은 양의 상관 → 원인은 둘 다 "여름"</li>
+                    <li>균형 점수와 인지 기능 점수는 양의 상관 → 공통 원인은 "전반적 건강 상태"일 수 있음</li>
+                </ul>
+                <p><strong>인과 관계 입증에는:</strong> 무작위 실험, 시간 순서, 제3변수 통제 필요</p>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 산점도(Scatterplot)</h3>
+                <p>두 연속형 변수의 관계를 시각적으로 보여주는 그래프입니다.</p>
+                <ul>
+                    <li>X축: 독립변수 (설명변수)</li>
+                    <li>Y축: 종속변수 (결과변수)</li>
+                    <li>각 점: 한 관측치의 두 변수 값</li>
+                </ul>
+                <p><strong>확인할 것:</strong></p>
+                <ul>
+                    <li>관계의 방향 (양/음)</li>
+                    <li>관계의 형태 (선형/비선형)</li>
+                    <li>이상치 존재 여부</li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 산점도 데이터 준비</h3>
+                <pre><code>-- 산점도용 데이터: 두 변수를 나란히 조회
+SELECT
+    p.participant_id,
+    m1.value AS bbs_score,    -- X축
+    m2.value AS tug_seconds   -- Y축
+FROM participants p
+JOIN measurements m1
+    ON p.participant_id = m1.participant_id
+    AND m1.variable_id = 1    -- BBS
+    AND m1.time_id = 1        -- baseline
+JOIN measurements m2
+    ON p.participant_id = m2.participant_id
+    AND m2.variable_id = 2    -- TUG
+    AND m2.time_id = 1        -- baseline
+WHERE m1.value IS NOT NULL
+  AND m2.value IS NOT NULL;</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>2. Pearson 상관계수</h2>
+
+            <div class="concept-box">
+                <h3>💡 Pearson 상관계수 (r)</h3>
+                <p>두 <strong>연속형 변수</strong> 간의 <strong>선형 관계</strong> 강도를 측정합니다.</p>
+                <p><strong>수식:</strong></p>
+                <pre>r = Σ(xᵢ - x̄)(yᵢ - ȳ) / √[Σ(xᵢ - x̄)² × Σ(yᵢ - ȳ)²]</pre>
+                <p><strong>범위:</strong> -1 ≤ r ≤ +1</p>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 상관계수 해석</h3>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>r 값</th>
+                            <th>해석</th>
+                            <th>의미</th>
+                        </tr>
+                        <tr>
+                            <td>r = 1.0</td>
+                            <td>완전한 양의 상관</td>
+                            <td>완벽한 선형 증가 관계</td>
+                        </tr>
+                        <tr>
+                            <td>0.7 ≤ r < 1.0</td>
+                            <td>강한 양의 상관</td>
+                            <td>밀접한 관계</td>
+                        </tr>
+                        <tr>
+                            <td>0.4 ≤ r < 0.7</td>
+                            <td>중간 양의 상관</td>
+                            <td>뚜렷한 관계</td>
+                        </tr>
+                        <tr>
+                            <td>0.1 ≤ r < 0.4</td>
+                            <td>약한 양의 상관</td>
+                            <td>약한 관계</td>
+                        </tr>
+                        <tr>
+                            <td>-0.1 < r < 0.1</td>
+                            <td>거의 무상관</td>
+                            <td>관계 없음</td>
+                        </tr>
+                        <tr>
+                            <td>-1.0 ≤ r ≤ -0.1</td>
+                            <td>음의 상관</td>
+                            <td>반대 방향 관계</td>
+                        </tr>
+                    </table>
+                </div>
+                <p><em>* Cohen(1988) 기준: 0.1=작음, 0.3=중간, 0.5=큼</em></p>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 Pearson 상관의 가정</h3>
+                <ol>
+                    <li><strong>연속형 변수</strong>: 두 변수 모두 연속형 (비율/등간 척도)</li>
+                    <li><strong>선형 관계</strong>: 두 변수가 직선 관계여야 함</li>
+                    <li><strong>정규성</strong>: 두 변수가 정규분포에 가까워야 함</li>
+                    <li><strong>등분산성</strong>: X값에 따라 Y의 분산이 일정해야 함</li>
+                    <li><strong>이상치 없음</strong>: 극단값이 상관계수를 왜곡할 수 있음</li>
+                </ol>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 Pearson 상관계수 계산 (SQL)</h3>
+                <pre><code>-- 두 변수 간 Pearson 상관계수
+WITH paired_data AS (
+    SELECT
+        m1.value AS x,
+        m2.value AS y
+    FROM measurements m1
+    JOIN measurements m2
+        ON m1.participant_id = m2.participant_id
+        AND m1.time_id = m2.time_id
+    WHERE m1.variable_id = 1   -- BBS
+      AND m2.variable_id = 2   -- TUG
+      AND m1.time_id = 1       -- baseline
+      AND m1.value IS NOT NULL
+      AND m2.value IS NOT NULL
+),
+stats AS (
+    SELECT
+        AVG(x) AS mean_x,
+        AVG(y) AS mean_y,
+        COUNT(*) AS n
+    FROM paired_data
+)
+SELECT
+    s.n,
+    ROUND(s.mean_x, 2) AS mean_x,
+    ROUND(s.mean_y, 2) AS mean_y,
+    -- 상관계수 계산
+    ROUND(
+        SUM((p.x - s.mean_x) * (p.y - s.mean_y)) /
+        SQRT(SUM((p.x - s.mean_x) * (p.x - s.mean_x)) *
+             SUM((p.y - s.mean_y) * (p.y - s.mean_y)))
+    , 3) AS pearson_r
+FROM paired_data p, stats s;
+
+-- 결과 예시: n=50, mean_x=43.2, mean_y=12.5, pearson_r=-0.72</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 결정계수 (R²)</h3>
+                <pre><code>-- R² = r² : 한 변수가 다른 변수의 분산을 설명하는 비율
+WITH correlation AS (
+    -- 위의 상관계수 쿼리 결과
+    SELECT -0.72 AS r
+)
+SELECT
+    r,
+    ROUND(r * r, 3) AS r_squared,
+    ROUND(r * r * 100, 1) || '%' AS variance_explained
+FROM correlation;
+
+-- 결과: r=-0.72, r_squared=0.518, variance_explained=51.8%
+-- 해석: BBS 점수가 TUG 시간 변동의 약 52%를 설명</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>3. Spearman 상관계수</h2>
+
+            <div class="concept-box">
+                <h3>💡 Spearman 순위 상관계수 (ρ, rho)</h3>
+                <p>두 변수의 <strong>순위(rank)</strong>를 기반으로 계산하는 상관계수입니다.</p>
+                <p><strong>사용 상황:</strong></p>
+                <ul>
+                    <li>정규성 가정을 만족하지 않는 연속형 변수</li>
+                    <li><strong>순서형(ordinal) 변수</strong> 간의 관계</li>
+                    <li>비선형이지만 단조(monotonic) 관계일 때</li>
+                    <li>이상치가 있을 때 (순위는 극단값에 덜 민감)</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 Pearson vs Spearman</h3>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>구분</th>
+                            <th>Pearson</th>
+                            <th>Spearman</th>
+                        </tr>
+                        <tr>
+                            <td>데이터 유형</td>
+                            <td>연속형 (등간/비율)</td>
+                            <td>연속형 또는 순서형</td>
+                        </tr>
+                        <tr>
+                            <td>관계 유형</td>
+                            <td>선형 관계</td>
+                            <td>단조 관계 (monotonic)</td>
+                        </tr>
+                        <tr>
+                            <td>정규성 가정</td>
+                            <td>필요</td>
+                            <td>불필요</td>
+                        </tr>
+                        <tr>
+                            <td>이상치 민감도</td>
+                            <td>민감</td>
+                            <td>덜 민감 (순위 사용)</td>
+                        </tr>
+                        <tr>
+                            <td>계산 방식</td>
+                            <td>원 데이터 값</td>
+                            <td>순위로 변환 후 계산</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 Spearman 상관계수 계산</h3>
+                <pre><code>-- 1단계: 각 변수의 순위 부여
+WITH ranked_data AS (
+    SELECT
+        m1.participant_id,
+        m1.value AS x,
+        m2.value AS y,
+        RANK() OVER (ORDER BY m1.value) AS rank_x,
+        RANK() OVER (ORDER BY m2.value) AS rank_y
+    FROM measurements m1
+    JOIN measurements m2
+        ON m1.participant_id = m2.participant_id
+        AND m1.time_id = m2.time_id
+    WHERE m1.variable_id = 1 AND m2.variable_id = 2
+      AND m1.time_id = 1
+      AND m1.value IS NOT NULL AND m2.value IS NOT NULL
+),
+-- 2단계: 순위에 대해 Pearson 상관 계산
+stats AS (
+    SELECT
+        AVG(rank_x) AS mean_rx,
+        AVG(rank_y) AS mean_ry,
+        COUNT(*) AS n
+    FROM ranked_data
+)
+SELECT
+    s.n,
+    -- Spearman rho = 순위에 대한 Pearson r
+    ROUND(
+        SUM((r.rank_x - s.mean_rx) * (r.rank_y - s.mean_ry)) /
+        SQRT(SUM((r.rank_x - s.mean_rx) * (r.rank_x - s.mean_rx)) *
+             SUM((r.rank_y - s.mean_ry) * (r.rank_y - s.mean_ry)))
+    , 3) AS spearman_rho
+FROM ranked_data r, stats s;</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>4. 카이제곱 검정</h2>
+
+            <div class="concept-box">
+                <h3>💡 카이제곱(χ²) 검정이란?</h3>
+                <p>두 <strong>범주형 변수</strong> 간의 관련성(독립성)을 검정합니다.</p>
+                <p><strong>귀무가설:</strong> 두 변수는 독립적이다 (관련 없다)</p>
+                <p><strong>대립가설:</strong> 두 변수는 독립적이지 않다 (관련 있다)</p>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 교차표(Contingency Table)</h3>
+                <p>카이제곱 검정의 기초 데이터입니다:</p>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th></th>
+                            <th>낙상 있음</th>
+                            <th>낙상 없음</th>
+                            <th>행 합계</th>
+                        </tr>
+                        <tr>
+                            <td><strong>운동군</strong></td>
+                            <td>5 (O₁₁)</td>
+                            <td>20 (O₁₂)</td>
+                            <td>25</td>
+                        </tr>
+                        <tr>
+                            <td><strong>대조군</strong></td>
+                            <td>12 (O₂₁)</td>
+                            <td>13 (O₂₂)</td>
+                            <td>25</td>
+                        </tr>
+                        <tr>
+                            <td><strong>열 합계</strong></td>
+                            <td>17</td>
+                            <td>33</td>
+                            <td>50</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 기대빈도 vs 관측빈도</h3>
+                <p><strong>기대빈도(E)</strong>: 두 변수가 독립적일 때 예상되는 빈도</p>
+                <p><strong>수식:</strong> E = (행 합계 × 열 합계) / 총합</p>
+                <p><strong>예:</strong> 운동군-낙상있음의 기대빈도 = (25 × 17) / 50 = 8.5</p>
+                <p><strong>카이제곱 통계량:</strong> χ² = Σ(O - E)² / E</p>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 교차표 생성</h3>
+                <pre><code>-- 2×2 교차표 생성
+SELECT
+    p.group_type,
+    SUM(CASE WHEN fe.fall_occurred = 1 THEN 1 ELSE 0 END) AS fall_yes,
+    SUM(CASE WHEN fe.fall_occurred = 0 OR fe.fall_occurred IS NULL THEN 1 ELSE 0 END) AS fall_no,
+    COUNT(*) AS total
+FROM participants p
+LEFT JOIN (
+    SELECT
+        participant_id,
+        MAX(CASE WHEN event_id IS NOT NULL THEN 1 ELSE 0 END) AS fall_occurred
+    FROM fall_events
+    GROUP BY participant_id
+) fe ON p.participant_id = fe.participant_id
+GROUP BY p.group_type;
+
+-- Wide 형식 교차표
+SELECT
+    SUM(CASE WHEN group_type = 'intervention' AND fall_occurred = 1 THEN 1 ELSE 0 END) AS int_fall,
+    SUM(CASE WHEN group_type = 'intervention' AND fall_occurred = 0 THEN 1 ELSE 0 END) AS int_nofall,
+    SUM(CASE WHEN group_type = 'control' AND fall_occurred = 1 THEN 1 ELSE 0 END) AS ctrl_fall,
+    SUM(CASE WHEN group_type = 'control' AND fall_occurred = 0 THEN 1 ELSE 0 END) AS ctrl_nofall
+FROM (
+    SELECT
+        p.group_type,
+        COALESCE(MAX(CASE WHEN fe.event_id IS NOT NULL THEN 1 END), 0) AS fall_occurred
+    FROM participants p
+    LEFT JOIN fall_events fe ON p.participant_id = fe.participant_id
+    GROUP BY p.participant_id, p.group_type
+) sub;</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 카이제곱 통계량 계산</h3>
+                <pre><code>-- 2×2 교차표에서 카이제곱 계산
+WITH observed AS (
+    SELECT
+        5 AS o11,   -- 운동군, 낙상 O
+        20 AS o12,  -- 운동군, 낙상 X
+        12 AS o21,  -- 대조군, 낙상 O
+        13 AS o22   -- 대조군, 낙상 X
+),
+totals AS (
+    SELECT
+        o.*,
+        o11 + o12 AS row1,
+        o21 + o22 AS row2,
+        o11 + o21 AS col1,
+        o12 + o22 AS col2,
+        o11 + o12 + o21 + o22 AS grand_total
+    FROM observed o
+),
+expected AS (
+    SELECT
+        t.*,
+        1.0 * row1 * col1 / grand_total AS e11,
+        1.0 * row1 * col2 / grand_total AS e12,
+        1.0 * row2 * col1 / grand_total AS e21,
+        1.0 * row2 * col2 / grand_total AS e22
+    FROM totals t
+)
+SELECT
+    ROUND(e11, 2) AS expected_11,
+    ROUND(e12, 2) AS expected_12,
+    ROUND(e21, 2) AS expected_21,
+    ROUND(e22, 2) AS expected_22,
+    -- 카이제곱 통계량
+    ROUND(
+        (o11 - e11) * (o11 - e11) / e11 +
+        (o12 - e12) * (o12 - e12) / e12 +
+        (o21 - e21) * (o21 - e21) / e21 +
+        (o22 - e22) * (o22 - e22) / e22
+    , 3) AS chi_square,
+    1 AS df  -- (행-1) × (열-1) = 1 × 1 = 1
+FROM expected;
+
+-- 결과: chi_square=4.17, df=1
+-- p-value는 카이제곱 분포표 참조 (p < 0.05이면 유의)</code></pre>
+            </div>
+
+            <div class="warning-box">
+                <h3>⚠️ 카이제곱 검정 주의사항</h3>
+                <ul>
+                    <li><strong>기대빈도 5 이상</strong>: 모든 셀의 기대빈도가 5 이상이어야 함</li>
+                    <li><strong>위반 시</strong>: Fisher's Exact Test 사용</li>
+                    <li><strong>독립 관측치</strong>: 같은 대상의 반복측정 불가</li>
+                </ul>
+            </div>
+
+            <hr>
+
+            <h2>5. 상관 행렬</h2>
+
+            <div class="concept-box">
+                <h3>💡 상관 행렬(Correlation Matrix)</h3>
+                <p>여러 변수 간의 상관계수를 행렬 형태로 정리한 것입니다.</p>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th></th>
+                            <th>BBS</th>
+                            <th>TUG</th>
+                            <th>통증</th>
+                            <th>나이</th>
+                        </tr>
+                        <tr>
+                            <td><strong>BBS</strong></td>
+                            <td>1.00</td>
+                            <td>-0.72</td>
+                            <td>-0.45</td>
+                            <td>-0.38</td>
+                        </tr>
+                        <tr>
+                            <td><strong>TUG</strong></td>
+                            <td>-0.72</td>
+                            <td>1.00</td>
+                            <td>0.52</td>
+                            <td>0.41</td>
+                        </tr>
+                        <tr>
+                            <td><strong>통증</strong></td>
+                            <td>-0.45</td>
+                            <td>0.52</td>
+                            <td>1.00</td>
+                            <td>0.15</td>
+                        </tr>
+                        <tr>
+                            <td><strong>나이</strong></td>
+                            <td>-0.38</td>
+                            <td>0.41</td>
+                            <td>0.15</td>
+                            <td>1.00</td>
+                        </tr>
+                    </table>
+                </div>
+                <p><strong>특징:</strong> 대각선은 1.0, 대칭 행렬</p>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 상관 행렬 테이블 설계</h3>
+                <pre><code>-- 상관 결과 저장 테이블
+CREATE TABLE correlation_matrix (
+    corr_id INTEGER PRIMARY KEY,
+    var1_id INTEGER NOT NULL,
+    var2_id INTEGER NOT NULL,
+    var1_name TEXT NOT NULL,
+    var2_name TEXT NOT NULL,
+    correlation_type TEXT DEFAULT 'pearson',  -- pearson, spearman
+    r_value REAL,
+    p_value REAL,
+    n INTEGER,
+    time_id INTEGER,           -- 측정 시점
+    analysis_date DATE DEFAULT CURRENT_DATE,
+    FOREIGN KEY (var1_id) REFERENCES variables(variable_id),
+    FOREIGN KEY (var2_id) REFERENCES variables(variable_id),
+    UNIQUE(var1_id, var2_id, time_id, correlation_type)
+);</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 모든 변수 쌍의 상관계수 계산</h3>
+                <pre><code>-- 모든 변수 쌍 조합에 대해 상관계수 계산
+INSERT INTO correlation_matrix (var1_id, var2_id, var1_name, var2_name, r_value, n, time_id)
+WITH variable_pairs AS (
+    SELECT v1.variable_id AS var1, v2.variable_id AS var2,
+           v1.variable_name AS name1, v2.variable_name AS name2
+    FROM variables v1
+    CROSS JOIN variables v2
+    WHERE v1.variable_id < v2.variable_id  -- 중복 방지
+),
+pair_data AS (
+    SELECT
+        vp.var1, vp.var2, vp.name1, vp.name2,
+        m1.value AS x, m2.value AS y, m1.time_id
+    FROM variable_pairs vp
+    JOIN measurements m1 ON vp.var1 = m1.variable_id
+    JOIN measurements m2 ON vp.var2 = m2.variable_id
+        AND m1.participant_id = m2.participant_id
+        AND m1.time_id = m2.time_id
+    WHERE m1.value IS NOT NULL AND m2.value IS NOT NULL
+),
+correlations AS (
+    SELECT
+        var1, var2, name1, name2, time_id,
+        COUNT(*) AS n,
+        (COUNT(*) * SUM(x * y) - SUM(x) * SUM(y)) /
+        SQRT((COUNT(*) * SUM(x * x) - SUM(x) * SUM(x)) *
+             (COUNT(*) * SUM(y * y) - SUM(y) * SUM(y))) AS r
+    FROM pair_data
+    GROUP BY var1, var2, name1, name2, time_id
+)
+SELECT var1, var2, name1, name2, ROUND(r, 3), n, time_id
+FROM correlations;</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 상관 행렬 Wide 형식 출력</h3>
+                <pre><code>-- 행렬 형태로 출력 (피벗)
+SELECT
+    var1_name,
+    MAX(CASE WHEN var2_name = 'BBS' THEN r_value END) AS BBS,
+    MAX(CASE WHEN var2_name = 'TUG' THEN r_value END) AS TUG,
+    MAX(CASE WHEN var2_name = '통증' THEN r_value END) AS 통증,
+    MAX(CASE WHEN var2_name = '나이' THEN r_value END) AS 나이
+FROM (
+    -- 자기 자신 포함
+    SELECT var1_name, var2_name, r_value FROM correlation_matrix
+    UNION ALL
+    SELECT var2_name, var1_name, r_value FROM correlation_matrix
+    UNION ALL
+    SELECT variable_name, variable_name, 1.0 FROM variables
+) combined
+GROUP BY var1_name
+ORDER BY var1_name;</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>6. 관계 분석을 위한 DB 설계</h2>
+
+            <div class="example-box">
+                <h3>📋 통합 관계 분석 스키마</h3>
+                <p>상관분석과 카이제곱 검정 결과를 저장하는 스키마입니다.</p>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 관계 분석 결과 테이블</h3>
+                <pre><code>-- ========================================
+-- 관계 분석 결과 데이터베이스
+-- ========================================
+
+-- 1. 상관분석 결과
+CREATE TABLE correlation_results (
+    result_id INTEGER PRIMARY KEY,
+    variable_x TEXT NOT NULL,
+    variable_y TEXT NOT NULL,
+    correlation_type TEXT NOT NULL,  -- 'pearson', 'spearman', 'point_biserial'
+    r_value REAL NOT NULL,
+    r_squared REAL,
+    p_value REAL,
+    n INTEGER,
+    ci_lower REAL,
+    ci_upper REAL,
+    time_point TEXT,
+    subgroup TEXT,                   -- 하위그룹 분석 시
+    analysis_date DATE DEFAULT CURRENT_DATE,
+    notes TEXT
+);
+
+-- 2. 카이제곱 검정 결과
+CREATE TABLE chi_square_results (
+    result_id INTEGER PRIMARY KEY,
+    variable_row TEXT NOT NULL,      -- 행 변수
+    variable_col TEXT NOT NULL,      -- 열 변수
+    chi_square REAL,
+    df INTEGER,
+    p_value REAL,
+    cramers_v REAL,                  -- 효과 크기
+    phi REAL,                        -- 2×2 교차표용 효과 크기
+    n INTEGER,
+    time_point TEXT,
+    analysis_date DATE DEFAULT CURRENT_DATE
+);
+
+-- 3. 교차표 셀 데이터
+CREATE TABLE crosstab_cells (
+    cell_id INTEGER PRIMARY KEY,
+    result_id INTEGER NOT NULL,      -- chi_square_results 참조
+    row_category TEXT NOT NULL,
+    col_category TEXT NOT NULL,
+    observed INTEGER,
+    expected REAL,
+    residual REAL,                   -- (O - E)
+    std_residual REAL,               -- (O - E) / sqrt(E)
+    FOREIGN KEY (result_id) REFERENCES chi_square_results(result_id)
+);</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 분석 결과 저장 및 조회</h3>
+                <pre><code>-- 상관분석 결과 저장
+INSERT INTO correlation_results
+    (variable_x, variable_y, correlation_type, r_value, r_squared, p_value, n, time_point)
+VALUES
+    ('BBS', 'TUG', 'pearson', -0.72, 0.52, 0.001, 50, 'baseline'),
+    ('BBS', '통증', 'pearson', -0.45, 0.20, 0.012, 50, 'baseline'),
+    ('TUG', '통증', 'pearson', 0.52, 0.27, 0.003, 50, 'baseline');
+
+-- 강한 상관관계만 조회
+SELECT
+    variable_x,
+    variable_y,
+    r_value,
+    CASE
+        WHEN ABS(r_value) >= 0.7 THEN '강함'
+        WHEN ABS(r_value) >= 0.4 THEN '중간'
+        WHEN ABS(r_value) >= 0.1 THEN '약함'
+        ELSE '무관'
+    END AS strength,
+    p_value,
+    CASE WHEN p_value < 0.05 THEN '*' ELSE '' END AS significant
+FROM correlation_results
+WHERE ABS(r_value) >= 0.3
+ORDER BY ABS(r_value) DESC;</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 논문용 상관 테이블 출력</h3>
+                <pre><code>-- 논문 형식: r (p-value)
+SELECT
+    variable_x || ' × ' || variable_y AS variables,
+    ROUND(r_value, 2) || ' (' ||
+    CASE
+        WHEN p_value < 0.001 THEN '<.001'
+        WHEN p_value < 0.01 THEN '<.01'
+        ELSE ROUND(p_value, 3)
+    END || ')' AS "r (p)",
+    n,
+    CASE
+        WHEN p_value < 0.001 THEN '***'
+        WHEN p_value < 0.01 THEN '**'
+        WHEN p_value < 0.05 THEN '*'
+        ELSE ''
+    END AS sig
+FROM correlation_results
+ORDER BY variable_x, variable_y;
+
+-- 결과:
+-- variables       | r (p)          | n  | sig
+-- BBS × TUG       | -0.72 (<.001)  | 50 | ***
+-- BBS × 통증      | -0.45 (<.05)   | 50 | *</code></pre>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 분석 방법 선택 가이드</h3>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>변수 X</th>
+                            <th>변수 Y</th>
+                            <th>분석 방법</th>
+                        </tr>
+                        <tr>
+                            <td>연속형 (정규)</td>
+                            <td>연속형 (정규)</td>
+                            <td>Pearson 상관</td>
+                        </tr>
+                        <tr>
+                            <td>연속형 (비정규)</td>
+                            <td>연속형 (비정규)</td>
+                            <td>Spearman 상관</td>
+                        </tr>
+                        <tr>
+                            <td>순서형</td>
+                            <td>순서형</td>
+                            <td>Spearman 상관</td>
+                        </tr>
+                        <tr>
+                            <td>이분형</td>
+                            <td>연속형</td>
+                            <td>Point-biserial 상관</td>
+                        </tr>
+                        <tr>
+                            <td>범주형</td>
+                            <td>범주형</td>
+                            <td>카이제곱 검정</td>
+                        </tr>
+                        <tr>
+                            <td>범주형 (2×2, 소표본)</td>
+                            <td>범주형</td>
+                            <td>Fisher's Exact</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="summary-box">
+                <h3>📝 이 장의 핵심 정리</h3>
+                <ol>
+                    <li><strong>상관 ≠ 인과</strong>: 두 변수의 관계가 원인-결과를 의미하지 않음</li>
+                    <li><strong>Pearson r</strong>: 연속형 변수의 선형 관계, -1~+1 범위</li>
+                    <li><strong>Spearman ρ</strong>: 순위 기반, 비정규/순서형에 적합</li>
+                    <li><strong>카이제곱</strong>: 범주형 변수 간 독립성 검정, 기대빈도 5 이상</li>
+                    <li><strong>상관 행렬</strong>: 여러 변수 간 상관을 한눈에 파악</li>
+                    <li><strong>결정계수 R²</strong>: 상관계수의 제곱, 설명력 비율</li>
+                </ol>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-16.html" class="nav-btn">← 이전</a>
+                <span class="page-num">17 / 20</span>
+                <a href="chapter-18.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[9권] 관계 체인과 중간 테이블 - 물리치료사를 위한 DB</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "1"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📗 1권: 정규화 편</h1>
+                <p>데이터베이스 기초 개념</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">[심화] 관계 체인과 중간 테이블</h1>
+            <p>테이블 설계에서 가장 헷갈리는 부분! 여러 테이블이 어떻게 연결되는지, 중간 테이블은 언제 만드는지 알아봐요.</p>
+            <hr>
+
+            <h2>관계 체인이란?</h2>
+            <p>테이블들이 <strong>연쇄적으로 연결</strong>되는 구조를 말해요.</p>
+            <pre><code>[보험사] ← [환자] ← [치료세션] → [치료사]
+                ↓
+           [SOAP기록]</code></pre>
+            <p>마치 사슬(chain)처럼 테이블들이 꼬리에 꼬리를 물고 연결되죠!</p>
+            <hr>
+
+            <h2>실제 상황으로 이해하기</h2>
+            <h3>김철수 환자가 3번 내원했어요</h3>
+            <table>
+                <tr><th>내원일</th><th>담당 치료사</th><th>치료 내용</th></tr>
+                <tr><td>3/1</td><td>박치료사</td><td>도수치료, 전기치료</td></tr>
+                <tr><td>3/8</td><td>박치료사</td><td>도수치료</td></tr>
+                <tr><td>3/15</td><td>이치료사</td><td>운동치료, 테이핑</td></tr>
+            </table>
+            <p>얼핏 보면 <strong>"환자 ↔ 치료사"가 N:M</strong> 같죠? 김철수가 박치료사도, 이치료사도 만났으니까요.</p>
+            <hr>
+
+            <h2>하지만 자세히 보면...</h2>
+            <pre><code>김철수 ──┬── 3/1 세션 ──── 박치료사
+         │
+         ├── 3/8 세션 ──── 박치료사
+         │
+         └── 3/15 세션 ─── 이치료사</code></pre>
+            <p><strong>치료세션</strong>이 중간에서 다리 역할을 하고 있어요!</p>
+            <ul>
+                <li>환자 1명 → 여러 세션 <strong>(1:N)</strong></li>
+                <li>각 세션 → 치료사 1명 <strong>(N:1)</strong></li>
+            </ul>
+            <p>이렇게 중간 테이블을 통해 연결하면, 복잡한 N:M도 <strong>1:N + N:1 체인</strong>으로 깔끔하게 풀려요!</p>
+            <hr>
+
+            <h2>관계 체인의 장점</h2>
+            <h3>1. 추가 정보를 담을 수 있어요</h3>
+            <pre><code>[잘못된 설계] - 환자↔치료사 직접 연결
+환자    | 치료사
+김철수  | 박치료사
+김철수  | 이치료사
+
+→ "언제 치료했지?" 기록할 곳이 없어요!</code></pre>
+            <pre><code>[올바른 설계] - 치료세션이 중간 다리
+세션ID | 환자   | 날짜  | 치료사   | 치료내용
+1      | 김철수 | 3/1   | 박치료사 | 도수치료
+2      | 김철수 | 3/8   | 박치료사 | 도수치료
+3      | 김철수 | 3/15  | 이치료사 | 운동치료
+
+→ 날짜, 치료내용, 시간 등 다 기록 가능!</code></pre>
+            <h3>2. 같은 조합이 여러 번 가능해요</h3>
+            <p>김철수 + 박치료사 조합이 3/1에도, 3/8에도 있죠?</p>
+            <p>중간 테이블이 있으면 <strong>같은 쌍이 여러 번</strong> 나와도 문제없어요!</p>
+            <h3>3. 데이터 무결성이 보장돼요</h3>
+            <p>외래키로 연결되어 있어서 "존재하지 않는 환자의 치료기록" 같은 오류를 방지해요.</p>
+            <hr>
+
+            <h2>전체 관계 체인 그림</h2>
+            <pre><code>        [보험사]                    [치료사]
+           1                           1
+           │                           │
+           N                           N
+        [환자] ────1:N──── [치료세션]
+           1                    │
+           │              ┌─────┼─────┐
+           N              1     N     N
+      [환자진단]      [SOAP]  [운동   [청구]
+           N                  처방]
+           │                   N
+           1                   │
+      [진단코드]               1
+                            [운동]</code></pre>
+            <h3>관계 정리</h3>
+            <table>
+                <tr><th>관계</th><th>타입</th><th>설명</th></tr>
+                <tr><td>보험사 : 환자</td><td>1:N</td><td>한 보험사에 여러 환자</td></tr>
+                <tr><td>환자 : 치료세션</td><td>1:N</td><td>한 환자가 여러 번 치료</td></tr>
+                <tr><td>치료사 : 치료세션</td><td>1:N</td><td>한 치료사가 여러 세션 담당</td></tr>
+                <tr><td>치료세션 : SOAP</td><td>1:1</td><td>한 세션에 SOAP 하나</td></tr>
+                <tr><td>치료세션 : 운동처방</td><td>1:N</td><td>한 세션에 여러 운동</td></tr>
+                <tr><td>환자 : 진단</td><td>N:M</td><td>환자진단 테이블로 연결</td></tr>
+            </table>
+            <hr>
+
+            <h2>💡 핵심 포인트</h2>
+            <blockquote><strong>"환자 N : 치료사 N"이면 N:M 아닌가요?</strong><br><br>
+            직접 연결하면 N:M이지만, <strong>치료세션을 통해</strong> 연결되면:<br>
+            • 환자 1 : N 치료세션<br>
+            • 치료세션 N : 1 치료사<br><br>
+            치료세션이 <strong>중간 다리</strong> 역할을 해서 자연스럽게 연결돼요!</blockquote>
+            <hr>
+
+            <h2>중간 테이블은 언제 만들어야 할까?</h2>
+            <h3>🚨 신호 1: "여러 개"가 양쪽에서 나올 때</h3>
+            <pre><code>"한 환자가 여러 치료사에게 치료받고,
+ 한 치료사가 여러 환자를 치료한다"</code></pre>
+            <p>양쪽 다 "여러 개"면 → <strong>N:M 관계</strong> → 중간 테이블 필요!</p>
+            <h3>🚨 신호 2: 관계 자체에 정보가 있을 때</h3>
+            <pre><code>"김철수가 박치료사에게 치료받았는데..."
+→ 언제? 무슨 치료를? 몇 분 동안?</code></pre>
+            <p>단순히 "연결됐다"가 아니라 <strong>그 연결에 대한 정보</strong>가 필요하면 → 중간 테이블 필요!</p>
+            <h3>🚨 신호 3: 같은 조합이 여러 번 생길 때</h3>
+            <pre><code>"김철수 + 박치료사" 조합이
+1월 15일에도, 1월 17일에도 있다</code></pre>
+            <p>같은 쌍이 반복되면 → 중간 테이블 필요!</p>
+            <hr>
+
+            <h2>✅ 중간 테이블 체크리스트</h2>
+            <table>
+                <tr><th>질문</th><th>예 → 중간 테이블 필요</th></tr>
+                <tr><td>A 하나가 B 여러 개와 연결되나요?</td><td>✓</td></tr>
+                <tr><td>B 하나도 A 여러 개와 연결되나요?</td><td>✓</td></tr>
+                <tr><td>이 연결에 날짜/횟수/금액 등 추가 정보가 있나요?</td><td>✓</td></tr>
+                <tr><td>같은 A-B 조합이 여러 번 발생하나요?</td><td>✓</td></tr>
+            </table>
+            <p><strong>하나라도 "예"면 중간 테이블을 만드세요!</strong></p>
+            <hr>
+
+            <h2>📋 물리치료 현장의 중간 테이블들</h2>
+            <table>
+                <tr><th>관계</th><th>중간 테이블</th><th>담는 정보</th></tr>
+                <tr><td>환자 ↔ 치료사</td><td>치료세션</td><td>날짜, 시간, 치료내용</td></tr>
+                <tr><td>환자 ↔ 진단</td><td>환자진단</td><td>진단일, 주진단여부</td></tr>
+                <tr><td>치료사 ↔ 자격증</td><td>치료사자격증</td><td>취득일</td></tr>
+                <tr><td>세션 ↔ 운동</td><td>운동처방</td><td>세트수, 반복횟수, 강도</td></tr>
+                <tr><td>세션 ↔ 청구항목</td><td>청구</td><td>수량, 금액, 수납상태</td></tr>
+            </table>
+            <hr>
+
+            <h2>중간 테이블 설계 예시</h2>
+            <h3>환자 ↔ 진단 (N:M)</h3>
+            <pre><code>[환자] 테이블
+환자번호(PK) | 환자명
+P001         | 김철수
+P002         | 이영희
+
+[진단코드] 테이블
+진단코드(PK) | 진단명
+D001         | 요추염좌
+D002         | 어깨충돌증후군
+D003         | 경추통
+
+[환자진단] 중간 테이블
+환자번호(FK) | 진단코드(FK) | 진단일     | 주진단여부
+P001         | D001         | 2024-01-10 | Y
+P001         | D003         | 2024-01-10 | N  ← 김철수: 2개 진단
+P002         | D002         | 2024-01-12 | Y</code></pre>
+            <p>이렇게 하면:</p>
+            <ul>
+                <li>김철수는 요추염좌 + 경추통 (2개 진단)</li>
+                <li>요추염좌는 김철수만 (1명)</li>
+                <li>각 연결에 "언제 진단받았는지", "주진단인지" 정보도 저장!</li>
+            </ul>
+            <hr>
+
+            <h2>💡 최종 정리</h2>
+            <blockquote><strong>관계 체인</strong> = 테이블들이 외래키로 연쇄 연결된 구조<br><br>
+            <strong>중간 테이블</strong> = N:M 관계를 1:N + N:1로 풀어주고, 관계에 대한 추가 정보를 담는 곳<br><br>
+            복잡해 보이는 관계도 <strong>체인으로 쪼개면</strong> 단순한 1:N의 연속이에요!</blockquote>
+
+            <div class="nav-buttons">
+                <a href="chapter-8.html" class="nav-btn">← 이전</a>
+                <span class="page-num">9 / 12</span>
+                <a href="chapter-10.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/nav.js"></script>
+</body>
+</html>

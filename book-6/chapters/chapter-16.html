@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[16장] 집단 비교 분석 - 연구 데이터 설계</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>📊</span> 연구 데이터 설계</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+            <a href="../../book-6/index.html" class="top-nav-link book-6 active">6권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📘 6권: 연구 데이터 설계</h1><p>변수부터 회귀분석까지</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <div class="part-header">4부: 기술통계와 추론통계</div>
+            <h1 class="title">[16장] 집단 비교 분석 (t-test, ANOVA)</h1>
+
+            <div class="intro-box">
+                <p>이 장에서는 <strong>집단 간 평균 비교</strong>를 위한 t-test와 ANOVA의 개념, 그리고 이를 위한 데이터 구조를 배웁니다.</p>
+            </div>
+
+            <hr>
+
+            <h2>1. 가설 검정의 기초</h2>
+
+            <div class="concept-box">
+                <h3>💡 귀무가설과 대립가설</h3>
+                <p>통계적 가설 검정은 두 가설 사이에서 판단합니다:</p>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>가설</th>
+                            <th>기호</th>
+                            <th>의미</th>
+                            <th>예시</th>
+                        </tr>
+                        <tr>
+                            <td><strong>귀무가설</strong><br>(Null Hypothesis)</td>
+                            <td>H₀</td>
+                            <td>차이가 없다, 효과가 없다</td>
+                            <td>μ₁ = μ₂ (두 집단 평균이 같다)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>대립가설</strong><br>(Alternative Hypothesis)</td>
+                            <td>H₁ 또는 Hₐ</td>
+                            <td>차이가 있다, 효과가 있다</td>
+                            <td>μ₁ ≠ μ₂ (두 집단 평균이 다르다)</td>
+                        </tr>
+                    </table>
+                </div>
+                <p><strong>핵심:</strong> 귀무가설을 기각할 충분한 증거가 있는지 검정합니다.</p>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 p-value의 의미</h3>
+                <p>p-value는 <strong>귀무가설이 참일 때</strong>, 현재 데이터(또는 더 극단적인 데이터)가 관찰될 확률입니다.</p>
+                <ul>
+                    <li><strong>p-value가 작다</strong> → 귀무가설 하에서 이런 결과가 나올 가능성이 낮다 → 귀무가설 기각</li>
+                    <li><strong>p-value가 크다</strong> → 귀무가설 하에서도 충분히 나올 수 있는 결과 → 귀무가설 기각 실패</li>
+                </ul>
+                <p><strong>주의:</strong> p-value는 효과의 크기를 말해주지 않습니다!</p>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 유의수준(α, Alpha)</h3>
+                <p>귀무가설을 기각하기 위한 <strong>기준값</strong>입니다.</p>
+                <ul>
+                    <li><strong>α = 0.05 (5%)</strong>: 가장 일반적인 기준</li>
+                    <li><strong>α = 0.01 (1%)</strong>: 더 엄격한 기준</li>
+                    <li><strong>판단:</strong> p &lt; α 이면 귀무가설 기각 ("통계적으로 유의함")</li>
+                </ul>
+            </div>
+
+            <div class="warning-box">
+                <h3>⚠️ 1종 오류와 2종 오류</h3>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th></th>
+                            <th>H₀가 실제로 참</th>
+                            <th>H₀가 실제로 거짓</th>
+                        </tr>
+                        <tr>
+                            <td><strong>H₀ 기각</strong></td>
+                            <td style="background-color: #ffebee;"><strong>1종 오류 (α)</strong><br>거짓 양성</td>
+                            <td style="background-color: #e8f5e9;">올바른 결정<br>(검정력, 1-β)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>H₀ 기각 실패</strong></td>
+                            <td style="background-color: #e8f5e9;">올바른 결정</td>
+                            <td style="background-color: #fff3e0;"><strong>2종 오류 (β)</strong><br>거짓 음성</td>
+                        </tr>
+                    </table>
+                </div>
+                <ul>
+                    <li><strong>1종 오류</strong>: 효과가 없는데 있다고 판단 (허위 발견)</li>
+                    <li><strong>2종 오류</strong>: 효과가 있는데 없다고 판단 (놓침)</li>
+                    <li><strong>검정력(Power)</strong>: 실제 효과를 발견할 확률 (보통 0.80 이상 권장)</li>
+                </ul>
+            </div>
+
+            <hr>
+
+            <h2>2. 독립표본 t-test</h2>
+
+            <div class="concept-box">
+                <h3>💡 언제 사용하나?</h3>
+                <p><strong>서로 다른 두 집단</strong>의 평균을 비교할 때 사용합니다.</p>
+                <p><strong>예시:</strong></p>
+                <ul>
+                    <li>중재군 vs 대조군의 통증 점수 비교</li>
+                    <li>남성 vs 여성의 근력 비교</li>
+                    <li>낙상 경험자 vs 비경험자의 균형 점수 비교</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 가정(Assumptions)</h3>
+                <ol>
+                    <li><strong>독립성</strong>: 두 집단의 관측치가 서로 독립적</li>
+                    <li><strong>정규성</strong>: 각 집단의 데이터가 정규분포를 따름 (n≥30이면 완화)</li>
+                    <li><strong>등분산성</strong>: 두 집단의 분산이 동일 (Welch's t-test로 완화 가능)</li>
+                </ol>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 독립표본 t-test를 위한 데이터 구조</h3>
+                <pre><code>-- 필수 구조: participant_id, group, value
+-- 각 참가자는 하나의 그룹에만 속함
+
+CREATE TABLE ttest_data (
+    participant_id INTEGER PRIMARY KEY,
+    group_type TEXT NOT NULL,  -- 'intervention' 또는 'control'
+    outcome_value REAL NOT NULL
+);
+
+-- 예시 데이터
+INSERT INTO ttest_data VALUES
+(1, 'intervention', 42.5),
+(2, 'intervention', 38.0),
+(3, 'control', 45.2),
+(4, 'control', 41.8);
+
+-- 집단별 기술통계 (t-test 전 필수 확인)
+SELECT
+    group_type,
+    COUNT(*) AS n,
+    ROUND(AVG(outcome_value), 2) AS mean,
+    ROUND(SQRT(SUM((outcome_value -
+        (SELECT AVG(outcome_value) FROM ttest_data t2
+         WHERE t2.group_type = t1.group_type))
+        * (outcome_value -
+        (SELECT AVG(outcome_value) FROM ttest_data t2
+         WHERE t2.group_type = t1.group_type))) / (COUNT(*) - 1)), 2) AS sd
+FROM ttest_data t1
+GROUP BY group_type;</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 t-test 관련 통계량 계산</h3>
+                <pre><code>-- 집단 간 평균 차이 계산
+WITH group_stats AS (
+    SELECT
+        group_type,
+        COUNT(*) AS n,
+        AVG(outcome_value) AS mean,
+        SUM((outcome_value - (SELECT AVG(outcome_value) FROM ttest_data WHERE group_type = t.group_type))
+            * (outcome_value - (SELECT AVG(outcome_value) FROM ttest_data WHERE group_type = t.group_type)))
+            / (COUNT(*) - 1) AS variance
+    FROM ttest_data t
+    GROUP BY group_type
+)
+SELECT
+    g1.mean - g2.mean AS mean_difference,
+    g1.n AS n1,
+    g2.n AS n2,
+    g1.mean AS mean1,
+    g2.mean AS mean2,
+    g1.variance AS var1,
+    g2.variance AS var2,
+    -- 합동 표준오차 (pooled SE)
+    SQRT(((g1.n - 1) * g1.variance + (g2.n - 1) * g2.variance) / (g1.n + g2.n - 2)
+        * (1.0/g1.n + 1.0/g2.n)) AS pooled_se
+FROM group_stats g1, group_stats g2
+WHERE g1.group_type = 'intervention' AND g2.group_type = 'control';
+
+-- 참고: 실제 t-값과 p-value 계산은 통계 소프트웨어 필요</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>3. 대응표본 t-test</h2>
+
+            <div class="concept-box">
+                <h3>💡 언제 사용하나?</h3>
+                <p><strong>같은 대상</strong>을 두 번 측정하여 비교할 때 사용합니다.</p>
+                <p><strong>예시:</strong></p>
+                <ul>
+                    <li>치료 전 vs 치료 후 통증 비교</li>
+                    <li>좌측 vs 우측 근력 비교</li>
+                    <li>프로그램 전 vs 프로그램 후 균형 점수 비교</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 차이 점수(Difference Score)</h3>
+                <p>대응표본 t-test는 <strong>차이 점수</strong>가 0과 다른지를 검정합니다:</p>
+                <p>D = 사후 점수 - 사전 점수</p>
+                <p>H₀: μD = 0 (사전-사후 차이가 없다)</p>
+                <p>H₁: μD ≠ 0 (사전-사후 차이가 있다)</p>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 Wide 형식 데이터 (대응표본용)</h3>
+                <pre><code>-- Wide 형식: 한 행에 사전-사후 값이 함께 있음
+CREATE TABLE paired_wide (
+    participant_id INTEGER PRIMARY KEY,
+    score_pre REAL NOT NULL,
+    score_post REAL NOT NULL
+);
+
+INSERT INTO paired_wide VALUES
+(1, 45.0, 38.0),
+(2, 52.0, 48.0),
+(3, 38.0, 35.0),
+(4, 41.0, 40.0);
+
+-- 차이 점수 계산
+SELECT
+    participant_id,
+    score_pre,
+    score_post,
+    score_post - score_pre AS difference
+FROM paired_wide;</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 Long 형식에서 Wide로 변환</h3>
+                <pre><code>-- Long 형식 원본 데이터
+CREATE TABLE paired_long (
+    participant_id INTEGER NOT NULL,
+    time_point TEXT NOT NULL,  -- 'pre' or 'post'
+    score REAL NOT NULL,
+    PRIMARY KEY (participant_id, time_point)
+);
+
+-- Long → Wide 변환하여 차이 계산
+SELECT
+    pre.participant_id,
+    pre.score AS score_pre,
+    post.score AS score_post,
+    post.score - pre.score AS difference
+FROM paired_long pre
+JOIN paired_long post
+    ON pre.participant_id = post.participant_id
+WHERE pre.time_point = 'pre'
+  AND post.time_point = 'post';
+
+-- 차이 점수의 기술통계
+WITH differences AS (
+    SELECT post.score - pre.score AS diff
+    FROM paired_long pre
+    JOIN paired_long post
+        ON pre.participant_id = post.participant_id
+    WHERE pre.time_point = 'pre' AND post.time_point = 'post'
+)
+SELECT
+    COUNT(*) AS n,
+    ROUND(AVG(diff), 2) AS mean_diff,
+    ROUND(SQRT(SUM((diff - (SELECT AVG(diff) FROM differences)) *
+                   (diff - (SELECT AVG(diff) FROM differences))) / (COUNT(*) - 1)), 2) AS sd_diff
+FROM differences;</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>4. 일원분산분석 (One-way ANOVA)</h2>
+
+            <div class="concept-box">
+                <h3>💡 언제 사용하나?</h3>
+                <p><strong>3개 이상의 독립적인 집단</strong> 평균을 비교할 때 사용합니다.</p>
+                <p><strong>예시:</strong></p>
+                <ul>
+                    <li>3가지 치료법(A, B, C)의 효과 비교</li>
+                    <li>4개 연령대(20대, 30대, 40대, 50대)의 균형 점수 비교</li>
+                    <li>3개 병원의 치료 성과 비교</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 ANOVA의 논리</h3>
+                <p>전체 변동(Total Variance)을 두 부분으로 분해합니다:</p>
+                <ul>
+                    <li><strong>집단 간 변동(Between-group)</strong>: 집단 평균들의 차이로 인한 변동</li>
+                    <li><strong>집단 내 변동(Within-group)</strong>: 각 집단 내에서의 개인차</li>
+                </ul>
+                <p><strong>F-통계량:</strong> F = (집단 간 변동) / (집단 내 변동)</p>
+                <p>F가 크면 → 집단 간 차이가 우연이 아닐 가능성 높음</p>
+            </div>
+
+            <div class="warning-box">
+                <h3>⚠️ ANOVA 결과 해석</h3>
+                <ul>
+                    <li>ANOVA는 "전체적으로 집단 간 차이가 있는가?"만 알려줌</li>
+                    <li>"어느 집단이 다른가?"는 <strong>사후검정(Post-hoc test)</strong>이 필요</li>
+                    <li>대표적인 사후검정: Tukey HSD, Bonferroni, Scheffe</li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 ANOVA를 위한 데이터 구조</h3>
+                <pre><code>-- 3개 이상의 그룹 비교
+CREATE TABLE anova_data (
+    participant_id INTEGER PRIMARY KEY,
+    treatment_group TEXT NOT NULL,  -- 'A', 'B', 'C'
+    outcome_score REAL NOT NULL
+);
+
+-- 샘플 데이터
+INSERT INTO anova_data VALUES
+(1, 'A', 42.0), (2, 'A', 45.0), (3, 'A', 38.0),
+(4, 'B', 35.0), (5, 'B', 32.0), (6, 'B', 37.0),
+(7, 'C', 48.0), (8, 'C', 52.0), (9, 'C', 50.0);
+
+-- 그룹별 기술통계
+SELECT
+    treatment_group,
+    COUNT(*) AS n,
+    ROUND(AVG(outcome_score), 2) AS mean,
+    ROUND(MIN(outcome_score), 2) AS min,
+    ROUND(MAX(outcome_score), 2) AS max
+FROM anova_data
+GROUP BY treatment_group
+ORDER BY treatment_group;</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 ANOVA 분산 분해</h3>
+                <pre><code>-- Sum of Squares 계산
+WITH grand_stats AS (
+    SELECT AVG(outcome_score) AS grand_mean, COUNT(*) AS n_total
+    FROM anova_data
+),
+group_stats AS (
+    SELECT
+        treatment_group,
+        COUNT(*) AS n,
+        AVG(outcome_score) AS group_mean
+    FROM anova_data
+    GROUP BY treatment_group
+)
+SELECT
+    -- SS Between (집단 간 제곱합)
+    SUM(g.n * (g.group_mean - gs.grand_mean) * (g.group_mean - gs.grand_mean)) AS ss_between,
+    -- SS Within (집단 내 제곱합)
+    (SELECT SUM((a.outcome_score -
+        (SELECT AVG(outcome_score) FROM anova_data WHERE treatment_group = a.treatment_group))
+        * (a.outcome_score -
+        (SELECT AVG(outcome_score) FROM anova_data WHERE treatment_group = a.treatment_group)))
+     FROM anova_data a) AS ss_within,
+    -- SS Total (전체 제곱합)
+    (SELECT SUM((outcome_score - gs.grand_mean) * (outcome_score - gs.grand_mean))
+     FROM anova_data) AS ss_total,
+    -- 자유도
+    (SELECT COUNT(DISTINCT treatment_group) - 1 FROM anova_data) AS df_between,
+    (SELECT COUNT(*) - COUNT(DISTINCT treatment_group) FROM anova_data) AS df_within
+FROM group_stats g, grand_stats gs;</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>5. 반복측정 ANOVA</h2>
+
+            <div class="concept-box">
+                <h3>💡 언제 사용하나?</h3>
+                <p><strong>같은 대상을 3회 이상</strong> 반복 측정하여 비교할 때 사용합니다.</p>
+                <p><strong>예시:</strong></p>
+                <ul>
+                    <li>치료 전 → 4주 후 → 8주 후 → 12주 후 통증 비교</li>
+                    <li>3가지 조건에서 같은 참가자의 수행 비교</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 구형성 가정(Sphericity)</h3>
+                <p>반복측정 ANOVA의 중요한 가정입니다:</p>
+                <ul>
+                    <li>모든 시점 쌍 간의 분산 차이가 동일해야 함</li>
+                    <li><strong>Mauchly's Test</strong>로 검정</li>
+                    <li>위반 시: Greenhouse-Geisser 또는 Huynh-Feldt 보정 사용</li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 반복측정을 위한 Long 형식</h3>
+                <pre><code>-- Long 형식: 반복측정에 적합
+CREATE TABLE repeated_measures (
+    participant_id INTEGER NOT NULL,
+    time_point INTEGER NOT NULL,  -- 1, 2, 3, 4 (측정 시점)
+    time_label TEXT NOT NULL,     -- 'baseline', 'week4', 'week8', 'week12'
+    score REAL NOT NULL,
+    PRIMARY KEY (participant_id, time_point)
+);
+
+-- 샘플 데이터
+INSERT INTO repeated_measures VALUES
+(1, 1, 'baseline', 45.0), (1, 2, 'week4', 42.0), (1, 3, 'week8', 38.0), (1, 4, 'week12', 35.0),
+(2, 1, 'baseline', 52.0), (2, 2, 'week4', 50.0), (2, 3, 'week8', 48.0), (2, 4, 'week12', 45.0),
+(3, 1, 'baseline', 38.0), (3, 2, 'week4', 36.0), (3, 3, 'week8', 33.0), (3, 4, 'week12', 30.0);
+
+-- 시점별 기술통계
+SELECT
+    time_point,
+    time_label,
+    COUNT(*) AS n,
+    ROUND(AVG(score), 2) AS mean,
+    ROUND(MIN(score), 2) AS min,
+    ROUND(MAX(score), 2) AS max
+FROM repeated_measures
+GROUP BY time_point, time_label
+ORDER BY time_point;</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 시점 간 변화 추적</h3>
+                <pre><code>-- 각 참가자의 시점별 점수와 기준선 대비 변화
+WITH baseline AS (
+    SELECT participant_id, score AS baseline_score
+    FROM repeated_measures
+    WHERE time_point = 1
+)
+SELECT
+    rm.participant_id,
+    rm.time_label,
+    rm.score,
+    b.baseline_score,
+    rm.score - b.baseline_score AS change_from_baseline,
+    ROUND(100.0 * (rm.score - b.baseline_score) / b.baseline_score, 1) AS pct_change
+FROM repeated_measures rm
+JOIN baseline b ON rm.participant_id = b.participant_id
+ORDER BY rm.participant_id, rm.time_point;
+
+-- 시점별 평균 변화량
+WITH baseline AS (
+    SELECT participant_id, score AS baseline_score
+    FROM repeated_measures
+    WHERE time_point = 1
+)
+SELECT
+    rm.time_label,
+    COUNT(*) AS n,
+    ROUND(AVG(rm.score - b.baseline_score), 2) AS mean_change,
+    ROUND(AVG(rm.score), 2) AS mean_score
+FROM repeated_measures rm
+JOIN baseline b ON rm.participant_id = b.participant_id
+GROUP BY rm.time_point, rm.time_label
+ORDER BY rm.time_point;</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>6. 집단 비교를 위한 DB 설계</h2>
+
+            <div class="example-box">
+                <h3>📋 집단 비교 연구 통합 스키마</h3>
+                <p>물리치료 효과 비교 연구를 위한 완전한 스키마입니다.</p>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 통합 스키마</h3>
+                <pre><code>-- ========================================
+-- 집단 비교 연구 데이터베이스
+-- ========================================
+
+-- 1. 참가자 및 집단 배정
+CREATE TABLE participants (
+    participant_id INTEGER PRIMARY KEY,
+    participant_code TEXT UNIQUE NOT NULL,
+    age INTEGER,
+    sex TEXT CHECK(sex IN ('M', 'F')),
+    group_id INTEGER NOT NULL,
+    randomization_date DATE,
+    FOREIGN KEY (group_id) REFERENCES study_groups(group_id)
+);
+
+-- 2. 연구 집단 정의
+CREATE TABLE study_groups (
+    group_id INTEGER PRIMARY KEY,
+    group_name TEXT NOT NULL,      -- 'A', 'B', 'C' 또는 설명적 이름
+    group_label TEXT NOT NULL,     -- '스트레칭', '강화운동', '대조군'
+    group_order INTEGER,           -- 표시 순서
+    is_control INTEGER DEFAULT 0   -- 대조군 여부
+);
+
+-- 3. 측정 시점
+CREATE TABLE time_points (
+    time_id INTEGER PRIMARY KEY,
+    time_name TEXT NOT NULL,       -- 'baseline', 'week4', 'week8'
+    time_order INTEGER NOT NULL,
+    days_from_baseline INTEGER     -- 기준선부터 일수
+);
+
+-- 4. 측정 변수 정의
+CREATE TABLE variables (
+    variable_id INTEGER PRIMARY KEY,
+    variable_name TEXT NOT NULL,   -- 'pain_nrs', 'bbs_score'
+    variable_label TEXT,           -- '통증 NRS', '균형 점수'
+    data_type TEXT,                -- 'continuous', 'ordinal', 'categorical'
+    min_value REAL,
+    max_value REAL
+);
+
+-- 5. 측정 데이터 (Long 형식)
+CREATE TABLE measurements (
+    measurement_id INTEGER PRIMARY KEY,
+    participant_id INTEGER NOT NULL,
+    variable_id INTEGER NOT NULL,
+    time_id INTEGER NOT NULL,
+    value REAL,
+    measurement_date DATE,
+    assessor_id INTEGER,
+    FOREIGN KEY (participant_id) REFERENCES participants(participant_id),
+    FOREIGN KEY (variable_id) REFERENCES variables(variable_id),
+    FOREIGN KEY (time_id) REFERENCES time_points(time_id),
+    UNIQUE(participant_id, variable_id, time_id)
+);
+
+-- 6. 분석 결과 저장
+CREATE TABLE analysis_results (
+    result_id INTEGER PRIMARY KEY,
+    analysis_type TEXT NOT NULL,   -- 't-test', 'anova', 'rm_anova'
+    variable_name TEXT NOT NULL,
+    comparison TEXT,               -- 'A vs B' 또는 'time effect'
+    test_statistic REAL,           -- t값 또는 F값
+    df1 INTEGER,
+    df2 INTEGER,
+    p_value REAL,
+    effect_size REAL,
+    effect_size_type TEXT,         -- 'cohen_d', 'eta_squared'
+    ci_lower REAL,
+    ci_upper REAL,
+    analysis_date DATE DEFAULT CURRENT_DATE
+);</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 집단별 기술통계 쿼리</h3>
+                <pre><code>-- 집단 × 시점별 기술통계 (논문 Table 1 형식)
+SELECT
+    sg.group_label,
+    tp.time_name,
+    v.variable_label,
+    COUNT(m.value) AS n,
+    ROUND(AVG(m.value), 2) AS mean,
+    ROUND(SQRT(SUM((m.value - (
+        SELECT AVG(m2.value)
+        FROM measurements m2
+        JOIN participants p2 ON m2.participant_id = p2.participant_id
+        WHERE p2.group_id = p.group_id
+          AND m2.variable_id = m.variable_id
+          AND m2.time_id = m.time_id
+    )) * (m.value - (
+        SELECT AVG(m2.value)
+        FROM measurements m2
+        JOIN participants p2 ON m2.participant_id = p2.participant_id
+        WHERE p2.group_id = p.group_id
+          AND m2.variable_id = m.variable_id
+          AND m2.time_id = m.time_id
+    ))) / NULLIF(COUNT(m.value) - 1, 0)), 2) AS sd
+FROM measurements m
+JOIN participants p ON m.participant_id = p.participant_id
+JOIN study_groups sg ON p.group_id = sg.group_id
+JOIN time_points tp ON m.time_id = tp.time_id
+JOIN variables v ON m.variable_id = v.variable_id
+GROUP BY sg.group_id, tp.time_id, v.variable_id
+ORDER BY v.variable_id, sg.group_order, tp.time_order;</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 효과 크기(Cohen's d) 계산</h3>
+                <pre><code>-- 두 집단 간 Cohen's d 계산
+WITH group_stats AS (
+    SELECT
+        p.group_id,
+        sg.group_label,
+        COUNT(*) AS n,
+        AVG(m.value) AS mean,
+        SUM((m.value - (
+            SELECT AVG(m2.value) FROM measurements m2
+            JOIN participants p2 ON m2.participant_id = p2.participant_id
+            WHERE p2.group_id = p.group_id AND m2.variable_id = 1 AND m2.time_id = 2
+        )) * (m.value - (
+            SELECT AVG(m2.value) FROM measurements m2
+            JOIN participants p2 ON m2.participant_id = p2.participant_id
+            WHERE p2.group_id = p.group_id AND m2.variable_id = 1 AND m2.time_id = 2
+        ))) / (COUNT(*) - 1) AS variance
+    FROM measurements m
+    JOIN participants p ON m.participant_id = p.participant_id
+    JOIN study_groups sg ON p.group_id = sg.group_id
+    WHERE m.variable_id = 1 AND m.time_id = 2  -- 특정 변수, 특정 시점
+    GROUP BY p.group_id, sg.group_label
+)
+SELECT
+    g1.group_label || ' vs ' || g2.group_label AS comparison,
+    ROUND(g1.mean, 2) AS mean_1,
+    ROUND(g2.mean, 2) AS mean_2,
+    ROUND(g1.mean - g2.mean, 2) AS mean_diff,
+    -- Cohen's d (pooled SD 사용)
+    ROUND((g1.mean - g2.mean) /
+        SQRT(((g1.n - 1) * g1.variance + (g2.n - 1) * g2.variance) / (g1.n + g2.n - 2)), 2) AS cohens_d
+FROM group_stats g1, group_stats g2
+WHERE g1.group_id < g2.group_id;
+
+-- Cohen's d 해석
+-- |d| < 0.2: 효과 없음
+-- 0.2 ≤ |d| < 0.5: 작은 효과
+-- 0.5 ≤ |d| < 0.8: 중간 효과
+-- |d| ≥ 0.8: 큰 효과</code></pre>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 분석 방법 선택 가이드</h3>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>상황</th>
+                            <th>분석 방법</th>
+                            <th>비모수 대안</th>
+                        </tr>
+                        <tr>
+                            <td>2개 독립 집단</td>
+                            <td>독립표본 t-test</td>
+                            <td>Mann-Whitney U</td>
+                        </tr>
+                        <tr>
+                            <td>2회 반복측정</td>
+                            <td>대응표본 t-test</td>
+                            <td>Wilcoxon signed-rank</td>
+                        </tr>
+                        <tr>
+                            <td>3개+ 독립 집단</td>
+                            <td>One-way ANOVA</td>
+                            <td>Kruskal-Wallis</td>
+                        </tr>
+                        <tr>
+                            <td>3회+ 반복측정</td>
+                            <td>Repeated ANOVA</td>
+                            <td>Friedman test</td>
+                        </tr>
+                        <tr>
+                            <td>2요인 (집단 × 시점)</td>
+                            <td>Mixed ANOVA</td>
+                            <td>-</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="summary-box">
+                <h3>📝 이 장의 핵심 정리</h3>
+                <ol>
+                    <li><strong>가설 검정</strong>: H₀(차이 없음) vs H₁(차이 있음), p &lt; α 면 기각</li>
+                    <li><strong>독립표본 t-test</strong>: 서로 다른 두 집단 비교, group 컬럼 필요</li>
+                    <li><strong>대응표본 t-test</strong>: 같은 대상 2회 측정, 차이 점수로 분석</li>
+                    <li><strong>One-way ANOVA</strong>: 3개+ 집단 비교, 사후검정 필요</li>
+                    <li><strong>반복측정 ANOVA</strong>: 3회+ 반복측정, Long 형식 데이터</li>
+                    <li><strong>효과 크기</strong>: Cohen's d로 실질적 의미 파악 (0.2/0.5/0.8 기준)</li>
+                </ol>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-15.html" class="nav-btn">← 이전</a>
+                <span class="page-num">16 / 20</span>
+                <a href="chapter-17.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

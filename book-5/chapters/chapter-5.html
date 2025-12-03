@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>5장: CSRF 공격과 방어 - 물리치료사를 위한 DB 5권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "5"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>🛡️ 5권: 보안 편</h1>
+                <p>DB & 서버 보안</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">CSRF 공격과 방어</h1>
+
+            <h2>CSRF(Cross-Site Request Forgery)란?</h2>
+
+            <p>사용자가 로그인한 상태를 이용해서 의도하지 않은 요청을 보내게 하는 공격입니다.</p>
+
+            <blockquote>
+                사용자가 힐링손 시스템에 로그인한 상태에서<br>
+                악성 사이트를 방문하면, 자동으로 환자 정보가 수정될 수 있습니다.
+            </blockquote>
+
+            <hr>
+
+            <h2>CSRF 공격 원리</h2>
+
+            <pre class="file-tree">공격 시나리오
+│
+├── 1. 관리자가 힐링손에 로그인 (세션 유지)
+│
+├── 2. 악성 이메일/사이트 클릭
+│   └── "무료 치료 장비 증정" 링크
+│
+├── 3. 악성 사이트의 숨겨진 폼이 자동 제출
+│   └── 힐링손 서버로 요청 전송
+│
+└── 4. 서버는 정상 요청으로 인식
+    └── 관리자 세션으로 실행됨!</pre>
+
+            <hr>
+
+            <h2>공격 예시 1: 숨겨진 폼</h2>
+
+            <pre><code>&lt;!-- 악성 사이트의 HTML --&gt;
+&lt;h1&gt;축하합니다! 경품에 당첨되었습니다!&lt;/h1&gt;
+
+&lt;!-- 숨겨진 폼 - 자동 제출 --&gt;
+&lt;form id="evil" action="https://healing-hands.com/api/patients/P001" method="POST" style="display:none"&gt;
+    &lt;input name="phone" value="010-9999-9999"&gt;
+    &lt;input name="address" value="해커주소"&gt;
+&lt;/form&gt;
+
+&lt;script&gt;
+    document.getElementById('evil').submit();
+&lt;/script&gt;
+
+&lt;!-- 피해자가 페이지를 열면 자동으로 환자 정보 수정! --&gt;</code></pre>
+
+            <h2>공격 예시 2: 이미지 태그</h2>
+
+            <pre><code>&lt;!-- GET 요청을 트리거하는 이미지 --&gt;
+&lt;img src="https://healing-hands.com/api/patients/P001/delete" style="display:none"&gt;
+
+&lt;!-- 페이지 로드만으로 삭제 요청 실행! --&gt;</code></pre>
+
+            <h2>공격 예시 3: 링크</h2>
+
+            <pre><code>&lt;!-- 이메일에 포함된 링크 --&gt;
+&lt;a href="https://healing-hands.com/api/admin/add?username=hacker&password=1234"&gt;
+    클릭하면 경품 당첨!
+&lt;/a&gt;
+
+&lt;!-- 관리자가 클릭하면 해커 계정 생성! --&gt;</code></pre>
+
+            <hr>
+
+            <h2>방어 1: CSRF 토큰</h2>
+
+            <p>서버가 생성한 비밀 토큰을 폼에 포함시킵니다.</p>
+
+            <pre><code>from flask import Flask, session, request
+from flask_wtf.csrf import CSRFProtect
+import secrets
+
+app = Flask(__name__)
+app.secret_key = secrets.token_hex(32)
+
+# CSRF 보호 활성화
+csrf = CSRFProtect(app)</code></pre>
+
+            <p>템플릿에서 CSRF 토큰 사용:</p>
+
+            <pre><code>&lt;!-- Jinja2 템플릿 --&gt;
+&lt;form method="POST" action="/api/patients"&gt;
+    &lt;input type="hidden" name="csrf_token" value="{{ csrf_token() }}"&gt;
+
+    &lt;input type="text" name="name"&gt;
+    &lt;input type="text" name="phone"&gt;
+    &lt;button type="submit"&gt;저장&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+
+            <p>서버에서 검증:</p>
+            <pre><code># Flask-WTF가 자동으로 검증
+# 토큰이 없거나 일치하지 않으면 400 에러
+
+@app.route('/api/patients', methods=['POST'])
+def create_patient():
+    # CSRF 토큰이 자동으로 검증됨
+    name = request.form['name']
+    ...</code></pre>
+
+            <hr>
+
+            <h2>방어 2: SameSite 쿠키</h2>
+
+            <p>다른 사이트에서 쿠키가 전송되지 않게 합니다.</p>
+
+            <pre><code>from flask import Flask
+
+app = Flask(__name__)
+
+# SameSite 쿠키 설정
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # 권장
+# 또는 'Strict' - 더 엄격하지만 사용성 저하</code></pre>
+
+            <p>SameSite 옵션:</p>
+            <table>
+                <tr>
+                    <th>값</th>
+                    <th>설명</th>
+                    <th>추천</th>
+                </tr>
+                <tr>
+                    <td>Strict</td>
+                    <td>다른 사이트에서 쿠키 절대 전송 안 함</td>
+                    <td>보안 최우선</td>
+                </tr>
+                <tr>
+                    <td>Lax</td>
+                    <td>링크 클릭은 허용, POST는 차단</td>
+                    <td>일반적 추천</td>
+                </tr>
+                <tr>
+                    <td>None</td>
+                    <td>항상 전송 (HTTPS 필수)</td>
+                    <td>비추천</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>방어 3: Referer 검증</h2>
+
+            <p>요청이 어디서 왔는지 확인합니다.</p>
+
+            <pre><code>from urllib.parse import urlparse
+
+ALLOWED_ORIGINS = ['https://healing-hands.com', 'https://www.healing-hands.com']
+
+@app.before_request
+def check_referer():
+    if request.method in ['POST', 'PUT', 'DELETE']:
+        referer = request.headers.get('Referer')
+
+        if not referer:
+            return {'error': '잘못된 요청'}, 403
+
+        origin = f"{urlparse(referer).scheme}://{urlparse(referer).netloc}"
+
+        if origin not in ALLOWED_ORIGINS:
+            return {'error': '허용되지 않은 출처'}, 403</code></pre>
+
+            <hr>
+
+            <h2>방어 4: 중요 작업에 재인증</h2>
+
+            <pre><code>@app.route('/api/patients/&lt;id&gt;/delete', methods=['POST'])
+def delete_patient(id):
+    # 중요 작업 전 비밀번호 재확인
+    password = request.form.get('password')
+
+    if not verify_password(session['user_id'], password):
+        return {'error': '비밀번호를 확인해주세요'}, 401
+
+    # 삭제 진행
+    ...</code></pre>
+
+            <hr>
+
+            <h2>AJAX 요청 보호</h2>
+
+            <pre><code>// JavaScript에서 CSRF 토큰 전송
+const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+fetch('/api/patients', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken  // 커스텀 헤더로 전송
+    },
+    body: JSON.stringify(data)
+});</code></pre>
+
+            <p>서버에서 헤더 검증:</p>
+            <pre><code># Flask-WTF 설정
+app.config['WTF_CSRF_HEADERS'] = ['X-CSRFToken']</code></pre>
+
+            <hr>
+
+            <h2>안전하지 않은 패턴</h2>
+
+            <pre><code># ❌ GET으로 상태 변경 (위험!)
+@app.route('/api/patients/&lt;id&gt;/delete')  # GET
+def delete_patient(id):
+    cursor.execute("DELETE FROM patients WHERE id = %s", (id,))
+
+# ✅ POST/DELETE로 상태 변경 (안전)
+@app.route('/api/patients/&lt;id&gt;', methods=['DELETE'])
+def delete_patient(id):
+    # CSRF 토큰 검증 후 삭제
+    cursor.execute("DELETE FROM patients WHERE id = %s", (id,))</code></pre>
+
+            <hr>
+
+            <h2>CSRF 방어 체크리스트</h2>
+
+            <table>
+                <tr>
+                    <th>항목</th>
+                    <th>확인</th>
+                </tr>
+                <tr>
+                    <td>모든 폼에 CSRF 토큰 포함</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>SameSite 쿠키 설정</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>GET으로 상태 변경 안 함</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>AJAX에서 CSRF 토큰 전송</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>중요 작업에 재인증</td>
+                    <td>☐</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li><strong>CSRF</strong>는 사용자의 로그인 상태를 악용하는 공격</li>
+                <li><strong>CSRF 토큰</strong>으로 정당한 요청인지 확인</li>
+                <li><strong>SameSite 쿠키</strong>로 다른 사이트에서 쿠키 전송 차단</li>
+                <li>상태 변경은 반드시 <strong>POST/PUT/DELETE</strong>로</li>
+                <li>중요 작업은 <strong>재인증</strong> 요구</li>
+            </ul>
+
+            <blockquote>다음 장에서는 안전한 인증과 세션 관리를 배웁니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

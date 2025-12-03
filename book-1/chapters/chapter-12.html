@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[부록] MySQL 세팅 가이드 - 물리치료사를 위한 DB</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "1"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📗 1권: 정규화 편</h1>
+                <p>데이터베이스 기초 개념</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">[부록] MySQL + DBeaver 초기 세팅 가이드</h1>
+
+            <h2>1. MySQL 설치</h2>
+            <h3>Windows</h3>
+            <ol>
+                <li><a href="https://dev.mysql.com/downloads/installer/" target="_blank">dev.mysql.com/downloads/installer</a> 접속</li>
+                <li>"MySQL Installer for Windows" 다운로드</li>
+                <li>설치 시 "Developer Default" 선택</li>
+                <li><strong>root 비밀번호 설정</strong> → 꼭 기억하세요!</li>
+            </ol>
+            <h3>Mac (Homebrew)</h3>
+            <pre><code>brew install mysql
+brew services start mysql
+mysql_secure_installation</code></pre>
+            <hr>
+
+            <h2>2. DBeaver 설치</h2>
+            <ol>
+                <li><a href="https://dbeaver.io/download/" target="_blank">dbeaver.io/download</a> 접속</li>
+                <li>운영체제에 맞는 버전 다운로드</li>
+                <li>설치 진행</li>
+            </ol>
+            <hr>
+
+            <h2>3. DBeaver에서 MySQL 연결</h2>
+            <pre><code>Server Host: localhost
+Port:        3306
+Username:    root
+Password:    (설치할 때 설정한 비밀번호)</code></pre>
+            <hr>
+
+            <h2>4. 데이터베이스 생성</h2>
+            <pre><code>CREATE DATABASE pt_clinic
+DEFAULT CHARACTER SET utf8mb4;
+
+USE pt_clinic;</code></pre>
+            <hr>
+
+            <h2>🎉 완료!</h2>
+            <p>이제 물리치료 클리닉 DB를 구축할 준비가 되었습니다!</p>
+
+            <div class="tip">
+                <strong>💡 다음 단계</strong><br>
+                2권 "SQL 기초 편"에서 테이블을 만들고 데이터를 다루는 법을 배워보세요!
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-11.html" class="nav-btn">← 이전</a>
+                <span class="page-num">12 / 12</span>
+                <button class="nav-btn" disabled>다음 →</button>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/nav.js"></script>
+</body>
+</html>

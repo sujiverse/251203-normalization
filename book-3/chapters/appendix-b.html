@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>부록 B: Metabase 쿼리 모음 - 물리치료사를 위한 데이터베이스 3권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "3"})
+
+    @@include('components/mobile-menu.html')
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📙 물리치료사를 위한</h1>
+                <p>실전 구축 & 대시보드 (3권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+<h1 class="title">부록 B: Metabase 쿼리 모음</h1>
+
+<h2>대시보드용 쿼리 전체 정리</h2>
+
+<p>이 부록에는 3종 대시보드(매출, 운영, 치료사 실적)에 사용된 모든 SQL 쿼리가 정리되어 있습니다. 필요한 쿼리를 복사해서 Metabase에 붙여넣기 하세요.</p>
+
+<hr>
+
+<h2>📊 매출 대시보드 쿼리</h2>
+
+<h3>1. 오늘 매출</h3>
+<pre><code>SELECT
+    COALESCE(SUM(b.total_amount), 0) as 오늘매출
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+WHERE ts.session_date = CURDATE()
+  AND b.payment_status = '완료';</code></pre>
+
+<h3>2. 이번 주 매출</h3>
+<pre><code>SELECT
+    COALESCE(SUM(b.total_amount), 0) as 이번주매출
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+WHERE YEARWEEK(ts.session_date, 1) = YEARWEEK(CURDATE(), 1)
+  AND b.payment_status = '완료';</code></pre>
+
+<h3>3. 이번 달 매출</h3>
+<pre><code>SELECT
+    COALESCE(SUM(b.total_amount), 0) as 이번달매출
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+  AND b.payment_status = '완료';</code></pre>
+
+<h3>4. 미수금 총액</h3>
+<pre><code>SELECT
+    COALESCE(SUM(total_amount), 0) as 미수금총액
+FROM billings
+WHERE payment_status = '대기'
+  AND total_amount > 0;</code></pre>
+
+<h3>5. 월별 매출 추이</h3>
+<pre><code>SELECT
+    DATE_FORMAT(ts.session_date, '%Y-%m') as 월,
+    SUM(b.total_amount) as 매출
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+WHERE b.payment_status = '완료'
+  AND ts.session_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+GROUP BY DATE_FORMAT(ts.session_date, '%Y-%m')
+ORDER BY 월;</code></pre>
+
+<h3>6. 일별 매출 추이 (최근 30일)</h3>
+<pre><code>SELECT
+    ts.session_date as 날짜,
+    SUM(b.total_amount) as 매출
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+WHERE b.payment_status = '완료'
+  AND ts.session_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+GROUP BY ts.session_date
+ORDER BY 날짜;</code></pre>
+
+<h3>7. 항목별 매출 비중</h3>
+<pre><code>SELECT
+    f.fee_name as 항목,
+    COUNT(*) as 건수,
+    SUM(b.total_amount) as 매출
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+JOIN fee_items f ON b.fee_code = f.fee_code
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+  AND b.payment_status = '완료'
+  AND b.total_amount > 0
+GROUP BY f.fee_code, f.fee_name
+ORDER BY 매출 DESC;</code></pre>
+
+<h3>8. 결제 수단별 비중</h3>
+<pre><code>SELECT
+    COALESCE(b.payment_method, '미수금') as 결제수단,
+    COUNT(*) as 건수,
+    SUM(b.total_amount) as 금액
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+  AND b.total_amount > 0
+GROUP BY b.payment_method
+ORDER BY 금액 DESC;</code></pre>
+
+<h3>9. 미수금 상세 목록</h3>
+<pre><code>SELECT
+    p.name as 환자명,
+    p.phone as 연락처,
+    ts.session_date as 치료일,
+    f.fee_name as 항목,
+    b.total_amount as 미수금액,
+    DATEDIFF(CURDATE(), ts.session_date) as 경과일
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+JOIN patients p ON ts.patient_id = p.patient_id
+JOIN fee_items f ON b.fee_code = f.fee_code
+WHERE b.payment_status = '대기'
+  AND b.total_amount > 0
+ORDER BY ts.session_date;</code></pre>
+
+<h3>10. 미수금 기간별 분포</h3>
+<pre><code>SELECT
+    CASE
+        WHEN DATEDIFF(CURDATE(), ts.session_date) <= 7 THEN '1주 이내'
+        WHEN DATEDIFF(CURDATE(), ts.session_date) <= 14 THEN '1~2주'
+        WHEN DATEDIFF(CURDATE(), ts.session_date) <= 30 THEN '2주~1달'
+        ELSE '1달 이상'
+    END as 기간,
+    COUNT(*) as 건수,
+    SUM(b.total_amount) as 금액
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+WHERE b.payment_status = '대기'
+  AND b.total_amount > 0
+GROUP BY 기간
+ORDER BY
+    CASE 기간
+        WHEN '1주 이내' THEN 1
+        WHEN '1~2주' THEN 2
+        WHEN '2주~1달' THEN 3
+        ELSE 4
+    END;</code></pre>
+
+<h3>11. 전월 대비 매출</h3>
+<pre><code>SELECT
+    '이번 달' as 구분,
+    SUM(b.total_amount) as 매출
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+  AND b.payment_status = '완료'
+
+UNION ALL
+
+SELECT
+    '지난 달' as 구분,
+    SUM(b.total_amount) as 매출
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), '%Y-%m')
+  AND b.payment_status = '완료';</code></pre>
+
+<hr>
+
+<h2>📋 운영 대시보드 쿼리</h2>
+
+<h3>1. 오늘 예약 환자 수</h3>
+<pre><code>SELECT COUNT(*) as 오늘예약
+FROM treatment_sessions
+WHERE session_date = CURDATE()
+  AND session_status IN ('예약', '완료');</code></pre>
+
+<h3>2. 오늘 완료 건수</h3>
+<pre><code>SELECT COUNT(*) as 완료건수
+FROM treatment_sessions
+WHERE session_date = CURDATE()
+  AND session_status = '완료';</code></pre>
+
+<h3>3. 오늘 남은 예약</h3>
+<pre><code>SELECT COUNT(*) as 남은예약
+FROM treatment_sessions
+WHERE session_date = CURDATE()
+  AND session_status = '예약'
+  AND start_time > CURTIME();</code></pre>
+
+<h3>4. 오늘 신규 환자</h3>
+<pre><code>SELECT COUNT(DISTINCT ts.patient_id) as 신규환자
+FROM treatment_sessions ts
+WHERE ts.session_date = CURDATE()
+  AND NOT EXISTS (
+      SELECT 1 FROM treatment_sessions ts2
+      WHERE ts2.patient_id = ts.patient_id
+        AND ts2.session_date < CURDATE()
+  );</code></pre>
+
+<h3>5. 오늘 예약 목록</h3>
+<pre><code>SELECT
+    TIME_FORMAT(ts.start_time, '%H:%i') as 시간,
+    p.name as 환자명,
+    p.phone as 연락처,
+    t.name as 치료사,
+    COALESCE(d.diagnosis_name, '-') as 진단,
+    ts.session_status as 상태,
+    ts.notes as 메모
+FROM treatment_sessions ts
+JOIN patients p ON ts.patient_id = p.patient_id
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+LEFT JOIN patient_diagnoses pd ON p.patient_id = pd.patient_id AND pd.is_primary = 'Y'
+LEFT JOIN diagnosis_codes d ON pd.diagnosis_code = d.diagnosis_code
+WHERE ts.session_date = CURDATE()
+ORDER BY ts.start_time;</code></pre>
+
+<h3>6. 치료사별 오늘 현황</h3>
+<pre><code>SELECT
+    t.name as 치료사,
+    COUNT(*) as 총예약,
+    SUM(CASE WHEN ts.session_status = '완료' THEN 1 ELSE 0 END) as 완료,
+    SUM(CASE WHEN ts.session_status = '예약' THEN 1 ELSE 0 END) as 대기,
+    SUM(CASE WHEN ts.session_status IN ('취소', '노쇼') THEN 1 ELSE 0 END) as '취소_노쇼'
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+WHERE ts.session_date = CURDATE()
+GROUP BY t.therapist_id, t.name
+ORDER BY t.therapist_id;</code></pre>
+
+<h3>7. 해피콜 요약</h3>
+<pre><code>SELECT
+    CASE
+        WHEN 경과일 BETWEEN 7 AND 13 THEN '7일 경과'
+        WHEN 경과일 BETWEEN 14 AND 29 THEN '14일 경과'
+        WHEN 경과일 >= 30 THEN '30일+ 경과'
+    END as 구분,
+    COUNT(*) as 환자수
+FROM (
+    SELECT
+        p.patient_id,
+        DATEDIFF(CURDATE(), MAX(ts.session_date)) as 경과일
+    FROM patients p
+    JOIN treatment_sessions ts ON p.patient_id = ts.patient_id
+    WHERE p.is_active = 'Y'
+      AND ts.session_status = '완료'
+    GROUP BY p.patient_id
+    HAVING 경과일 >= 7
+) sub
+GROUP BY 구분
+ORDER BY
+    CASE 구분
+        WHEN '7일 경과' THEN 1
+        WHEN '14일 경과' THEN 2
+        ELSE 3
+    END;</code></pre>
+
+<h3>8. 7일 미방문 환자 (해피콜)</h3>
+<pre><code>SELECT
+    p.name as 환자명,
+    p.phone as 연락처,
+    MAX(ts.session_date) as 마지막방문,
+    DATEDIFF(CURDATE(), MAX(ts.session_date)) as 경과일,
+    COALESCE(d.diagnosis_name, '-') as 주진단,
+    COUNT(ts.session_id) as 총방문횟수
+FROM patients p
+JOIN treatment_sessions ts ON p.patient_id = ts.patient_id
+LEFT JOIN patient_diagnoses pd ON p.patient_id = pd.patient_id AND pd.is_primary = 'Y'
+LEFT JOIN diagnosis_codes d ON pd.diagnosis_code = d.diagnosis_code
+WHERE p.is_active = 'Y'
+  AND ts.session_status = '완료'
+GROUP BY p.patient_id, p.name, p.phone, d.diagnosis_name
+HAVING DATEDIFF(CURDATE(), MAX(ts.session_date)) BETWEEN 7 AND 14
+ORDER BY 경과일 DESC;</code></pre>
+
+<h3>9. 14일+ 미방문 환자</h3>
+<pre><code>SELECT
+    p.name as 환자명,
+    p.phone as 연락처,
+    MAX(ts.session_date) as 마지막방문,
+    DATEDIFF(CURDATE(), MAX(ts.session_date)) as 경과일,
+    COALESCE(d.diagnosis_name, '-') as 주진단
+FROM patients p
+JOIN treatment_sessions ts ON p.patient_id = ts.patient_id
+LEFT JOIN patient_diagnoses pd ON p.patient_id = pd.patient_id AND pd.is_primary = 'Y'
+LEFT JOIN diagnosis_codes d ON pd.diagnosis_code = d.diagnosis_code
+WHERE p.is_active = 'Y'
+  AND ts.session_status = '완료'
+GROUP BY p.patient_id, p.name, p.phone, d.diagnosis_name
+HAVING DATEDIFF(CURDATE(), MAX(ts.session_date)) BETWEEN 14 AND 30
+ORDER BY 경과일 DESC;</code></pre>
+
+<h3>10. 이탈 위험 (30일+ 미방문)</h3>
+<pre><code>SELECT
+    p.name as 환자명,
+    p.phone as 연락처,
+    MAX(ts.session_date) as 마지막방문,
+    DATEDIFF(CURDATE(), MAX(ts.session_date)) as 경과일,
+    COUNT(ts.session_id) as 총방문횟수,
+    COALESCE(d.diagnosis_name, '-') as 주진단
+FROM patients p
+JOIN treatment_sessions ts ON p.patient_id = ts.patient_id
+LEFT JOIN patient_diagnoses pd ON p.patient_id = pd.patient_id AND pd.is_primary = 'Y'
+LEFT JOIN diagnosis_codes d ON pd.diagnosis_code = d.diagnosis_code
+WHERE p.is_active = 'Y'
+  AND ts.session_status = '완료'
+GROUP BY p.patient_id, p.name, p.phone, d.diagnosis_name
+HAVING DATEDIFF(CURDATE(), MAX(ts.session_date)) > 30
+ORDER BY 경과일 DESC;</code></pre>
+
+<h3>11. 이번 달 신규 환자 수</h3>
+<pre><code>SELECT COUNT(DISTINCT ts.patient_id) as 신규환자수
+FROM treatment_sessions ts
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+  AND NOT EXISTS (
+      SELECT 1 FROM treatment_sessions ts2
+      WHERE ts2.patient_id = ts.patient_id
+        AND ts2.session_date < DATE_FORMAT(CURDATE(), '%Y-%m-01')
+  );</code></pre>
+
+<h3>12. 월별 신규 환자 추이</h3>
+<pre><code>SELECT
+    DATE_FORMAT(첫방문일, '%Y-%m') as 월,
+    COUNT(*) as 신규환자수
+FROM (
+    SELECT
+        patient_id,
+        MIN(session_date) as 첫방문일
+    FROM treatment_sessions
+    WHERE session_status = '완료'
+    GROUP BY patient_id
+) sub
+WHERE 첫방문일 >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+GROUP BY DATE_FORMAT(첫방문일, '%Y-%m')
+ORDER BY 월;</code></pre>
+
+<h3>13. 최근 신규 환자 목록</h3>
+<pre><code>SELECT
+    p.name as 환자명,
+    p.phone as 연락처,
+    MIN(ts.session_date) as 첫방문일,
+    COALESCE(d.diagnosis_name, '-') as 주진단,
+    t.name as 담당치료사
+FROM patients p
+JOIN treatment_sessions ts ON p.patient_id = ts.patient_id
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+LEFT JOIN patient_diagnoses pd ON p.patient_id = pd.patient_id AND pd.is_primary = 'Y'
+LEFT JOIN diagnosis_codes d ON pd.diagnosis_code = d.diagnosis_code
+WHERE ts.session_status = '완료'
+GROUP BY p.patient_id, p.name, p.phone, d.diagnosis_name, t.name
+HAVING MIN(ts.session_date) >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+ORDER BY 첫방문일 DESC;</code></pre>
+
+<h3>14. 노쇼/취소 현황</h3>
+<pre><code>SELECT
+    session_status as 상태,
+    COUNT(*) as 건수
+FROM treatment_sessions
+WHERE DATE_FORMAT(session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+  AND session_status IN ('취소', '노쇼')
+GROUP BY session_status;</code></pre>
+
+<h3>15. 노쇼 상습자</h3>
+<pre><code>SELECT
+    p.name as 환자명,
+    p.phone as 연락처,
+    COUNT(*) as 노쇼횟수,
+    MAX(ts.session_date) as 최근노쇼
+FROM treatment_sessions ts
+JOIN patients p ON ts.patient_id = p.patient_id
+WHERE ts.session_status = '노쇼'
+GROUP BY p.patient_id, p.name, p.phone
+HAVING COUNT(*) >= 2
+ORDER BY 노쇼횟수 DESC;</code></pre>
+
+<h3>16. 진단별 환자 수 TOP 10</h3>
+<pre><code>SELECT
+    d.diagnosis_name as 진단명,
+    d.diagnosis_category as 분류,
+    COUNT(DISTINCT pd.patient_id) as 환자수
+FROM patient_diagnoses pd
+JOIN diagnosis_codes d ON pd.diagnosis_code = d.diagnosis_code
+JOIN patients p ON pd.patient_id = p.patient_id
+WHERE p.is_active = 'Y'
+  AND pd.is_primary = 'Y'
+GROUP BY d.diagnosis_code, d.diagnosis_name, d.diagnosis_category
+ORDER BY 환자수 DESC
+LIMIT 10;</code></pre>
+
+<hr>
+
+<h2>👨‍⚕️ 치료사 실적 대시보드 쿼리</h2>
+
+<h3>1. 이번 달 총 치료 건수</h3>
+<pre><code>SELECT COUNT(*) as 총치료건수
+FROM treatment_sessions
+WHERE DATE_FORMAT(session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+  AND session_status = '완료';</code></pre>
+
+<h3>2. 이번 달 총 매출</h3>
+<pre><code>SELECT COALESCE(SUM(b.total_amount), 0) as 총매출
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+  AND b.payment_status = '완료';</code></pre>
+
+<h3>3. 치료사별 이번 달 실적</h3>
+<pre><code>SELECT
+    t.name as 치료사,
+    COUNT(ts.session_id) as 치료건수,
+    COALESCE(SUM(b.total_amount), 0) as 매출,
+    ROUND(COALESCE(SUM(b.total_amount), 0) / NULLIF(COUNT(ts.session_id), 0)) as 건당매출
+FROM therapists t
+LEFT JOIN treatment_sessions ts ON t.therapist_id = ts.therapist_id
+    AND DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+    AND ts.session_status = '완료'
+LEFT JOIN billings b ON ts.session_id = b.session_id
+    AND b.payment_status = '완료'
+WHERE t.is_active = 'Y'
+GROUP BY t.therapist_id, t.name
+ORDER BY 매출 DESC;</code></pre>
+
+<h3>4. 치료사별 매출 비교</h3>
+<pre><code>SELECT
+    t.name as 치료사,
+    COALESCE(SUM(b.total_amount), 0) as 매출
+FROM therapists t
+LEFT JOIN treatment_sessions ts ON t.therapist_id = ts.therapist_id
+    AND DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+    AND ts.session_status = '완료'
+LEFT JOIN billings b ON ts.session_id = b.session_id
+    AND b.payment_status = '완료'
+WHERE t.is_active = 'Y'
+GROUP BY t.therapist_id, t.name
+ORDER BY 매출 DESC;</code></pre>
+
+<h3>5. 치료사별 월별 매출 추이</h3>
+<pre><code>SELECT
+    DATE_FORMAT(ts.session_date, '%Y-%m') as 월,
+    t.name as 치료사,
+    SUM(b.total_amount) as 매출
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+JOIN billings b ON ts.session_id = b.session_id
+WHERE ts.session_status = '완료'
+  AND b.payment_status = '완료'
+  AND ts.session_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+GROUP BY DATE_FORMAT(ts.session_date, '%Y-%m'), t.therapist_id, t.name
+ORDER BY 월, t.name;</code></pre>
+
+<h3>6. 치료사별 담당 환자 수</h3>
+<pre><code>SELECT
+    t.name as 치료사,
+    COUNT(DISTINCT ts.patient_id) as 담당환자수
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+  AND ts.session_status = '완료'
+GROUP BY t.therapist_id, t.name
+ORDER BY 담당환자수 DESC;</code></pre>
+
+<h3>7. 치료사별 신규 환자 유치</h3>
+<pre><code>SELECT
+    t.name as 치료사,
+    COUNT(DISTINCT ts.patient_id) as 신규환자수
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+  AND ts.session_status = '완료'
+  AND NOT EXISTS (
+      SELECT 1 FROM treatment_sessions ts2
+      WHERE ts2.patient_id = ts.patient_id
+        AND ts2.session_date < DATE_FORMAT(CURDATE(), '%Y-%m-01')
+  )
+GROUP BY t.therapist_id, t.name
+ORDER BY 신규환자수 DESC;</code></pre>
+
+<h3>8. 환자당 평균 방문 횟수</h3>
+<pre><code>SELECT
+    t.name as 치료사,
+    COUNT(*) as 총치료건수,
+    COUNT(DISTINCT ts.patient_id) as 환자수,
+    ROUND(COUNT(*) / COUNT(DISTINCT ts.patient_id), 1) as 환자당방문횟수
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+  AND ts.session_status = '완료'
+GROUP BY t.therapist_id, t.name
+ORDER BY 환자당방문횟수 DESC;</code></pre>
+
+<h3>9. 치료사별 시간대 분포</h3>
+<pre><code>SELECT
+    t.name as 치료사,
+    CASE
+        WHEN HOUR(ts.start_time) < 12 THEN '오전'
+        WHEN HOUR(ts.start_time) < 15 THEN '오후1'
+        WHEN HOUR(ts.start_time) < 18 THEN '오후2'
+        ELSE '저녁'
+    END as 시간대,
+    COUNT(*) as 건수
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+  AND ts.session_status = '완료'
+GROUP BY t.therapist_id, t.name, 시간대
+ORDER BY t.name;</code></pre>
+
+<h3>10. 치료사별 요일 분포</h3>
+<pre><code>SELECT
+    t.name as 치료사,
+    CASE DAYOFWEEK(ts.session_date)
+        WHEN 1 THEN '일'
+        WHEN 2 THEN '월'
+        WHEN 3 THEN '화'
+        WHEN 4 THEN '수'
+        WHEN 5 THEN '목'
+        WHEN 6 THEN '금'
+        WHEN 7 THEN '토'
+    END as 요일,
+    COUNT(*) as 건수
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+  AND ts.session_status = '완료'
+GROUP BY t.therapist_id, t.name, DAYOFWEEK(ts.session_date)
+ORDER BY t.name, DAYOFWEEK(ts.session_date);</code></pre>
+
+<h3>11. 인센티브 계산표</h3>
+<pre><code>SELECT
+    t.name as 치료사,
+    COALESCE(SUM(b.total_amount), 0) as 매출,
+    COUNT(DISTINCT ts.session_id) as 치료건수,
+    -- 매출 인센티브: 200만원 초과분의 10%
+    GREATEST(0, (COALESCE(SUM(b.total_amount), 0) - 2000000)) * 0.1 as 매출인센티브,
+    -- 건수 인센티브: 50건 초과분 × 1만원
+    GREATEST(0, COUNT(DISTINCT ts.session_id) - 50) * 10000 as 건수인센티브
+FROM therapists t
+LEFT JOIN treatment_sessions ts ON t.therapist_id = ts.therapist_id
+    AND DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+    AND ts.session_status = '완료'
+LEFT JOIN billings b ON ts.session_id = b.session_id
+    AND b.payment_status = '완료'
+WHERE t.is_active = 'Y'
+GROUP BY t.therapist_id, t.name
+ORDER BY 매출 DESC;</code></pre>
+
+<hr>
+
+<h2>유틸리티 쿼리</h2>
+
+<h3>환자 검색 (이름)</h3>
+<pre><code>SELECT patient_id, name, phone, birth_date, memo
+FROM patients
+WHERE name LIKE '%검색어%'
+  AND is_active = 'Y'
+ORDER BY name;</code></pre>
+
+<h3>환자 검색 (전화번호)</h3>
+<pre><code>SELECT patient_id, name, phone, birth_date, memo
+FROM patients
+WHERE phone LIKE '%검색어%'
+  AND is_active = 'Y'
+ORDER BY name;</code></pre>
+
+<h3>환자 상세 정보</h3>
+<pre><code>SELECT
+    p.patient_id,
+    p.name as 이름,
+    CASE p.gender WHEN 'M' THEN '남' ELSE '여' END as 성별,
+    p.birth_date as 생년월일,
+    TIMESTAMPDIFF(YEAR, p.birth_date, CURDATE()) as 나이,
+    p.phone as 연락처,
+    i.insurance_name as 보험,
+    p.memo as 특이사항
+FROM patients p
+LEFT JOIN insurances i ON p.insurance_code = i.insurance_code
+WHERE p.patient_id = '{{환자ID}}';</code></pre>
+
+<h3>환자 치료 이력</h3>
+<pre><code>SELECT
+    ts.session_date as 치료일,
+    t.name as 치료사,
+    f.fee_name as 치료항목,
+    b.total_amount as 금액,
+    b.payment_status as 수납상태
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+JOIN billings b ON ts.session_id = b.session_id
+JOIN fee_items f ON b.fee_code = f.fee_code
+WHERE ts.patient_id = '{{환자ID}}'
+ORDER BY ts.session_date DESC
+LIMIT 10;</code></pre>
+
+<h3>데이터베이스 통계 요약</h3>
+<pre><code>SELECT
+    (SELECT COUNT(*) FROM patients WHERE is_active = 'Y') as 활성환자수,
+    (SELECT COUNT(*) FROM therapists WHERE is_active = 'Y') as 치료사수,
+    (SELECT COUNT(*) FROM treatment_sessions WHERE session_status = '완료') as 총치료건수,
+    (SELECT SUM(total_amount) FROM billings WHERE payment_status = '완료') as 총매출,
+    (SELECT SUM(total_amount) FROM billings WHERE payment_status = '대기') as 미수금총액;</code></pre>
+
+<hr>
+
+<p>이 쿼리들을 Metabase에서 복사해서 사용하세요. <code>{{변수명}}</code> 형식은 Metabase 필터로 자동 변환됩니다.</p>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3장: SQL 인젝션 방어 - 물리치료사를 위한 DB 5권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "5"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>🛡️ 5권: 보안 편</h1>
+                <p>DB & 서버 보안</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">SQL 인젝션 방어</h1>
+
+            <h2>방어의 핵심: Prepared Statement</h2>
+
+            <p>Prepared Statement(매개변수화된 쿼리)는 SQL 인젝션을 <strong>완벽하게 차단</strong>합니다.</p>
+
+            <h3>원리</h3>
+            <pre class="file-tree">일반 쿼리 (취약)
+├── 1. 쿼리 문자열 생성
+├── 2. 사용자 입력 삽입
+└── 3. DB로 전송 → 코드와 데이터가 섞임!
+
+Prepared Statement (안전)
+├── 1. 쿼리 템플릿 전송 (데이터 위치만 표시)
+├── 2. 데이터 별도 전송
+└── 3. DB가 구분해서 처리 → 코드와 데이터 분리!</pre>
+
+            <hr>
+
+            <h2>Python (MySQL Connector)</h2>
+
+            <h3>취약한 코드</h3>
+            <pre><code># ❌ 위험!
+name = request.args.get('name')
+query = f"SELECT * FROM patients WHERE name = '{name}'"
+cursor.execute(query)</code></pre>
+
+            <h3>안전한 코드</h3>
+            <pre><code># ✅ 안전!
+name = request.args.get('name')
+query = "SELECT * FROM patients WHERE name = %s"
+cursor.execute(query, (name,))  # 튜플로 전달</code></pre>
+
+            <p><code>%s</code>는 플레이스홀더입니다. 실제 값은 별도로 전달됩니다.</p>
+
+            <hr>
+
+            <h2>여러 매개변수 사용</h2>
+
+            <pre><code># 여러 조건
+query = """
+    SELECT * FROM patients
+    WHERE name = %s
+    AND birth_date = %s
+    AND insurance_code = %s
+"""
+cursor.execute(query, (name, birth_date, insurance_code))</code></pre>
+
+            <pre><code># INSERT
+query = """
+    INSERT INTO patients (name, phone, birth_date)
+    VALUES (%s, %s, %s)
+"""
+cursor.execute(query, (name, phone, birth_date))</code></pre>
+
+            <pre><code># UPDATE
+query = """
+    UPDATE patients
+    SET phone = %s, address = %s
+    WHERE patient_id = %s
+"""
+cursor.execute(query, (phone, address, patient_id))</code></pre>
+
+            <hr>
+
+            <h2>Flask 앱 적용 예시</h2>
+
+            <pre><code>from flask import Flask, request, jsonify
+import mysql.connector
+
+app = Flask(__name__)
+
+def get_db():
+    return mysql.connector.connect(
+        host='localhost',
+        user='healing_user',
+        password='secure_password',
+        database='healing_hands'
+    )
+
+@app.route('/api/patients/search')
+def search_patients():
+    name = request.args.get('name', '')
+
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+
+    # ✅ Prepared Statement 사용
+    query = "SELECT patient_id, name, phone FROM patients WHERE name LIKE %s"
+    cursor.execute(query, (f'%{name}%',))
+
+    results = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    return jsonify({'success': True, 'data': results})
+
+@app.route('/api/patients', methods=['POST'])
+def create_patient():
+    data = request.get_json()
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # ✅ Prepared Statement 사용
+    query = """
+        INSERT INTO patients (patient_id, name, phone, birth_date)
+        VALUES (%s, %s, %s, %s)
+    """
+    cursor.execute(query, (
+        data['patient_id'],
+        data['name'],
+        data['phone'],
+        data['birth_date']
+    ))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({'success': True})</code></pre>
+
+            <hr>
+
+            <h2>ORM 사용 (SQLAlchemy)</h2>
+
+            <p>ORM을 사용하면 자동으로 Prepared Statement가 적용됩니다.</p>
+
+            <pre><code>from flask_sqlalchemy import SQLAlchemy
+
+db = SQLAlchemy()
+
+class Patient(db.Model):
+    __tablename__ = 'patients'
+    patient_id = db.Column(db.String(10), primary_key=True)
+    name = db.Column(db.String(30))
+    phone = db.Column(db.String(20))
+
+# 검색 - 자동으로 안전하게 처리
+@app.route('/api/patients/search')
+def search():
+    name = request.args.get('name')
+
+    # ✅ ORM이 자동으로 이스케이프 처리
+    patients = Patient.query.filter(
+        Patient.name.like(f'%{name}%')
+    ).all()
+
+    return jsonify([p.to_dict() for p in patients])</code></pre>
+
+            <hr>
+
+            <h2>추가 방어: 입력 검증</h2>
+
+            <p>Prepared Statement와 함께 입력 검증도 적용하세요.</p>
+
+            <pre><code>import re
+
+def validate_patient_id(patient_id):
+    """환자 ID 형식 검증: P + 숫자 3자리"""
+    if not re.match(r'^P\d{3}$', patient_id):
+        raise ValueError('잘못된 환자 ID 형식')
+    return patient_id
+
+def validate_phone(phone):
+    """전화번호 형식 검증"""
+    if not re.match(r'^\d{3}-\d{4}-\d{4}$', phone):
+        raise ValueError('잘못된 전화번호 형식')
+    return phone
+
+def validate_name(name):
+    """이름 검증: 한글, 영문만 허용"""
+    if not re.match(r'^[가-힣a-zA-Z\s]+$', name):
+        raise ValueError('이름에 허용되지 않는 문자 포함')
+    if len(name) > 30:
+        raise ValueError('이름이 너무 깁니다')
+    return name
+
+@app.route('/api/patients', methods=['POST'])
+def create_patient():
+    data = request.get_json()
+
+    try:
+        # 입력 검증
+        patient_id = validate_patient_id(data['patient_id'])
+        name = validate_name(data['name'])
+        phone = validate_phone(data['phone'])
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+    # DB 저장 (Prepared Statement)
+    ...</code></pre>
+
+            <hr>
+
+            <h2>에러 메시지 숨기기</h2>
+
+            <p>SQL 에러를 사용자에게 노출하면 공격에 도움이 됩니다.</p>
+
+            <pre><code># ❌ 위험: 상세 에러 노출
+@app.route('/api/patients')
+def get_patients():
+    try:
+        cursor.execute(query)
+    except Exception as e:
+        return jsonify({'error': str(e)})  # SQL 에러 노출!
+
+# ✅ 안전: 일반적인 메시지만 표시
+@app.route('/api/patients')
+def get_patients():
+    try:
+        cursor.execute(query)
+    except Exception as e:
+        app.logger.error(f'DB 에러: {e}')  # 서버 로그에만 기록
+        return jsonify({'error': '요청을 처리할 수 없습니다'}), 500</code></pre>
+
+            <hr>
+
+            <h2>최소 권한 원칙</h2>
+
+            <p>DB 사용자에게 필요한 권한만 부여합니다.</p>
+
+            <pre><code>-- 웹 앱용 사용자: SELECT, INSERT, UPDATE만
+CREATE USER 'web_app'@'localhost' IDENTIFIED BY 'password';
+GRANT SELECT, INSERT, UPDATE ON healing_hands.* TO 'web_app'@'localhost';
+
+-- DELETE, DROP 권한 없음!
+-- 실수로 테이블 삭제 방지</code></pre>
+
+            <hr>
+
+            <h2>방어 체크리스트</h2>
+
+            <table>
+                <tr>
+                    <th>항목</th>
+                    <th>확인</th>
+                </tr>
+                <tr>
+                    <td>모든 쿼리에 Prepared Statement 사용</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>사용자 입력 검증</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>SQL 에러 메시지 숨김</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>DB 사용자 최소 권한</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>ORM 사용 고려</td>
+                    <td>☐</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li><strong>Prepared Statement</strong>는 SQL 인젝션의 완벽한 방어책</li>
+                <li>쿼리와 데이터를 분리해서 전달</li>
+                <li>입력 검증을 추가로 적용</li>
+                <li>에러 메시지를 사용자에게 노출하지 않음</li>
+                <li>DB 사용자에게 최소 권한만 부여</li>
+            </ul>
+
+            <blockquote>다음 장에서는 XSS 공격과 방어를 배웁니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

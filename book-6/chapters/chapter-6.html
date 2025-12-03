@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[6장] 범주형 변수 완전정복 - 연구 데이터 설계</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>📊</span> 연구 데이터 설계</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+            <a href="../../book-6/index.html" class="top-nav-link book-6 active">6권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📘 6권: 연구 데이터 설계</h1><p>변수부터 회귀분석까지</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <div class="part-header">2부: 변수 유형과 저장 원칙</div>
+            <h1 class="title">[6장] 범주형 변수 완전정복</h1>
+
+            <div class="intro-box">
+                <p>이 장에서는 <strong>범주형 변수의 종류와 저장 방법</strong>을 배웁니다. 코드화, 레이블 테이블, 더미변수 변환까지 완전히 익힙니다.</p>
+            </div>
+
+            <hr>
+
+            <h2>1. 이분형 변수 (Binary/Dichotomous)</h2>
+
+            <p>이분형 변수는 <strong>2개의 범주</strong>만 가지는 변수입니다.</p>
+
+            <div class="concept-box">
+                <h3>특성</h3>
+                <ul>
+                    <li>가장 단순한 범주형 변수</li>
+                    <li>예/아니오, 있음/없음, 참/거짓 형태</li>
+                    <li>통계에서 특별한 위치 (로지스틱 회귀의 종속변수)</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>예시</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>변수</th><th>범주</th><th>권장 코딩</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>성별</td><td>남성, 여성</td><td>0=여성, 1=남성 또는 M/F</td></tr>
+                            <tr><td>흡연 여부</td><td>흡연, 비흡연</td><td>0=비흡연, 1=흡연</td></tr>
+                            <tr><td>합격 여부</td><td>합격, 불합격</td><td>0=불합격, 1=합격</td></tr>
+                            <tr><td>질병 유무</td><td>있음, 없음</td><td>0=없음, 1=있음</td></tr>
+                            <tr><td>실험 조건</td><td>실험군, 대조군</td><td>0=대조, 1=실험</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="concept-box">
+                <h3>코딩 규칙</h3>
+                <ul>
+                    <li><strong>0/1 코딩:</strong> 가장 권장됨. 회귀분석에서 해석이 명확</li>
+                    <li><strong>1/2 코딩:</strong> SPSS 전통. 평균 계산 시 의미 없는 값 생성</li>
+                    <li><strong>기준 범주:</strong> 일반적으로 "없음", "대조군", "기준" 조건을 0으로</li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <p><strong>DB 저장 방법:</strong></p>
+                <pre>-- 방법 1: 정수 (권장)
+is_smoker INTEGER CHECK(is_smoker IN (0, 1))
+
+-- 방법 2: 불리언 (일부 DB)
+is_smoker BOOLEAN
+
+-- 방법 3: 텍스트 (가독성 좋지만 비효율)
+gender TEXT CHECK(gender IN ('M', 'F'))
+
+-- 실제 테이블 예시
+CREATE TABLE participants (
+    id INTEGER PRIMARY KEY,
+    is_smoker INTEGER DEFAULT 0,
+    is_treatment INTEGER DEFAULT 0,  -- 0=대조군, 1=실험군
+    has_diabetes INTEGER DEFAULT 0
+);</pre>
+            </div>
+
+            <hr>
+
+            <h2>2. 다분형 변수 (Multinomial/Polytomous)</h2>
+
+            <p>다분형 변수는 <strong>3개 이상의 범주</strong>를 가지며, 범주 간에 <strong>순서가 없는</strong> 변수입니다.</p>
+
+            <div class="concept-box">
+                <h3>특성</h3>
+                <ul>
+                    <li>명목 척도에 해당</li>
+                    <li>범주 간 크고 작음이 없음</li>
+                    <li>숫자 코드는 레이블일 뿐, 산술적 의미 없음</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>예시</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>변수</th><th>범주</th><th>코딩</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>혈액형</td><td>A, B, O, AB</td><td>1, 2, 3, 4</td></tr>
+                            <tr><td>종교</td><td>기독교, 불교, 천주교, 무교, 기타</td><td>1, 2, 3, 4, 5</td></tr>
+                            <tr><td>거주 지역</td><td>서울, 경기, 부산, 기타</td><td>1, 2, 3, 4</td></tr>
+                            <tr><td>진단명</td><td>요통, 경추통, 어깨통, 무릎통</td><td>LBP, NP, SP, KP</td></tr>
+                            <tr><td>치료 유형</td><td>A치료, B치료, C치료</td><td>1, 2, 3</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="warning-box">
+                <h3>주의</h3>
+                <p>다분형 변수의 숫자 코드로 평균을 계산하면 안 됩니다.</p>
+                <p>예: 혈액형 평균 = 2.3은 무의미합니다.</p>
+            </div>
+
+            <hr>
+
+            <h2>3. 순서형 변수 (Ordinal)</h2>
+
+            <p>순서형 변수는 범주 간에 <strong>순서</strong>가 있지만, <strong>간격이 균등하지 않은</strong> 변수입니다.</p>
+
+            <div class="concept-box">
+                <h3>특성</h3>
+                <ul>
+                    <li>서열 척도에 해당</li>
+                    <li>범주 간 크고 작음 비교 가능</li>
+                    <li>숫자 간 간격이 동일하다고 가정할 수 없음</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>예시</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>변수</th><th>범주</th><th>코딩</th><th>순서</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>학력</td><td>초졸, 중졸, 고졸, 대졸, 대학원졸</td><td>1, 2, 3, 4, 5</td><td>1 < 2 < 3 < 4 < 5</td></tr>
+                            <tr><td>소득 구간</td><td>200만 미만, 200-400, 400-600, 600 이상</td><td>1, 2, 3, 4</td><td>1 < 2 < 3 < 4</td></tr>
+                            <tr><td>통증 등급</td><td>없음, 경미, 중등, 심각</td><td>0, 1, 2, 3</td><td>0 < 1 < 2 < 3</td></tr>
+                            <tr><td>암 병기</td><td>Stage I, II, III, IV</td><td>1, 2, 3, 4</td><td>I < II < III < IV</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="explanation-box">
+                <h3>순서형의 분석적 취급</h3>
+                <ul>
+                    <li><strong>엄밀히:</strong> 중앙값, 비모수 검정 사용</li>
+                    <li><strong>실무적:</strong> 범주가 많고 대칭적이면 등간으로 처리하기도 함</li>
+                    <li><strong>권장:</strong> 범주 수가 5개 미만이면 서열로, 5개 이상이면 등간 처리 고려</li>
+                </ul>
+            </div>
+
+            <hr>
+
+            <h2>4. 코드화와 레이블 테이블</h2>
+
+            <p>범주형 변수는 숫자 코드로 저장하고, 별도 테이블에서 레이블을 관리합니다.</p>
+
+            <div class="concept-box">
+                <h3>왜 숫자로 저장하는가?</h3>
+                <ul>
+                    <li><strong>저장 공간 절약:</strong> INTEGER(4바이트) vs TEXT(가변)</li>
+                    <li><strong>연산 속도:</strong> 숫자 비교가 문자열 비교보다 빠름</li>
+                    <li><strong>일관성:</strong> "남", "남성", "Male" 같은 입력 오류 방지</li>
+                    <li><strong>다국어 지원:</strong> 코드는 그대로, 레이블만 번역</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>레이블 테이블 설계</h3>
+                <div class="sql-box">
+                    <pre>-- 범용 레이블 테이블
+CREATE TABLE value_labels (
+    variable_name TEXT,
+    code INTEGER,
+    label TEXT,
+    display_order INTEGER,
+    PRIMARY KEY (variable_name, code)
+);
+
+INSERT INTO value_labels VALUES
+('gender', 1, '남성', 1),
+('gender', 2, '여성', 2),
+('education', 1, '초등학교 졸업', 1),
+('education', 2, '중학교 졸업', 2),
+('education', 3, '고등학교 졸업', 3),
+('education', 4, '대학교 졸업', 4),
+('education', 5, '대학원 졸업', 5),
+('blood_type', 1, 'A형', 1),
+('blood_type', 2, 'B형', 2),
+('blood_type', 3, 'O형', 3),
+('blood_type', 4, 'AB형', 4);</pre>
+                </div>
+            </div>
+
+            <div class="concept-box">
+                <h3>레이블 조회 쿼리</h3>
+                <div class="sql-box">
+                    <pre>-- 코드를 레이블로 변환하여 조회
+SELECT
+    p.id,
+    p.gender_code,
+    vl.label as gender_label,
+    p.education_code,
+    vl2.label as education_label
+FROM participants p
+LEFT JOIN value_labels vl
+    ON vl.variable_name = 'gender'
+    AND vl.code = p.gender_code
+LEFT JOIN value_labels vl2
+    ON vl2.variable_name = 'education'
+    AND vl2.code = p.education_code;</pre>
+                </div>
+            </div>
+
+            <div class="concept-box">
+                <h3>코드북에 기록</h3>
+                <p>변수별 코딩 체계는 반드시 코드북에 기록해야 합니다:</p>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>변수명</th><th>설명</th><th>값</th><th>레이블</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td rowspan="2">gender</td><td rowspan="2">성별</td><td>1</td><td>남성</td></tr>
+                            <tr><td>2</td><td>여성</td></tr>
+                            <tr><td rowspan="5">education</td><td rowspan="5">학력</td><td>1</td><td>초졸</td></tr>
+                            <tr><td>2</td><td>중졸</td></tr>
+                            <tr><td>3</td><td>고졸</td></tr>
+                            <tr><td>4</td><td>대졸</td></tr>
+                            <tr><td>5</td><td>대학원졸</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <hr>
+
+            <h2>5. 다중응답 변수 처리</h2>
+
+            <p>하나의 질문에 여러 개의 답변을 선택할 수 있는 경우입니다.</p>
+
+            <div class="concept-box">
+                <h3>문제 상황</h3>
+                <p>예: "현재 복용 중인 약물을 모두 선택하세요" (복수 응답 가능)</p>
+                <ul>
+                    <li>참가자 A: 진통제, 소염제</li>
+                    <li>참가자 B: 진통제</li>
+                    <li>참가자 C: 진통제, 소염제, 근이완제</li>
+                </ul>
+                <p>이를 단일 컬럼에 저장하면 문제가 발생합니다.</p>
+            </div>
+
+            <div class="warning-box">
+                <h3>나쁜 방법</h3>
+                <div class="sql-box">
+                    <pre>-- 쉼표로 구분 (절대 금지!)
+medications TEXT  -- "1,2,3"
+
+-- 문제점:
+-- 1. 검색 어려움: "소염제 복용자"를 찾으려면?
+-- 2. 집계 불가: 각 약물별 빈도를 구하려면?
+-- 3. 정규화 위반</pre>
+                </div>
+            </div>
+
+            <div class="concept-box">
+                <h3>해결 1: 별도 테이블 (정규화)</h3>
+                <div class="sql-box">
+                    <pre>-- 약물 목록 테이블
+CREATE TABLE medications (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL
+);
+
+INSERT INTO medications VALUES
+(1, '진통제'), (2, '소염제'), (3, '근이완제');
+
+-- 참가자-약물 연결 테이블 (다대다 관계)
+CREATE TABLE participant_medications (
+    participant_id INTEGER REFERENCES participants(id),
+    medication_id INTEGER REFERENCES medications(id),
+    PRIMARY KEY (participant_id, medication_id)
+);
+
+-- 데이터 입력
+INSERT INTO participant_medications VALUES
+(1, 1), (1, 2),      -- 참가자 1: 진통제, 소염제
+(2, 1),              -- 참가자 2: 진통제
+(3, 1), (3, 2), (3, 3);  -- 참가자 3: 모두
+
+-- 쿼리: 소염제 복용자 조회
+SELECT p.*
+FROM participants p
+JOIN participant_medications pm ON p.id = pm.participant_id
+WHERE pm.medication_id = 2;
+
+-- 쿼리: 약물별 복용자 수
+SELECT m.name, COUNT(*) as n
+FROM medications m
+JOIN participant_medications pm ON m.id = pm.medication_id
+GROUP BY m.id;</pre>
+                </div>
+            </div>
+
+            <div class="concept-box">
+                <h3>해결 2: 각 옵션을 이분형으로</h3>
+                <div class="sql-box">
+                    <pre>-- 각 약물을 별도 컬럼으로
+CREATE TABLE participants (
+    id INTEGER PRIMARY KEY,
+    med_painkiller INTEGER DEFAULT 0,   -- 진통제 복용 여부
+    med_antiinflam INTEGER DEFAULT 0,   -- 소염제 복용 여부
+    med_relaxant INTEGER DEFAULT 0      -- 근이완제 복용 여부
+);
+
+-- 데이터 입력
+INSERT INTO participants VALUES
+(1, 1, 1, 0),  -- 참가자 1: 진통제, 소염제
+(2, 1, 0, 0),  -- 참가자 2: 진통제만
+(3, 1, 1, 1);  -- 참가자 3: 모두
+
+-- 장점: 단순, 빠른 쿼리
+-- 단점: 옵션이 많으면 컬럼이 많아짐, 옵션 추가 시 스키마 변경 필요</pre>
+                </div>
+            </div>
+
+            <div class="explanation-box">
+                <h3>방법 선택 기준</h3>
+                <ul>
+                    <li><strong>정규화 방법:</strong> 옵션이 많거나, 옵션이 변경될 가능성이 있을 때</li>
+                    <li><strong>이분형 컬럼 방법:</strong> 옵션이 고정되어 있고 적을 때 (보통 5-10개 이하)</li>
+                </ul>
+            </div>
+
+            <hr>
+
+            <h2>6. 더미변수 변환 (Dummy Coding)</h2>
+
+            <p>회귀분석에서 범주형 변수를 사용하려면 <strong>더미변수(가변수)</strong>로 변환해야 합니다.</p>
+
+            <div class="concept-box">
+                <h3>왜 더미변수가 필요한가?</h3>
+                <p>회귀분석은 연속형 변수를 가정합니다. 범주형 변수의 숫자 코드(1, 2, 3)를 그대로 넣으면:</p>
+                <ul>
+                    <li>혈액형 A=1, B=2, O=3을 넣으면 "O형은 A형의 3배"라는 의미가 됨</li>
+                    <li>범주 간 순서와 간격이 있다고 가정하게 됨</li>
+                    <li>명목 변수에는 적합하지 않음</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>더미변수 변환 규칙</h3>
+                <p><strong>k개의 범주 → k-1개의 더미변수</strong></p>
+                <ul>
+                    <li>하나의 범주를 <strong>기준(reference)</strong>으로 지정</li>
+                    <li>기준 범주는 모든 더미변수가 0</li>
+                    <li>다른 범주는 해당 더미변수만 1</li>
+                </ul>
+            </div>
+
+            <div class="example-box">
+                <h3>예시: 혈액형 (4범주 → 3더미)</h3>
+                <p><strong>기준 범주:</strong> O형</p>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>혈액형</th><th>dummy_A</th><th>dummy_B</th><th>dummy_AB</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>O형 (기준)</td><td>0</td><td>0</td><td>0</td></tr>
+                            <tr><td>A형</td><td>1</td><td>0</td><td>0</td></tr>
+                            <tr><td>B형</td><td>0</td><td>1</td><td>0</td></tr>
+                            <tr><td>AB형</td><td>0</td><td>0</td><td>1</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="concept-box">
+                <h3>기준 범주 선택</h3>
+                <ul>
+                    <li><strong>이론적 기준:</strong> 대조군, "없음", 정상 상태</li>
+                    <li><strong>실용적 기준:</strong> 가장 빈도가 높은 범주</li>
+                    <li><strong>비교 대상:</strong> 비교하고 싶은 기준이 되는 범주</li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <p><strong>SQL로 더미변수 생성:</strong></p>
+                <pre>-- CASE문으로 더미변수 생성
+SELECT
+    id,
+    blood_type,
+    CASE WHEN blood_type = 'A' THEN 1 ELSE 0 END as dummy_A,
+    CASE WHEN blood_type = 'B' THEN 1 ELSE 0 END as dummy_B,
+    CASE WHEN blood_type = 'AB' THEN 1 ELSE 0 END as dummy_AB
+    -- O형은 기준: 모든 더미가 0
+FROM participants;
+
+-- 결과 예시:
+-- id | blood_type | dummy_A | dummy_B | dummy_AB
+-- 1  | A          | 1       | 0       | 0
+-- 2  | O          | 0       | 0       | 0
+-- 3  | B          | 0       | 1       | 0
+-- 4  | AB         | 0       | 0       | 1</pre>
+            </div>
+
+            <div class="concept-box">
+                <h3>회귀분석에서의 해석</h3>
+                <div class="sql-box">
+                    <pre>Y = b₀ + b₁(dummy_A) + b₂(dummy_B) + b₃(dummy_AB) + ε</pre>
+                </div>
+                <ul>
+                    <li><strong>b₀:</strong> 기준 범주(O형)의 평균 Y</li>
+                    <li><strong>b₁:</strong> A형과 O형의 Y 차이</li>
+                    <li><strong>b₂:</strong> B형과 O형의 Y 차이</li>
+                    <li><strong>b₃:</strong> AB형과 O형의 Y 차이</li>
+                </ul>
+            </div>
+
+            <div class="warning-box">
+                <h3>더미 트랩 (Dummy Trap)</h3>
+                <p>k개 범주에 k개 더미변수를 모두 넣으면 <strong>완전 다중공선성</strong>이 발생합니다.</p>
+                <p>항상 k-1개만 넣어야 합니다. 대부분의 통계 소프트웨어는 자동으로 처리합니다.</p>
+            </div>
+
+            <div class="summary-box">
+                <h3>📝 이 장의 핵심 정리</h3>
+                <table>
+                    <thead>
+                        <tr><th>변수 유형</th><th>범주 수</th><th>순서</th><th>예시</th><th>저장 방법</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>이분형</td><td>2</td><td>해당 없음</td><td>성별, 흡연</td><td>0/1 정수</td></tr>
+                        <tr><td>다분형</td><td>3+</td><td>없음</td><td>혈액형, 지역</td><td>코드 + 레이블 테이블</td></tr>
+                        <tr><td>순서형</td><td>3+</td><td>있음</td><td>학력, 등급</td><td>순서 반영 정수</td></tr>
+                    </tbody>
+                </table>
+                <p><strong>핵심 원칙:</strong></p>
+                <ul>
+                    <li>숫자 코드로 저장, 레이블 테이블로 의미 관리</li>
+                    <li>다중응답은 정규화 또는 이분형 컬럼으로 처리</li>
+                    <li>회귀분석에는 k-1개 더미변수 사용</li>
+                </ul>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-5.html" class="nav-btn">← 이전</a>
+                <span class="page-num">6 / 20</span>
+                <a href="chapter-7.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

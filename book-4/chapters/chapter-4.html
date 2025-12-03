@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4장: Flask 시작하기 - 물리치료사를 위한 DB 4권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "4"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📕 물리치료사를 위한</h1>
+                <p>웹 앱 만들기 (4권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">Flask 시작하기</h1>
+
+            <h2>Flask란?</h2>
+
+            <p>Flask는 Python으로 웹 서버를 만드는 프레임워크입니다.</p>
+
+            <ul>
+                <li><strong>가볍다</strong> - 필요한 것만 사용</li>
+                <li><strong>쉽다</strong> - 배우기 간단</li>
+                <li><strong>유연하다</strong> - 내 맘대로 구성 가능</li>
+            </ul>
+
+            <div class="tip"><strong>💡 프레임워크란?</strong><br>
+            자주 쓰는 기능들을 미리 만들어둔 도구 모음입니다. 바퀴를 새로 발명할 필요 없이 가져다 쓰면 됩니다.</div>
+
+            <hr>
+
+            <h2>기본 구조 이해</h2>
+
+            <pre><code>from flask import Flask
+
+# Flask 앱 생성
+app = Flask(__name__)
+
+# 라우트 정의
+@app.route('/')
+def index():
+    return '홈페이지입니다'
+
+# 서버 실행
+if __name__ == '__main__':
+    app.run(debug=True)</code></pre>
+
+            <h3>한 줄씩 설명</h3>
+
+            <table>
+                <tr>
+                    <th>코드</th>
+                    <th>설명</th>
+                </tr>
+                <tr>
+                    <td><code>from flask import Flask</code></td>
+                    <td>Flask 라이브러리 가져오기</td>
+                </tr>
+                <tr>
+                    <td><code>app = Flask(__name__)</code></td>
+                    <td>Flask 앱 객체 생성</td>
+                </tr>
+                <tr>
+                    <td><code>@app.route('/')</code></td>
+                    <td>URL '/'에 연결</td>
+                </tr>
+                <tr>
+                    <td><code>def index():</code></td>
+                    <td>실행할 함수 정의</td>
+                </tr>
+                <tr>
+                    <td><code>return '...'</code></td>
+                    <td>브라우저에 보여줄 내용</td>
+                </tr>
+                <tr>
+                    <td><code>app.run(debug=True)</code></td>
+                    <td>서버 실행 (디버그 모드)</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>debug=True의 의미</h2>
+
+            <p>개발할 때 편리한 기능들:</p>
+            <ul>
+                <li><strong>자동 재시작</strong> - 코드 수정하면 서버가 자동으로 재시작</li>
+                <li><strong>상세 에러</strong> - 오류 발생 시 자세한 정보 표시</li>
+            </ul>
+
+            <div class="danger"><strong>🚨 주의!</strong><br>
+            실제 서비스에서는 <code>debug=False</code>로 해야 합니다. 디버그 모드는 보안에 취약합니다.</div>
+
+            <hr>
+
+            <h2>실습: 여러 페이지 만들기</h2>
+
+            <pre><code>from flask import Flask
+
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return '&lt;h1&gt;힐링손 물리치료센터&lt;/h1&gt;&lt;p&gt;환영합니다!&lt;/p&gt;'
+
+@app.route('/about')
+def about():
+    return '&lt;h1&gt;소개&lt;/h1&gt;&lt;p&gt;2024년 설립된 물리치료 전문 센터입니다.&lt;/p&gt;'
+
+@app.route('/contact')
+def contact():
+    return '&lt;h1&gt;연락처&lt;/h1&gt;&lt;p&gt;전화: 02-1234-5678&lt;/p&gt;'
+
+if __name__ == '__main__':
+    app.run(debug=True)</code></pre>
+
+            <h3>확인해보기</h3>
+            <ul>
+                <li><code>http://127.0.0.1:5000/</code> → 홈페이지</li>
+                <li><code>http://127.0.0.1:5000/about</code> → 소개 페이지</li>
+                <li><code>http://127.0.0.1:5000/contact</code> → 연락처 페이지</li>
+            </ul>
+
+            <hr>
+
+            <h2>@app.route() 이해하기</h2>
+
+            <p><code>@app.route()</code>는 "이 URL로 오면 이 함수를 실행해라"라는 의미입니다.</p>
+
+            <pre><code># URL: /patients
+@app.route('/patients')
+def patients():
+    return '환자 목록 페이지'
+
+# URL: /therapists
+@app.route('/therapists')
+def therapists():
+    return '치료사 목록 페이지'
+
+# URL: /reservations
+@app.route('/reservations')
+def reservations():
+    return '예약 현황 페이지'</code></pre>
+
+            <hr>
+
+            <h2>HTML 반환하기</h2>
+
+            <p>문자열로 HTML을 직접 작성할 수 있습니다.</p>
+
+            <pre><code>@app.route('/')
+def home():
+    return '''
+    &lt;!DOCTYPE html&gt;
+    &lt;html&gt;
+    &lt;head&gt;
+        &lt;title&gt;힐링손&lt;/title&gt;
+    &lt;/head&gt;
+    &lt;body&gt;
+        &lt;h1&gt;힐링손 물리치료센터&lt;/h1&gt;
+        &lt;ul&gt;
+            &lt;li&gt;&lt;a href="/patients"&gt;환자 관리&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href="/reservations"&gt;예약 현황&lt;/a&gt;&lt;/li&gt;
+        &lt;/ul&gt;
+    &lt;/body&gt;
+    &lt;/html&gt;
+    '''</code></pre>
+
+            <div class="tip"><strong>💡 나중에는 템플릿 사용</strong><br>
+            HTML을 코드 안에 직접 쓰면 복잡해집니다. 나중에 <code>templates/</code> 폴더에 HTML 파일을 따로 만들어서 사용합니다.</div>
+
+            <hr>
+
+            <h2>에러가 났을 때</h2>
+
+            <h3>흔한 에러들</h3>
+
+            <table>
+                <tr>
+                    <th>에러</th>
+                    <th>원인</th>
+                    <th>해결</th>
+                </tr>
+                <tr>
+                    <td>404 Not Found</td>
+                    <td>URL이 없음</td>
+                    <td>route 확인</td>
+                </tr>
+                <tr>
+                    <td>500 Internal Server Error</td>
+                    <td>코드 오류</td>
+                    <td>터미널 로그 확인</td>
+                </tr>
+                <tr>
+                    <td>Address already in use</td>
+                    <td>포트 사용 중</td>
+                    <td>다른 서버 종료</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li>Flask는 Python 웹 프레임워크입니다</li>
+                <li><code>@app.route()</code>로 URL과 함수를 연결합니다</li>
+                <li><code>return</code>으로 브라우저에 보여줄 내용을 전달합니다</li>
+                <li><code>debug=True</code>로 개발 편의 기능을 켭니다</li>
+            </ul>
+
+            <blockquote>다음 장에서는 URL에 변수를 넣는 방법을 배웁니다. /patients/1, /patients/2 처럼 동적 URL을 만들어봅시다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

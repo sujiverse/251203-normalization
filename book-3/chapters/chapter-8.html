@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8장: 일상 업무 시뮬레이션 - 물리치료사를 위한 데이터베이스 3권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "3"})
+
+    @@include('components/mobile-menu.html')
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📙 물리치료사를 위한</h1>
+                <p>실전 구축 & 대시보드 (3권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+<h1 class="title">일상 업무 시뮬레이션</h1>
+
+<h2>실제 클리닉처럼 운영해보기</h2>
+
+<p>데이터베이스가 완성되었으니, 이제 실제로 사용해볼 차례입니다. 힐링손 물리치료센터의 하루를 시뮬레이션하면서, 자주 사용하는 쿼리들을 익혀봅시다.</p>
+
+<p>오늘은 <strong>2024년 3월 25일 월요일</strong>입니다. 김지훈 원장이 출근해서 하루를 시작합니다.</p>
+
+<hr>
+
+<h2>1. 아침: 오늘 예약 확인</h2>
+
+<h3>오늘 예약된 환자 목록</h3>
+
+<pre><code>SELECT
+    TIME_FORMAT(ts.start_time, '%H:%i') as 시간,
+    p.name as 환자명,
+    p.phone as 연락처,
+    t.name as 담당치료사,
+    ts.notes as 메모
+FROM treatment_sessions ts
+JOIN patients p ON ts.patient_id = p.patient_id
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+WHERE ts.session_date = '2024-03-25'
+ORDER BY ts.start_time;</code></pre>
+
+<h3>치료사별 오늘 스케줄</h3>
+
+<pre><code>SELECT
+    t.name as 치료사,
+    COUNT(*) as 예약건수,
+    GROUP_CONCAT(
+        CONCAT(TIME_FORMAT(ts.start_time, '%H:%i'), ' ', p.name)
+        ORDER BY ts.start_time
+        SEPARATOR ', '
+    ) as 스케줄
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+JOIN patients p ON ts.patient_id = p.patient_id
+WHERE ts.session_date = '2024-03-25'
+GROUP BY t.therapist_id, t.name
+ORDER BY t.name;</code></pre>
+
+<hr>
+
+<h2>2. 환자 접수: 환자 정보 조회</h2>
+
+<h3>환자 검색 (이름으로)</h3>
+
+<pre><code>SELECT
+    patient_id,
+    name,
+    gender,
+    phone,
+    TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) as 나이,
+    memo
+FROM patients
+WHERE name LIKE '%강민%';</code></pre>
+
+<h3>환자 상세 정보</h3>
+
+<pre><code>SELECT
+    p.patient_id,
+    p.name,
+    CASE p.gender WHEN 'M' THEN '남' ELSE '여' END as 성별,
+    p.birth_date,
+    TIMESTAMPDIFF(YEAR, p.birth_date, CURDATE()) as 나이,
+    p.phone,
+    p.email,
+    i.insurance_name as 보험,
+    p.memo
+FROM patients p
+LEFT JOIN insurances i ON p.insurance_code = i.insurance_code
+WHERE p.patient_id = 'P001';</code></pre>
+
+<h3>환자의 진단 정보</h3>
+
+<pre><code>SELECT
+    d.diagnosis_code as 코드,
+    d.diagnosis_name as 진단명,
+    pd.diagnosis_date as 진단일,
+    CASE pd.is_primary WHEN 'Y' THEN '주진단' ELSE '부진단' END as 구분,
+    pd.notes as 비고
+FROM patient_diagnoses pd
+JOIN diagnosis_codes d ON pd.diagnosis_code = d.diagnosis_code
+WHERE pd.patient_id = 'P001'
+ORDER BY pd.is_primary DESC;</code></pre>
+
+<h3>환자의 치료 이력</h3>
+
+<pre><code>SELECT
+    ts.session_date as 날짜,
+    t.name as 치료사,
+    f.fee_name as 치료항목,
+    b.total_amount as 금액,
+    b.payment_status as 수납상태
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+JOIN billings b ON ts.session_id = b.session_id
+JOIN fee_items f ON b.fee_code = f.fee_code
+WHERE ts.patient_id = 'P001'
+ORDER BY ts.session_date DESC
+LIMIT 10;</code></pre>
+
+<hr>
+
+<h2>3. 신규 환자 등록</h2>
+
+<p>새로운 환자가 왔습니다. 정보를 입력해봅시다.</p>
+
+<pre><code>-- 신규 환자 등록
+INSERT INTO patients (
+    patient_id, name, gender, birth_date, phone,
+    email, address, insurance_code,
+    emergency_contact, emergency_phone, memo
+) VALUES (
+    'P031', '김새환자', 'M', '1990-05-15', '010-9999-0001',
+    'newpatient@email.com', '서울시 강남구 역삼동 100-1', 'INS001',
+    '김보호자', '010-9999-0002', '웹 검색으로 방문, 허리 통증'
+);
+
+-- 진단 연결
+INSERT INTO patient_diagnoses (patient_id, diagnosis_code, diagnosis_date, is_primary, notes)
+VALUES ('P031', 'M54.5', '2024-03-25', 'Y', '급성 요통');</code></pre>
+
+<hr>
+
+<h2>4. 치료 기록 입력</h2>
+
+<h3>치료 세션 등록</h3>
+
+<pre><code>-- 치료 세션 기록
+INSERT INTO treatment_sessions (
+    patient_id, therapist_id, session_date,
+    start_time, end_time, session_status, notes
+) VALUES (
+    'P001', 'T001', '2024-03-25',
+    '10:00', '10:30', '완료', '도수치료, 상태 호전 중'
+);</code></pre>
+
+<h3>청구 등록</h3>
+
+<pre><code>-- 방금 입력한 세션의 ID 확인
+SELECT LAST_INSERT_ID() as 새세션ID;
+
+-- 청구 입력 (세션ID가 88이라고 가정)
+INSERT INTO billings (
+    session_id, fee_code, quantity, unit_price,
+    total_amount, payment_status, payment_method, payment_date
+) VALUES (
+    88, 'FEE001', 1, 80000,
+    80000, '완료', '카드', '2024-03-25'
+);</code></pre>
+
+<hr>
+
+<h2>5. 오후: 현황 확인</h2>
+
+<h3>오늘 매출 현황</h3>
+
+<pre><code>SELECT
+    COUNT(*) as 치료건수,
+    SUM(CASE WHEN b.payment_status = '완료' THEN b.total_amount ELSE 0 END) as 수납완료,
+    SUM(CASE WHEN b.payment_status = '대기' THEN b.total_amount ELSE 0 END) as 미수금
+FROM treatment_sessions ts
+JOIN billings b ON ts.session_id = b.session_id
+WHERE ts.session_date = '2024-03-25';</code></pre>
+
+<h3>미수금 목록</h3>
+
+<pre><code>SELECT
+    p.name as 환자명,
+    p.phone as 연락처,
+    ts.session_date as 치료일,
+    f.fee_name as 항목,
+    b.total_amount as 금액,
+    DATEDIFF(CURDATE(), ts.session_date) as 경과일
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+JOIN patients p ON ts.patient_id = p.patient_id
+JOIN fee_items f ON b.fee_code = f.fee_code
+WHERE b.payment_status = '대기'
+  AND b.total_amount > 0
+ORDER BY ts.session_date;</code></pre>
+
+<hr>
+
+<h2>6. 해피콜 대상자 확인</h2>
+
+<h3>7일 이상 미방문 환자 (연락 필요)</h3>
+
+<pre><code>SELECT
+    p.name as 환자명,
+    p.phone as 연락처,
+    MAX(ts.session_date) as 마지막방문,
+    DATEDIFF('2024-03-25', MAX(ts.session_date)) as 경과일,
+    d.diagnosis_name as 주진단
+FROM patients p
+JOIN treatment_sessions ts ON p.patient_id = ts.patient_id
+LEFT JOIN patient_diagnoses pd ON p.patient_id = pd.patient_id AND pd.is_primary = 'Y'
+LEFT JOIN diagnosis_codes d ON pd.diagnosis_code = d.diagnosis_code
+WHERE p.is_active = 'Y'
+GROUP BY p.patient_id, p.name, p.phone, d.diagnosis_name
+HAVING DATEDIFF('2024-03-25', MAX(ts.session_date)) BETWEEN 7 AND 14
+ORDER BY 경과일 DESC;</code></pre>
+
+<h3>30일 이상 미방문 (이탈 위험)</h3>
+
+<pre><code>SELECT
+    p.name as 환자명,
+    p.phone as 연락처,
+    MAX(ts.session_date) as 마지막방문,
+    DATEDIFF('2024-03-25', MAX(ts.session_date)) as 경과일,
+    COUNT(ts.session_id) as 총방문횟수
+FROM patients p
+JOIN treatment_sessions ts ON p.patient_id = ts.patient_id
+WHERE p.is_active = 'Y'
+GROUP BY p.patient_id, p.name, p.phone
+HAVING DATEDIFF('2024-03-25', MAX(ts.session_date)) > 30
+ORDER BY 경과일 DESC;</code></pre>
+
+<hr>
+
+<h2>7. 저녁: 마감 업무</h2>
+
+<h3>오늘 치료사별 실적</h3>
+
+<pre><code>SELECT
+    t.name as 치료사,
+    COUNT(*) as 치료건수,
+    SUM(b.total_amount) as 매출
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+JOIN billings b ON ts.session_id = b.session_id
+WHERE ts.session_date = '2024-03-25'
+  AND ts.session_status = '완료'
+GROUP BY t.therapist_id, t.name
+ORDER BY 매출 DESC;</code></pre>
+
+<h3>내일 예약 미리보기</h3>
+
+<pre><code>SELECT
+    TIME_FORMAT(ts.start_time, '%H:%i') as 시간,
+    p.name as 환자명,
+    t.name as 치료사,
+    ts.notes as 메모
+FROM treatment_sessions ts
+JOIN patients p ON ts.patient_id = p.patient_id
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+WHERE ts.session_date = '2024-03-26'
+ORDER BY ts.start_time;</code></pre>
+
+<hr>
+
+<h2>8. 월말 업무</h2>
+
+<h3>이번 달 매출 요약</h3>
+
+<pre><code>SELECT
+    COUNT(DISTINCT ts.patient_id) as 환자수,
+    COUNT(ts.session_id) as 총치료건수,
+    SUM(b.total_amount) as 총매출,
+    SUM(CASE WHEN b.payment_status = '완료' THEN b.total_amount ELSE 0 END) as 수납완료,
+    SUM(CASE WHEN b.payment_status = '대기' THEN b.total_amount ELSE 0 END) as 미수금
+FROM treatment_sessions ts
+JOIN billings b ON ts.session_id = b.session_id
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = '2024-03';</code></pre>
+
+<h3>치료사별 월간 실적</h3>
+
+<pre><code>SELECT
+    t.name as 치료사,
+    COUNT(ts.session_id) as 치료건수,
+    COUNT(DISTINCT ts.patient_id) as 담당환자수,
+    SUM(b.total_amount) as 매출
+FROM therapists t
+LEFT JOIN treatment_sessions ts ON t.therapist_id = ts.therapist_id
+    AND DATE_FORMAT(ts.session_date, '%Y-%m') = '2024-03'
+    AND ts.session_status = '완료'
+LEFT JOIN billings b ON ts.session_id = b.session_id
+    AND b.payment_status = '완료'
+WHERE t.is_active = 'Y'
+GROUP BY t.therapist_id, t.name
+ORDER BY 매출 DESC;</code></pre>
+
+<hr>
+
+<h2>유용한 쿼리 모음</h2>
+
+<h3>특정 진단의 환자 목록</h3>
+
+<pre><code>SELECT
+    p.name, p.phone, d.diagnosis_name, pd.diagnosis_date
+FROM patients p
+JOIN patient_diagnoses pd ON p.patient_id = pd.patient_id
+JOIN diagnosis_codes d ON pd.diagnosis_code = d.diagnosis_code
+WHERE d.diagnosis_code = 'M54.5'  -- 요통
+  AND pd.is_primary = 'Y'
+ORDER BY pd.diagnosis_date DESC;</code></pre>
+
+<h3>치료 항목별 매출</h3>
+
+<pre><code>SELECT
+    f.fee_name as 항목,
+    COUNT(*) as 건수,
+    SUM(b.total_amount) as 매출
+FROM billings b
+JOIN fee_items f ON b.fee_code = f.fee_code
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = '2024-03'
+  AND b.total_amount > 0
+GROUP BY f.fee_code, f.fee_name
+ORDER BY 매출 DESC;</code></pre>
+
+<hr>
+
+<h2>이번 장 요약</h2>
+
+<p>이번 장에서 실습한 것:</p>
+
+<ol>
+<li><strong>아침 업무</strong> - 오늘 예약 확인, 스케줄 파악</li>
+<li><strong>환자 관리</strong> - 검색, 상세 조회, 신규 등록</li>
+<li><strong>치료 기록</strong> - 세션 입력, 청구 등록</li>
+<li><strong>현황 파악</strong> - 매출, 미수금 확인</li>
+<li><strong>환자 관리</strong> - 해피콜 대상, 이탈 위험</li>
+<li><strong>마감 업무</strong> - 일일/월간 실적 정리</li>
+</ol>
+
+<p>이 쿼리들은 실제 업무에서 매일 사용하게 될 것들입니다. 하지만 매번 SQL을 직접 치기는 번거롭죠? 다음 파트에서는 Metabase를 사용해서 클릭 한 번으로 이런 정보들을 볼 수 있는 대시보드를 만듭니다!</p>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

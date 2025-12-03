@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[8장] 데이터 품질 관리 - 물리치료사를 위한 DB 2권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>🏥</span> DB 완전정복</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2 active">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📙 2권: SQL 기초 편</h1><p>데이터베이스 활용</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <h1 class="title">[8장] 데이터 품질 관리</h1>
+
+            <div class="intro-box">
+                <p>이번 장에서는 <strong>데이터 정합성을 점검</strong>하는 쿼리를 배웁니다. 중복 데이터, 누락된 정보, 연결이 끊어진 데이터 등을 찾아내서 <strong>데이터 품질을 관리</strong>하는 방법이에요. 정기적으로 점검하면 데이터 신뢰도가 높아집니다!</p>
+            </div>
+
+            <div class="warning">
+                <strong>⚠️ 데이터 품질이 왜 중요할까요?</strong><br><br>
+                • 중복 환자 → 치료 기록이 분산되어 이력 파악 어려움<br>
+                • 진단 누락 → 보험 청구 불가<br>
+                • 청구 누락 → 매출 손실!<br><br>
+                <strong>쓰레기가 들어가면 쓰레기가 나온다 (Garbage In, Garbage Out)</strong>
+            </div>
+
+            <hr>
+
+            <!-- ===== 쿼리 1: 중복 환자 찾기 ===== -->
+            <h2>1. 중복 환자 찾기</h2>
+
+            <div class="concept-box">
+                <h3>🎯 이 쿼리가 필요한 상황</h3>
+                <p>"같은 환자가 두 번 등록된 것 같은데?" - 이름과 전화번호가 같은 중복 등록 환자를 찾습니다. 데이터 입력 실수나 시스템 오류로 발생할 수 있어요.</p>
+            </div>
+
+            <pre><code>SELECT
+    name AS 이름,
+    phone AS 연락처,
+    COUNT(*) AS 중복횟수
+FROM patients
+GROUP BY name, phone
+HAVING COUNT(*) > 1;</code></pre>
+
+            <div class="explanation-box">
+                <h3>📖 중복 찾기의 원리</h3>
+
+                <div class="line-explain">
+                    <div class="code-line">GROUP BY name, phone</div>
+                    <div class="explain-text">
+                        <strong>이름과 전화번호 조합</strong>으로 그룹화합니다.<br><br>
+                        같은 이름 + 같은 전화번호를 가진 행들이 하나의 그룹이 돼요.
+                    </div>
+                </div>
+
+                <div class="line-explain highlight-line">
+                    <div class="code-line">HAVING COUNT(*) > 1</div>
+                    <div class="explain-text">
+                        <strong>"그룹에 2개 이상 있으면"</strong> = 중복!<br><br>
+
+                        <div class="analogy-box">
+                            <h4>🎭 비유로 이해하기</h4>
+                            <p>출석부에서 같은 이름+전화번호가 2번 이상 나오면 중복 등록!</p>
+                            <table class="mini-table">
+                                <tr><th>ID</th><th>이름</th><th>전화번호</th></tr>
+                                <tr><td>P001</td><td>김철수</td><td>010-1234-5678</td></tr>
+                                <tr class="highlight-row"><td>P005</td><td>김철수</td><td>010-1234-5678</td></tr>
+                            </table>
+                            <p>↑ 같은 사람이 2번 등록됨!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="why-box">
+                    <h4>❓ WHERE가 아니라 HAVING을 쓰는 이유?</h4>
+                    <p><code>COUNT(*)</code>는 GROUP BY 후에 계산되는 값이에요.</p>
+                    <p>그룹화 전 필터링은 WHERE, 그룹화 후 필터링은 HAVING!</p>
+                </div>
+            </div>
+
+            <div class="result-example">
+                <h4>📋 실행 결과 예시</h4>
+                <table class="result-table">
+                    <tr><th>이름</th><th>연락처</th><th>중복횟수</th></tr>
+                    <tr><td>김철수</td><td>010-1234-5678</td><td>2</td></tr>
+                    <tr><td>박민수</td><td>010-3456-7890</td><td>3</td></tr>
+                </table>
+                <p class="result-note">김철수는 2번, 박민수는 3번 중복 등록됨!</p>
+            </div>
+
+            <div class="tip">
+                <strong>💡 중복 환자 처리 방법</strong><br><br>
+                1. 중복 환자 목록 확인<br>
+                2. 어떤 게 "진짜"인지 확인 (치료 기록이 많은 쪽)<br>
+                3. 나머지 환자의 치료 기록을 진짜 환자로 이동<br>
+                4. 중복 환자 삭제 (또는 비활성화)
+            </div>
+
+            <hr>
+
+            <!-- ===== 쿼리 2: 진단 없는 환자 ===== -->
+            <h2>2. 진단 없는 환자</h2>
+
+            <div class="concept-box">
+                <h3>🎯 이 쿼리가 필요한 상황</h3>
+                <p>"이 환자 진단 코드가 없어서 보험 청구가 안 돼요!" - 진단 정보가 누락된 환자를 찾습니다. 건강보험 청구에 필수인 정보예요.</p>
+            </div>
+
+            <pre><code>SELECT
+    p.patient_id AS 환자번호,
+    p.name AS 이름,
+    p.phone AS 연락처
+FROM patients p
+LEFT JOIN patient_diagnoses pd ON p.patient_id = pd.patient_id
+WHERE pd.patient_id IS NULL;</code></pre>
+
+            <div class="explanation-box">
+                <h3>📖 LEFT JOIN + IS NULL 패턴</h3>
+
+                <p>이 패턴은 <strong>"연결된 데이터가 없는 것"</strong>을 찾을 때 사용해요. 아주 중요한 패턴이니 잘 익혀두세요!</p>
+
+                <div class="line-explain">
+                    <div class="code-line">LEFT JOIN patient_diagnoses pd ON p.patient_id = pd.patient_id</div>
+                    <div class="explain-text">
+                        <strong>LEFT JOIN</strong>은 왼쪽(patients)은 전부, 오른쪽(diagnoses)은 있으면 가져옵니다.<br><br>
+                        진단이 없는 환자도 결과에 포함돼요!
+                    </div>
+                </div>
+
+                <div class="line-explain highlight-line">
+                    <div class="code-line">WHERE pd.patient_id IS NULL</div>
+                    <div class="explain-text">
+                        <strong>"오른쪽에서 가져온 게 없으면"</strong> = 진단이 없는 환자!<br><br>
+
+                        <div class="analogy-box">
+                            <h4>🎭 비유로 이해하기</h4>
+                            <p>학생 명단과 성적표를 연결할 때:</p>
+                            <table class="mini-table">
+                                <tr><th>학생명</th><th>성적</th></tr>
+                                <tr><td>김철수</td><td>90</td></tr>
+                                <tr><td>이영희</td><td>85</td></tr>
+                                <tr class="highlight-row"><td>박민수</td><td>NULL</td></tr>
+                            </table>
+                            <p>박민수는 성적표에 없음 → 시험 안 봤거나 누락!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="why-box">
+                    <h4>❓ IS NULL vs = NULL</h4>
+                    <p>SQL에서 NULL 비교는 특별해요!</p>
+                    <ul>
+                        <li><code>= NULL</code>: ❌ 작동 안 함!</li>
+                        <li><code>IS NULL</code>: ✅ 올바른 방법</li>
+                        <li><code>IS NOT NULL</code>: NULL이 아닌 것</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="result-example">
+                <h4>📋 실행 결과 예시</h4>
+                <table class="result-table">
+                    <tr><th>환자번호</th><th>이름</th><th>연락처</th></tr>
+                    <tr><td>P008</td><td>신규환</td><td>010-5678-9012</td></tr>
+                    <tr><td>P012</td><td>처음방</td><td>010-6789-0123</td></tr>
+                </table>
+                <p class="result-note">이 환자들은 진단 코드가 없어서 보험 청구 불가!</p>
+            </div>
+
+            <hr>
+
+            <!-- ===== 쿼리 3: 청구 누락 ===== -->
+            <h2>3. 청구 누락 (치료했는데 청구 없음)</h2>
+
+            <div class="concept-box">
+                <h3>🎯 이 쿼리가 필요한 상황</h3>
+                <p>"치료는 했는데 청구를 안 했어!" - 치료 기록은 있는데 청구 정보가 없는 건을 찾습니다. <strong>이건 곧 매출 누수예요!</strong></p>
+            </div>
+
+            <pre><code>SELECT
+    ts.session_id,
+    ts.session_date AS 치료일,
+    p.name AS 환자명,
+    t.name AS 치료사
+FROM treatment_sessions ts
+JOIN patients p ON ts.patient_id = p.patient_id
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+LEFT JOIN billings b ON ts.session_id = b.session_id
+WHERE b.session_id IS NULL
+ORDER BY ts.session_date DESC;</code></pre>
+
+            <div class="explanation-box">
+                <h3>📖 같은 패턴, 다른 적용</h3>
+
+                <p>2번 쿼리와 같은 <strong>LEFT JOIN + IS NULL</strong> 패턴이에요!</p>
+
+                <div class="compare-box">
+                    <div class="compare-item">
+                        <h5>2번: 진단 없는 환자</h5>
+                        <p>patients ← patient_diagnoses</p>
+                        <p>환자는 있는데 진단이 없음</p>
+                    </div>
+                    <div class="compare-item">
+                        <h5>3번: 청구 없는 치료</h5>
+                        <p>treatment_sessions ← billings</p>
+                        <p>치료는 있는데 청구가 없음</p>
+                    </div>
+                </div>
+
+                <div class="line-explain">
+                    <div class="code-line">ORDER BY ts.session_date DESC</div>
+                    <div class="explain-text">
+                        <strong>최근 치료부터</strong> 보여줍니다.<br>
+                        최근 건이 더 시급하니까요! (아직 청구 기한 내일 수 있음)
+                    </div>
+                </div>
+            </div>
+
+            <div class="warning">
+                <strong>⚠️ 매출 누수!</strong><br><br>
+                청구 누락 = <strong>돈을 못 받은 치료!</strong><br><br>
+                • 정기적으로 (매일 또는 매주) 체크하세요<br>
+                • 발견하면 즉시 청구 처리<br>
+                • 누락이 자주 발생하면 프로세스 개선 필요
+            </div>
+
+            <div class="result-example">
+                <h4>📋 실행 결과 예시</h4>
+                <table class="result-table">
+                    <tr><th>session_id</th><th>치료일</th><th>환자명</th><th>치료사</th></tr>
+                    <tr class="urgent-row"><td>156</td><td>2024-01-28</td><td>김철수</td><td>박치료</td></tr>
+                    <tr class="urgent-row"><td>152</td><td>2024-01-27</td><td>이영희</td><td>김재활</td></tr>
+                    <tr><td>148</td><td>2024-01-25</td><td>박민수</td><td>박치료</td></tr>
+                </table>
+                <p class="result-note">이 치료들은 청구가 누락됨! 빨리 처리하세요!</p>
+            </div>
+
+            <div class="summary-box">
+                <h3>📝 이번 장 핵심 정리</h3>
+                <table class="summary-table">
+                    <tr>
+                        <th>점검 유형</th>
+                        <th>핵심 패턴</th>
+                        <th>찾는 것</th>
+                    </tr>
+                    <tr>
+                        <td><strong>중복 찾기</strong></td>
+                        <td>GROUP BY + HAVING > 1</td>
+                        <td>같은 값이 2개 이상</td>
+                    </tr>
+                    <tr>
+                        <td><strong>누락 찾기</strong></td>
+                        <td>LEFT JOIN + IS NULL</td>
+                        <td>연결된 데이터 없음</td>
+                    </tr>
+                    <tr>
+                        <td><strong>NULL 비교</strong></td>
+                        <td>IS NULL / IS NOT NULL</td>
+                        <td>= NULL은 안 됨!</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="practice-box">
+                <h3>🏋️ 데이터 품질 점검 체크리스트</h3>
+                <p>정기적으로 아래 항목을 점검하세요!</p>
+                <ul>
+                    <li>□ 중복 환자 확인 (주 1회)</li>
+                    <li>□ 진단 없는 환자 확인 (주 1회)</li>
+                    <li>□ 청구 누락 확인 (매일)</li>
+                    <li>□ 미수금 현황 확인 (주 1회)</li>
+                </ul>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-7.html" class="nav-btn">← 이전</a>
+                <span class="page-num">8 / 12</span>
+                <a href="chapter-9.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

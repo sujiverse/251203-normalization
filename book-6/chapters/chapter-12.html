@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[12장] 실험 연구 - 연구 데이터 설계</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>📊</span> 연구 데이터 설계</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+            <a href="../../book-6/index.html" class="top-nav-link book-6 active">6권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📘 6권: 연구 데이터 설계</h1><p>변수부터 회귀분석까지</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <div class="part-header">3부: 연구 형태별 DB 설계</div>
+            <h1 class="title">[12장] 실험 연구 (Experimental)</h1>
+
+            <div class="intro-box">
+                <p>이 장에서는 <strong>조건을 조작하는 실험 연구</strong>의 DB 설계를 배웁니다. 피험자간, 피험자내, 혼합 설계를 모두 다루고, 무선화와 역균형화 정보 저장 방법도 배웁니다.</p>
+            </div>
+
+            <hr>
+
+            <h2>1. 실험 설계의 기본</h2>
+
+            <h3>1.1 실험 연구란?</h3>
+
+            <div class="concept-box">
+                <h3>📖 실험 연구의 핵심 요소</h3>
+                <p><strong>실험 연구(Experimental Study)</strong>는 연구자가 <strong>독립변수를 의도적으로 조작</strong>하고, 그 결과를 측정하는 연구 설계입니다.</p>
+                <ul>
+                    <li><strong>독립변수 조작</strong>: 처치(treatment)의 유무나 종류를 연구자가 결정</li>
+                    <li><strong>무선 할당</strong>: 참가자를 조건에 무작위로 배정</li>
+                    <li><strong>통제</strong>: 외생변수의 영향 최소화</li>
+                </ul>
+                <p><strong>목적</strong>: 인과관계 추론 (A가 B를 유발하는가?)</p>
+            </div>
+
+            <h3>1.2 실험 vs 관찰 연구</h3>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>특성</th>
+                            <th>실험 연구</th>
+                            <th>관찰 연구</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>독립변수</td>
+                            <td>연구자가 조작</td>
+                            <td>자연 발생</td>
+                        </tr>
+                        <tr>
+                            <td>집단 할당</td>
+                            <td>무작위</td>
+                            <td>자기 선택 또는 기존 특성</td>
+                        </tr>
+                        <tr>
+                            <td>인과관계</td>
+                            <td>추론 가능</td>
+                            <td>제한적</td>
+                        </tr>
+                        <tr>
+                            <td>예시</td>
+                            <td>운동 프로그램 효과 검증</td>
+                            <td>운동량과 건강의 관계 조사</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>1.3 실험 설계 유형</h3>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>설계</th>
+                            <th>영문</th>
+                            <th>특징</th>
+                            <th>DB 구조</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>피험자간 설계</td>
+                            <td>Between-subjects</td>
+                            <td>각 참가자가 한 조건만 경험</td>
+                            <td>group 컬럼</td>
+                        </tr>
+                        <tr>
+                            <td>피험자내 설계</td>
+                            <td>Within-subjects</td>
+                            <td>모든 참가자가 모든 조건 경험</td>
+                            <td>Long format (조건별 행)</td>
+                        </tr>
+                        <tr>
+                            <td>혼합 설계</td>
+                            <td>Mixed Design</td>
+                            <td>두 유형 결합</td>
+                            <td>group + 반복측정</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <hr>
+
+            <h2>2. 피험자간 설계 (Between-subjects)</h2>
+
+            <div class="concept-box">
+                <h3>📖 피험자간 설계</h3>
+                <p><strong>정의</strong>: 각 참가자가 <strong>하나의 조건</strong>에만 참여하는 설계</p>
+                <p><strong>예시</strong>: 운동군 vs 대조군, 치료A vs 치료B vs 위약</p>
+            </div>
+
+            <h3>2.1 장점과 단점</h3>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr><th>장점</th><th>단점</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>순서 효과 없음 (연습, 피로)</td>
+                            <td>개인차가 오차에 포함</td>
+                        </tr>
+                        <tr>
+                            <td>짧은 실험 시간</td>
+                            <td>더 많은 참가자 필요</td>
+                        </tr>
+                        <tr>
+                            <td>조건 간 간섭 없음</td>
+                            <td>집단 간 동질성 확보 필요</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>2.2 DB 구조</h3>
+
+            <div class="sql-box">
+                <h3>💻 피험자간 설계 테이블</h3>
+                <pre><code>-- 간단한 두 집단 비교 (운동군 vs 대조군)
+CREATE TABLE between_subjects_study (
+    participant_id TEXT PRIMARY KEY,
+    enrollment_date DATE NOT NULL,
+
+    -- 집단 할당
+    group_code TEXT NOT NULL CHECK (group_code IN ('exercise', 'control')),
+    randomization_date DATE,
+    randomization_method TEXT,  -- 'simple', 'stratified', 'block'
+
+    -- 인구통계 (공변량)
+    age INTEGER,
+    gender TEXT,
+
+    -- 사전 측정
+    pre_pain INTEGER,
+    pre_function INTEGER,
+
+    -- 사후 측정
+    post_pain INTEGER,
+    post_function INTEGER
+);
+
+-- 집단별 기술통계
+SELECT
+    group_code,
+    COUNT(*) AS n,
+    ROUND(AVG(pre_pain), 1) AS pre_pain_mean,
+    ROUND(AVG(post_pain), 1) AS post_pain_mean,
+    ROUND(AVG(pre_pain - post_pain), 1) AS pain_change
+FROM between_subjects_study
+GROUP BY group_code;</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>💻 다집단 비교 (3개 이상 조건)</h3>
+                <pre><code>-- 조건 정의 테이블
+CREATE TABLE conditions (
+    condition_id INTEGER PRIMARY KEY,
+    condition_code TEXT NOT NULL UNIQUE,
+    condition_name TEXT,
+    description TEXT
+);
+
+INSERT INTO conditions VALUES
+(1, 'CONTROL', '대조군', '평소 활동 유지'),
+(2, 'EX_LOW', '저강도 운동', '주 2회 30분'),
+(3, 'EX_HIGH', '고강도 운동', '주 4회 60분');
+
+-- 참가자 테이블
+CREATE TABLE participants_between (
+    participant_id TEXT PRIMARY KEY,
+    condition_id INTEGER NOT NULL,
+    randomization_date DATE,
+    age INTEGER,
+    gender TEXT,
+    FOREIGN KEY (condition_id) REFERENCES conditions(condition_id)
+);
+
+-- 측정 테이블
+CREATE TABLE measurements_between (
+    measurement_id INTEGER PRIMARY KEY,
+    participant_id TEXT NOT NULL,
+    measurement_date DATE NOT NULL,
+    time_point TEXT CHECK (time_point IN ('pre', 'post')),
+    pain_vas INTEGER,
+    function_score INTEGER,
+    strength_kg DECIMAL(4,1),
+    FOREIGN KEY (participant_id) REFERENCES participants_between(participant_id)
+);</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>3. 피험자내 설계 (Within-subjects)</h2>
+
+            <div class="concept-box">
+                <h3>📖 피험자내 설계</h3>
+                <p><strong>정의</strong>: 각 참가자가 <strong>모든 조건</strong>을 경험하는 설계 (반복측정 설계)</p>
+                <p><strong>예시</strong>: 같은 참가자에게 세 가지 테이핑 조건을 모두 적용하고 비교</p>
+            </div>
+
+            <h3>3.1 장점과 단점</h3>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr><th>장점</th><th>단점</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>개인차 통제 (더 적은 참가자)</td>
+                            <td>순서 효과 (연습, 피로, 이월)</td>
+                        </tr>
+                        <tr>
+                            <td>높은 통계적 검정력</td>
+                            <td>역균형화 필요</td>
+                        </tr>
+                        <tr>
+                            <td>개인 내 비교 가능</td>
+                            <td>긴 실험 시간</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>3.2 순서 효과</h3>
+
+            <div class="warning-box">
+                <h3>⚠️ 피험자내 설계의 위협 요인</h3>
+                <ul>
+                    <li><strong>연습 효과(Practice Effect)</strong>: 반복으로 인해 수행 향상</li>
+                    <li><strong>피로 효과(Fatigue Effect)</strong>: 지침으로 인해 수행 저하</li>
+                    <li><strong>이월 효과(Carryover Effect)</strong>: 이전 조건의 영향이 남아있음</li>
+                </ul>
+                <p><strong>해결책</strong>: 역균형화(Counterbalancing) - 조건 제시 순서를 다양하게</p>
+            </div>
+
+            <h3>3.3 DB 구조</h3>
+
+            <div class="sql-box">
+                <h3>💻 피험자내 설계 테이블 (Long format)</h3>
+                <pre><code>-- 테이핑 효과 비교 연구
+-- 각 참가자가 3가지 테이핑 조건 모두 경험
+
+-- 조건 정의
+CREATE TABLE taping_conditions (
+    condition_id INTEGER PRIMARY KEY,
+    condition_code TEXT NOT NULL,
+    condition_name TEXT
+);
+
+INSERT INTO taping_conditions VALUES
+(1, 'NO_TAPE', '테이핑 없음'),
+(2, 'SHAM_TAPE', '가짜 테이핑'),
+(3, 'KINESIO_TAPE', '키네시오 테이핑');
+
+-- 참가자 기본 정보
+CREATE TABLE participants_within (
+    participant_id TEXT PRIMARY KEY,
+    age INTEGER,
+    gender TEXT,
+    condition_order TEXT  -- 'ABC', 'BAC', 'CAB' 등 (순서)
+);
+
+-- 시행(Trial) 데이터 - Long format
+CREATE TABLE trials_within (
+    trial_id INTEGER PRIMARY KEY,
+    participant_id TEXT NOT NULL,
+    condition_id INTEGER NOT NULL,
+    trial_order INTEGER NOT NULL,  -- 몇 번째 시행인지
+    trial_date DATE,
+
+    -- 측정값
+    balance_score DECIMAL(4,2),
+    pain_vas INTEGER,
+    rom_degrees INTEGER,
+
+    FOREIGN KEY (participant_id) REFERENCES participants_within(participant_id),
+    FOREIGN KEY (condition_id) REFERENCES taping_conditions(condition_id)
+);
+
+-- 조건별 평균 비교
+SELECT
+    c.condition_name,
+    COUNT(*) AS n_trials,
+    ROUND(AVG(t.balance_score), 2) AS mean_balance,
+    ROUND(AVG(t.pain_vas), 1) AS mean_pain
+FROM trials_within t
+JOIN taping_conditions c ON t.condition_id = c.condition_id
+GROUP BY c.condition_id, c.condition_name;</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>4. 혼합 설계 (Mixed Design)</h2>
+
+            <div class="concept-box">
+                <h3>📖 혼합 설계</h3>
+                <p><strong>정의</strong>: 피험자간 요인과 피험자내 요인을 <strong>동시에</strong> 포함하는 설계</p>
+                <p><strong>예시</strong>: 집단(운동 vs 대조) × 시점(사전, 사후, 추후)</p>
+                <ul>
+                    <li><strong>피험자간 요인</strong>: 집단 (between) - 각 참가자는 한 집단</li>
+                    <li><strong>피험자내 요인</strong>: 시점 (within) - 모든 참가자가 모든 시점 측정</li>
+                </ul>
+            </div>
+
+            <h3>4.1 혼합 설계 예시</h3>
+
+            <div class="example-box">
+                <h3>📝 연구 설계: 2 × 3 혼합 설계</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>사전 (T1)</th>
+                            <th>사후 (T2)</th>
+                            <th>추후 (T3)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>운동군</strong></td>
+                            <td>측정</td>
+                            <td>측정</td>
+                            <td>측정</td>
+                        </tr>
+                        <tr>
+                            <td><strong>대조군</strong></td>
+                            <td>측정</td>
+                            <td>측정</td>
+                            <td>측정</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p><strong>분석</strong>: 반복측정 ANOVA (집단 × 시점 상호작용)</p>
+            </div>
+
+            <h3>4.2 DB 구조</h3>
+
+            <div class="sql-box">
+                <h3>💻 혼합 설계 테이블</h3>
+                <pre><code>-- 운동 프로그램 효과 연구: 집단(2) × 시점(3) 혼합 설계
+
+-- 참가자 테이블 (피험자간 요인)
+CREATE TABLE participants_mixed (
+    participant_id TEXT PRIMARY KEY,
+    group_code TEXT NOT NULL CHECK (group_code IN ('exercise', 'control')),
+    randomization_date DATE,
+    age INTEGER,
+    gender TEXT
+);
+
+-- 시점 정의
+CREATE TABLE time_points (
+    time_id INTEGER PRIMARY KEY,
+    time_code TEXT NOT NULL,  -- 'pre', 'post', 'followup'
+    time_name TEXT,
+    time_order INTEGER
+);
+
+INSERT INTO time_points VALUES
+(1, 'pre', '사전', 1),
+(2, 'post', '사후 (4주)', 2),
+(3, 'followup', '추후 (12주)', 3);
+
+-- 측정 테이블 (피험자내 요인)
+CREATE TABLE measurements_mixed (
+    measurement_id INTEGER PRIMARY KEY,
+    participant_id TEXT NOT NULL,
+    time_id INTEGER NOT NULL,
+    measurement_date DATE,
+
+    -- 종속변수들
+    pain_vas INTEGER,
+    function_score INTEGER,
+    strength_kg DECIMAL(4,1),
+    balance_score DECIMAL(4,2),
+
+    FOREIGN KEY (participant_id) REFERENCES participants_mixed(participant_id),
+    FOREIGN KEY (time_id) REFERENCES time_points(time_id)
+);
+
+-- 집단 × 시점 기술통계
+SELECT
+    p.group_code,
+    t.time_name,
+    COUNT(*) AS n,
+    ROUND(AVG(m.pain_vas), 1) AS mean_pain,
+    ROUND(AVG(m.function_score), 1) AS mean_function
+FROM measurements_mixed m
+JOIN participants_mixed p ON m.participant_id = p.participant_id
+JOIN time_points t ON m.time_id = t.time_id
+GROUP BY p.group_code, t.time_name, t.time_order
+ORDER BY p.group_code, t.time_order;</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>5. 무선화와 균형화</h2>
+
+            <h3>5.1 무선 할당 (Random Assignment)</h3>
+
+            <div class="concept-box">
+                <h3>📖 무선 할당 방법</h3>
+                <table>
+                    <thead>
+                        <tr><th>방법</th><th>설명</th><th>장점</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>단순 무선화</td>
+                            <td>동전 던지기처럼 완전 무작위</td>
+                            <td>간단함</td>
+                        </tr>
+                        <tr>
+                            <td>블록 무선화</td>
+                            <td>일정 블록 내에서 균등 배정</td>
+                            <td>집단 크기 균형 유지</td>
+                        </tr>
+                        <tr>
+                            <td>층화 무선화</td>
+                            <td>층(성별, 연령대)별로 무선화</td>
+                            <td>중요 변수의 균형</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="sql-box">
+                <h3>💻 무선 할당 정보 저장</h3>
+                <pre><code>-- 무선 할당 정보 테이블
+CREATE TABLE randomization_log (
+    randomization_id INTEGER PRIMARY KEY,
+    participant_id TEXT NOT NULL,
+    randomization_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    randomization_method TEXT,  -- 'simple', 'block', 'stratified'
+    block_number INTEGER,  -- 블록 무선화 시
+    stratum TEXT,  -- 층화 무선화 시 (예: 'M_young', 'F_old')
+    assigned_group TEXT NOT NULL,
+    randomizer_id TEXT,  -- 누가 할당했는지
+    FOREIGN KEY (participant_id) REFERENCES participants(participant_id)
+);
+
+-- 블록 무선화 예시: 4명 블록
+-- 블록 1: [Ex, Ex, Ctrl, Ctrl] → 무작위 순서
+-- 블록 2: [Ex, Ctrl, Ex, Ctrl] → 무작위 순서
+INSERT INTO randomization_log (participant_id, randomization_method, block_number, assigned_group) VALUES
+('P001', 'block', 1, 'exercise'),
+('P002', 'block', 1, 'control'),
+('P003', 'block', 1, 'exercise'),
+('P004', 'block', 1, 'control'),
+('P005', 'block', 2, 'control'),
+('P006', 'block', 2, 'exercise');</code></pre>
+            </div>
+
+            <h3>5.2 역균형화 (Counterbalancing)</h3>
+
+            <div class="concept-box">
+                <h3>📖 피험자내 설계의 역균형화</h3>
+                <p>순서 효과를 통제하기 위해 조건 제시 순서를 다양하게 배치합니다.</p>
+                <table>
+                    <thead>
+                        <tr><th>방법</th><th>조건 수</th><th>예시 (ABC)</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>완전 역균형화</td>
+                            <td>모든 순서 (n!)</td>
+                            <td>ABC, ACB, BAC, BCA, CAB, CBA</td>
+                        </tr>
+                        <tr>
+                            <td>라틴 스퀘어</td>
+                            <td>n개 순서</td>
+                            <td>ABC, BCA, CAB (3개만)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="sql-box">
+                <h3>💻 역균형화 정보 저장</h3>
+                <pre><code>-- 순서 정의 테이블
+CREATE TABLE condition_orders (
+    order_id INTEGER PRIMARY KEY,
+    order_code TEXT NOT NULL,  -- 'ABC', 'ACB', 'BAC', etc.
+    first_condition_id INTEGER,
+    second_condition_id INTEGER,
+    third_condition_id INTEGER
+);
+
+-- 라틴 스퀘어 (3조건)
+INSERT INTO condition_orders VALUES
+(1, 'ABC', 1, 2, 3),
+(2, 'BCA', 2, 3, 1),
+(3, 'CAB', 3, 1, 2);
+
+-- 참가자에게 순서 할당
+CREATE TABLE participants_counterbalanced (
+    participant_id TEXT PRIMARY KEY,
+    order_id INTEGER NOT NULL,
+    age INTEGER,
+    gender TEXT,
+    FOREIGN KEY (order_id) REFERENCES condition_orders(order_id)
+);
+
+-- 순서별 참가자 수 확인 (균형 확인)
+SELECT
+    co.order_code,
+    COUNT(*) AS n_participants
+FROM participants_counterbalanced p
+JOIN condition_orders co ON p.order_id = co.order_id
+GROUP BY co.order_code;</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>6. 조건-시행-측정 테이블 구조</h2>
+
+            <h3>6.1 완전한 실험 연구 스키마</h3>
+
+            <div class="sql-box">
+                <h3>💻 운동 양식 비교 실험 (피험자내 설계)</h3>
+                <pre><code>-- 연구: 3가지 스트레칭 방법의 유연성 향상 효과 비교
+-- 설계: 피험자내 설계, 라틴 스퀘어 역균형화
+
+-- 1. 조건 정의
+CREATE TABLE stretch_conditions (
+    condition_id INTEGER PRIMARY KEY,
+    condition_code TEXT NOT NULL,
+    condition_name TEXT,
+    duration_sec INTEGER,
+    description TEXT
+);
+
+INSERT INTO stretch_conditions VALUES
+(1, 'STATIC', '정적 스트레칭', 30, '30초간 유지'),
+(2, 'DYNAMIC', '동적 스트레칭', 30, '10회 반복'),
+(3, 'PNF', 'PNF 스트레칭', 30, '수축-이완-스트레칭');
+
+-- 2. 순서 정의 (라틴 스퀘어)
+CREATE TABLE stretch_orders (
+    order_id INTEGER PRIMARY KEY,
+    order_code TEXT,
+    seq1 INTEGER, seq2 INTEGER, seq3 INTEGER
+);
+
+INSERT INTO stretch_orders VALUES
+(1, 'SDP', 1, 2, 3),  -- Static → Dynamic → PNF
+(2, 'DPS', 2, 3, 1),  -- Dynamic → PNF → Static
+(3, 'PSD', 3, 1, 2);  -- PNF → Static → Dynamic
+
+-- 3. 참가자
+CREATE TABLE stretch_participants (
+    participant_id TEXT PRIMARY KEY,
+    order_id INTEGER NOT NULL,
+    age INTEGER,
+    gender TEXT,
+    baseline_flexibility DECIMAL(4,1),  -- 기초 유연성
+    FOREIGN KEY (order_id) REFERENCES stretch_orders(order_id)
+);
+
+-- 4. 시행 데이터
+CREATE TABLE stretch_trials (
+    trial_id INTEGER PRIMARY KEY,
+    participant_id TEXT NOT NULL,
+    condition_id INTEGER NOT NULL,
+    trial_sequence INTEGER NOT NULL,  -- 1, 2, 3 (몇 번째 시행)
+    trial_date DATE,
+    washout_days INTEGER,  -- 이전 시행 후 휴식 기간
+
+    -- 측정값
+    pre_rom DECIMAL(4,1),   -- 스트레칭 전 ROM
+    post_rom DECIMAL(4,1),  -- 스트레칭 직후 ROM
+    post_10min_rom DECIMAL(4,1),  -- 10분 후 ROM
+
+    -- 계산된 변화량
+    immediate_change DECIMAL(4,1),  -- post - pre
+    retained_change DECIMAL(4,1),   -- post_10min - pre
+
+    FOREIGN KEY (participant_id) REFERENCES stretch_participants(participant_id),
+    FOREIGN KEY (condition_id) REFERENCES stretch_conditions(condition_id)
+);
+
+-- 5. 분석용 VIEW
+CREATE VIEW stretch_analysis AS
+SELECT
+    p.participant_id,
+    p.age,
+    p.gender,
+    p.baseline_flexibility,
+    so.order_code,
+    c.condition_name,
+    t.trial_sequence,
+    t.pre_rom,
+    t.post_rom,
+    t.post_rom - t.pre_rom AS rom_change
+FROM stretch_trials t
+JOIN stretch_participants p ON t.participant_id = p.participant_id
+JOIN stretch_conditions c ON t.condition_id = c.condition_id
+JOIN stretch_orders so ON p.order_id = so.order_id;</code></pre>
+            </div>
+
+            <h3>6.2 분석 쿼리</h3>
+
+            <div class="sql-box">
+                <h3>💻 분석용 쿼리</h3>
+                <pre><code>-- 1. 조건별 ROM 변화량 비교
+SELECT
+    condition_name,
+    COUNT(*) AS n,
+    ROUND(AVG(pre_rom), 1) AS mean_pre,
+    ROUND(AVG(post_rom), 1) AS mean_post,
+    ROUND(AVG(rom_change), 1) AS mean_change,
+    ROUND(AVG(rom_change) / AVG(pre_rom) * 100, 1) AS pct_change
+FROM stretch_analysis
+GROUP BY condition_name;
+
+-- 2. 순서 효과 확인 (시행 순서별 변화량)
+SELECT
+    trial_sequence,
+    ROUND(AVG(rom_change), 1) AS mean_change
+FROM stretch_analysis
+GROUP BY trial_sequence;
+-- 시행 순서에 따라 변화량이 다르면 순서 효과 존재
+
+-- 3. 조건 × 순서 교차표
+SELECT
+    condition_name,
+    trial_sequence,
+    COUNT(*) AS n,
+    ROUND(AVG(rom_change), 1) AS mean_change
+FROM stretch_analysis
+GROUP BY condition_name, trial_sequence
+ORDER BY condition_name, trial_sequence;
+
+-- 4. 통계 분석용 Wide 형식 변환
+SELECT
+    participant_id,
+    MAX(CASE WHEN condition_name = '정적 스트레칭' THEN rom_change END) AS static_change,
+    MAX(CASE WHEN condition_name = '동적 스트레칭' THEN rom_change END) AS dynamic_change,
+    MAX(CASE WHEN condition_name = 'PNF 스트레칭' THEN rom_change END) AS pnf_change
+FROM stretch_analysis
+GROUP BY participant_id;</code></pre>
+            </div>
+
+            <div class="summary-box">
+                <h3>📝 이 장의 핵심 정리</h3>
+                <ol>
+                    <li><strong>실험 연구</strong>: 독립변수 조작 + 무선 할당으로 인과관계 추론</li>
+                    <li><strong>피험자간 설계</strong>: 각 참가자가 한 조건 → group 컬럼으로 구분</li>
+                    <li><strong>피험자내 설계</strong>: 모든 참가자가 모든 조건 → Long format</li>
+                    <li><strong>혼합 설계</strong>: 피험자간 + 피험자내 결합 (집단 × 시점)</li>
+                    <li><strong>역균형화</strong>: 순서 효과 통제, 라틴 스퀘어 등 사용</li>
+                    <li><strong>DB 구조</strong>: conditions + participants + trials 패턴</li>
+                </ol>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-11.html" class="nav-btn">← 이전</a>
+                <span class="page-num">12 / 20</span>
+                <a href="chapter-13.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

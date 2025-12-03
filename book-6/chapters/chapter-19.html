@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[19장] 코드북과 메타데이터 - 연구 데이터 설계</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>📊</span> 연구 데이터 설계</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+            <a href="../../book-6/index.html" class="top-nav-link book-6 active">6권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📘 6권: 연구 데이터 설계</h1><p>변수부터 회귀분석까지</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <div class="part-header">5부: 실무 데이터 관리</div>
+            <h1 class="title">[19장] 코드북과 메타데이터</h1>
+
+            <div class="intro-box">
+                <p>이 장에서는 <strong>데이터의 데이터</strong>인 메타데이터 관리와 코드북 작성법을 배웁니다. 재현 가능한 연구의 핵심입니다.</p>
+            </div>
+
+            <hr>
+
+            <h2>1. 코드북이란?</h2>
+
+            <div class="concept-box">
+                <h3>📖 코드북(Codebook)의 정의</h3>
+                <p><strong>코드북</strong>은 데이터셋에 포함된 모든 변수에 대한 상세한 설명 문서입니다. 연구자가 데이터를 이해하고 올바르게 분석할 수 있도록 필수 정보를 제공합니다.</p>
+            </div>
+
+            <h3>1.1 코드북의 구성 요소</h3>
+            <p>표준적인 코드북에는 다음 정보가 포함됩니다:</p>
+
+            <div class="table-container">
+                <table>
+                    <tr><th>구성 요소</th><th>설명</th><th>예시</th></tr>
+                    <tr><td>변수명</td><td>데이터 파일 내 실제 이름</td><td>vas_pre</td></tr>
+                    <tr><td>변수 레이블</td><td>사람이 읽을 수 있는 설명</td><td>치료 전 VAS 통증 점수</td></tr>
+                    <tr><td>데이터 타입</td><td>숫자, 문자, 날짜 등</td><td>INTEGER</td></tr>
+                    <tr><td>측정 수준</td><td>명목, 서열, 등간, 비율</td><td>비율(ratio)</td></tr>
+                    <tr><td>허용 범위</td><td>유효한 값의 범위</td><td>0-100</td></tr>
+                    <tr><td>값 레이블</td><td>코드화된 값의 의미</td><td>1=남성, 2=여성</td></tr>
+                    <tr><td>결측값 코드</td><td>결측을 나타내는 값</td><td>-99, NULL</td></tr>
+                    <tr><td>수집 방법</td><td>변수의 출처/측정 도구</td><td>Jamar 악력계</td></tr>
+                </table>
+            </div>
+
+            <h3>1.2 코드북이 필요한 이유</h3>
+
+            <div class="example-box">
+                <h3>💡 코드북 없이 발생하는 문제</h3>
+                <p><strong>시나리오:</strong> 3년 전 데이터를 분석하려고 열었을 때...</p>
+                <ul>
+                    <li><code>grp</code> 변수: 1, 2, 3이 무슨 의미?</li>
+                    <li><code>score_t1</code>: 어떤 도구로 측정? 단위는?</li>
+                    <li><code>-9</code> 값: 실제 측정값? 결측 코드?</li>
+                    <li><code>age</code>: 만 나이? 세는 나이?</li>
+                </ul>
+                <p>코드북이 없으면 <strong>데이터 해석이 불가능</strong>하거나 <strong>오류가 발생</strong>합니다.</p>
+            </div>
+
+            <h3>1.3 연구 재현성과 코드북</h3>
+            <p><strong>재현 가능한 연구(Reproducible Research)</strong>의 필수 조건:</p>
+
+            <div class="concept-box">
+                <h3>🔬 재현성의 세 가지 수준</h3>
+                <ol>
+                    <li><strong>반복성(Repeatability)</strong>: 같은 연구자, 같은 데이터, 같은 결과</li>
+                    <li><strong>재현성(Reproducibility)</strong>: 다른 연구자, 같은 데이터, 같은 결과</li>
+                    <li><strong>복제성(Replicability)</strong>: 다른 연구자, 새로운 데이터, 유사한 결과</li>
+                </ol>
+                <p>코드북이 없으면 2번(재현성)부터 불가능합니다.</p>
+            </div>
+
+            <hr>
+
+            <h2>2. 변수 사전 (Data Dictionary)</h2>
+
+            <div class="concept-box">
+                <h3>📚 변수 사전이란?</h3>
+                <p><strong>변수 사전(Data Dictionary)</strong>은 코드북의 핵심 부분으로, 각 변수의 기술적/의미적 정보를 체계적으로 정리한 문서입니다.</p>
+            </div>
+
+            <h3>2.1 변수 사전 테이블 설계</h3>
+
+            <div class="sql-box">
+                <h3>▶ 변수 사전 테이블 구조</h3>
+                <pre><code>-- 연구 프로젝트 테이블
+CREATE TABLE studies (
+    study_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    study_code TEXT UNIQUE NOT NULL,      -- 연구 코드 (예: PT2024-001)
+    title TEXT NOT NULL,                   -- 연구 제목
+    principal_investigator TEXT,           -- 책임연구자
+    start_date DATE,
+    end_date DATE,
+    irb_number TEXT,                       -- IRB 승인번호
+    description TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 데이터셋 테이블
+CREATE TABLE datasets (
+    dataset_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    study_id INTEGER NOT NULL,
+    dataset_name TEXT NOT NULL,            -- 데이터셋 이름
+    description TEXT,
+    record_count INTEGER,                  -- 총 레코드 수
+    version TEXT DEFAULT '1.0',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME,
+    FOREIGN KEY (study_id) REFERENCES studies(study_id)
+);
+
+-- 변수 사전 테이블
+CREATE TABLE data_dictionary (
+    variable_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dataset_id INTEGER NOT NULL,
+
+    -- 변수 기본 정보
+    variable_name TEXT NOT NULL,           -- DB/파일 내 실제 변수명
+    variable_label TEXT NOT NULL,          -- 사람이 읽는 레이블
+    description TEXT,                      -- 상세 설명
+
+    -- 데이터 타입 정보
+    data_type TEXT NOT NULL,               -- INTEGER, REAL, TEXT, DATE 등
+    measurement_level TEXT,                -- nominal, ordinal, interval, ratio
+
+    -- 값 범위
+    min_value REAL,                        -- 최소 허용값
+    max_value REAL,                        -- 최대 허용값
+    valid_values TEXT,                     -- 허용되는 개별 값 목록 (JSON)
+
+    -- 결측값
+    missing_codes TEXT,                    -- 결측값 코드 목록
+    missing_description TEXT,              -- 결측값 의미 설명
+
+    -- 측정 관련
+    unit TEXT,                             -- 측정 단위 (cm, kg, sec 등)
+    instrument TEXT,                       -- 측정 도구
+
+    -- 출처 및 변환
+    source_variable TEXT,                  -- 원본 변수 (파생변수인 경우)
+    derivation_formula TEXT,               -- 파생 공식
+
+    -- 메타 정보
+    position INTEGER,                      -- 변수 순서
+    required INTEGER DEFAULT 0,            -- 필수 여부 (1=필수)
+
+    FOREIGN KEY (dataset_id) REFERENCES datasets(dataset_id),
+    UNIQUE(dataset_id, variable_name)
+);</code></pre>
+            </div>
+
+            <h3>2.2 실제 변수 사전 예시</h3>
+
+            <div class="sql-box">
+                <h3>▶ 물리치료 연구 변수 사전 입력</h3>
+                <pre><code>-- 연구 등록
+INSERT INTO studies (study_code, title, principal_investigator, irb_number)
+VALUES ('PT2024-BPS', '요통 환자 균형 훈련 효과 연구', '김철수', 'IRB-2024-0045');
+
+-- 데이터셋 등록
+INSERT INTO datasets (study_id, dataset_name, description, record_count)
+VALUES (1, 'main_data', '주 분석 데이터셋', 120);
+
+-- 변수 사전 입력
+INSERT INTO data_dictionary
+    (dataset_id, variable_name, variable_label, description,
+     data_type, measurement_level, min_value, max_value, unit, instrument, position)
+VALUES
+    -- 식별 변수
+    (1, 'participant_id', '참가자 ID', '익명화된 고유 식별자',
+     'TEXT', NULL, NULL, NULL, NULL, NULL, 1),
+
+    -- 인구통계 변수
+    (1, 'age', '나이', '연구 등록 시점의 만 나이',
+     'INTEGER', 'ratio', 19, 80, '세(years)', '자기보고', 2),
+
+    (1, 'sex', '성별', '생물학적 성별',
+     'INTEGER', 'nominal', 1, 2, NULL, '자기보고', 3),
+
+    (1, 'pain_duration', '통증 기간', '요통 시작부터 등록까지 기간',
+     'INTEGER', 'ratio', 1, 600, '개월(months)', '자기보고', 4),
+
+    -- 집단 변수
+    (1, 'group', '집단', '무작위 배정된 실험집단',
+     'INTEGER', 'nominal', 1, 3, NULL, '무작위 배정', 5),
+
+    -- 결과 변수
+    (1, 'vas_pre', '사전 VAS 점수', '중재 전 시각아날로그척도 통증 점수',
+     'INTEGER', 'ratio', 0, 100, 'mm', 'VAS 100mm', 6),
+
+    (1, 'vas_post', '사후 VAS 점수', '중재 후 시각아날로그척도 통증 점수',
+     'INTEGER', 'ratio', 0, 100, 'mm', 'VAS 100mm', 7),
+
+    (1, 'berg_pre', '사전 BBS 점수', '중재 전 버그균형척도 점수',
+     'INTEGER', 'ordinal', 0, 56, '점', 'Berg Balance Scale', 8),
+
+    (1, 'berg_post', '사후 BBS 점수', '중재 후 버그균형척도 점수',
+     'INTEGER', 'ordinal', 0, 56, '점', 'Berg Balance Scale', 9);</code></pre>
+            </div>
+
+            <h3>2.3 결측값 코드 문서화</h3>
+
+            <div class="warning-box">
+                <h3>⚠️ 결측값 코드의 중요성</h3>
+                <p>결측값 코드를 명확히 문서화하지 않으면:</p>
+                <ul>
+                    <li><code>-9</code>를 실제 측정값으로 오인하여 평균 계산에 포함</li>
+                    <li><code>999</code>를 이상치(outlier)로 잘못 분류</li>
+                    <li><code>NULL</code>과 <code>-99</code>의 의미 차이 혼동</li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <h3>▶ 결측값 코드 업데이트</h3>
+                <pre><code>-- 결측값 정보 추가
+UPDATE data_dictionary
+SET missing_codes = '-9, -99',
+    missing_description = '-9: 해당없음(not applicable), -99: 무응답(refused)'
+WHERE dataset_id = 1
+  AND variable_name IN ('pain_duration', 'vas_pre', 'vas_post');
+
+-- 결측값 분류 테이블 (선택적)
+CREATE TABLE missing_codes (
+    code_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    study_id INTEGER NOT NULL,
+    code_value TEXT NOT NULL,
+    meaning TEXT NOT NULL,
+    description TEXT,
+    FOREIGN KEY (study_id) REFERENCES studies(study_id)
+);
+
+INSERT INTO missing_codes (study_id, code_value, meaning, description)
+VALUES
+    (1, '-9', 'not applicable', '질문이 해당 참가자에게 적용되지 않음'),
+    (1, '-99', 'refused', '참가자가 응답 거부'),
+    (1, '-88', 'unknown', '정보를 알 수 없음'),
+    (1, 'NULL', 'system missing', '시스템 결측 (데이터 미입력)');</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>3. 값 레이블 관리</h2>
+
+            <h3>3.1 값 레이블 테이블</h3>
+            <p>코드화된 값(1, 2, 3...)의 실제 의미를 저장합니다.</p>
+
+            <div class="sql-box">
+                <h3>▶ 값 레이블 테이블 설계</h3>
+                <pre><code>-- 값 레이블 테이블
+CREATE TABLE value_labels (
+    label_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    variable_id INTEGER NOT NULL,
+    code_value TEXT NOT NULL,              -- 데이터 내 실제 값
+    label TEXT NOT NULL,                   -- 값의 의미
+    label_en TEXT,                         -- 영문 레이블 (선택)
+    display_order INTEGER,                 -- 출력 순서
+
+    FOREIGN KEY (variable_id) REFERENCES data_dictionary(variable_id),
+    UNIQUE(variable_id, code_value)
+);
+
+-- 성별 값 레이블
+INSERT INTO value_labels (variable_id, code_value, label, label_en, display_order)
+VALUES
+    (3, '1', '남성', 'Male', 1),
+    (3, '2', '여성', 'Female', 2);
+
+-- 집단 값 레이블
+INSERT INTO value_labels (variable_id, code_value, label, label_en, display_order)
+VALUES
+    (5, '1', '실험군-A', 'Experimental Group A', 1),
+    (5, '2', '실험군-B', 'Experimental Group B', 2),
+    (5, '3', '대조군', 'Control Group', 3);</code></pre>
+            </div>
+
+            <h3>3.2 값 레이블이 있는 변수 조회</h3>
+
+            <div class="sql-box">
+                <h3>▶ 변수별 값 레이블 조회</h3>
+                <pre><code>-- 특정 변수의 값 레이블 조회
+SELECT
+    dd.variable_name,
+    dd.variable_label,
+    vl.code_value AS '코드',
+    vl.label AS '의미',
+    vl.label_en AS '영문명'
+FROM data_dictionary dd
+JOIN value_labels vl ON dd.variable_id = vl.variable_id
+WHERE dd.variable_name = 'group'
+ORDER BY vl.display_order;
+
+/* 결과:
+variable_name | variable_label | 코드 | 의미      | 영문명
+group         | 집단           | 1    | 실험군-A  | Experimental Group A
+group         | 집단           | 2    | 실험군-B  | Experimental Group B
+group         | 집단           | 3    | 대조군    | Control Group
+*/</code></pre>
+            </div>
+
+            <h3>3.3 서열척도 값 레이블</h3>
+
+            <div class="sql-box">
+                <h3>▶ Likert 척도 값 레이블</h3>
+                <pre><code>-- 만족도 변수 추가
+INSERT INTO data_dictionary
+    (dataset_id, variable_name, variable_label, description,
+     data_type, measurement_level, min_value, max_value, position)
+VALUES
+    (1, 'satisfaction', '치료 만족도', '중재에 대한 전반적 만족도',
+     'INTEGER', 'ordinal', 1, 5, 10);
+
+-- 서열척도 값 레이블 (variable_id = 10 가정)
+INSERT INTO value_labels (variable_id, code_value, label, display_order)
+VALUES
+    (10, '1', '매우 불만족', 1),
+    (10, '2', '불만족', 2),
+    (10, '3', '보통', 3),
+    (10, '4', '만족', 4),
+    (10, '5', '매우 만족', 5);</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>4. 메타데이터 테이블 설계</h2>
+
+            <h3>4.1 완전한 메타데이터 스키마</h3>
+
+            <div class="sql-box">
+                <h3>▶ 연구 메타데이터 전체 구조</h3>
+                <pre><code>-- 변수 변경 이력 테이블
+CREATE TABLE variable_changelog (
+    change_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    variable_id INTEGER NOT NULL,
+    change_type TEXT NOT NULL,             -- 'created', 'modified', 'deleted'
+    field_changed TEXT,                    -- 변경된 필드명
+    old_value TEXT,
+    new_value TEXT,
+    changed_by TEXT,
+    changed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    reason TEXT,                           -- 변경 사유
+
+    FOREIGN KEY (variable_id) REFERENCES data_dictionary(variable_id)
+);
+
+-- 데이터셋 버전 테이블
+CREATE TABLE dataset_versions (
+    version_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dataset_id INTEGER NOT NULL,
+    version_number TEXT NOT NULL,          -- '1.0', '1.1', '2.0' 등
+    release_date DATE NOT NULL,
+    description TEXT,                      -- 버전 변경 사항
+    record_count INTEGER,
+    file_checksum TEXT,                    -- 파일 무결성 확인용
+
+    FOREIGN KEY (dataset_id) REFERENCES datasets(dataset_id)
+);
+
+-- 연구 키워드 테이블
+CREATE TABLE study_keywords (
+    keyword_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    study_id INTEGER NOT NULL,
+    keyword TEXT NOT NULL,
+    keyword_type TEXT,                     -- 'MeSH', 'custom', 'topic'
+
+    FOREIGN KEY (study_id) REFERENCES studies(study_id)
+);</code></pre>
+            </div>
+
+            <h3>4.2 변경 이력 추적</h3>
+
+            <div class="sql-box">
+                <h3>▶ 트리거를 통한 자동 변경 이력</h3>
+                <pre><code>-- 변수 수정 시 자동 기록 트리거
+CREATE TRIGGER log_variable_update
+AFTER UPDATE ON data_dictionary
+FOR EACH ROW
+BEGIN
+    INSERT INTO variable_changelog
+        (variable_id, change_type, field_changed, old_value, new_value, changed_at)
+    SELECT
+        OLD.variable_id,
+        'modified',
+        'variable_label',
+        OLD.variable_label,
+        NEW.variable_label,
+        CURRENT_TIMESTAMP
+    WHERE OLD.variable_label != NEW.variable_label;
+END;
+
+-- 변수명 변경 기록
+UPDATE data_dictionary
+SET variable_label = '사전 통증(VAS)'
+WHERE variable_name = 'vas_pre';
+
+-- 변경 이력 조회
+SELECT
+    dd.variable_name,
+    vc.field_changed AS '변경 필드',
+    vc.old_value AS '이전값',
+    vc.new_value AS '새값',
+    vc.changed_at AS '변경일시'
+FROM variable_changelog vc
+JOIN data_dictionary dd ON vc.variable_id = dd.variable_id
+ORDER BY vc.changed_at DESC;</code></pre>
+            </div>
+
+            <h3>4.3 데이터셋 버전 관리</h3>
+
+            <div class="example-box">
+                <h3>💡 버전 관리가 필요한 상황</h3>
+                <ul>
+                    <li><strong>v1.0</strong>: 초기 데이터 수집 완료</li>
+                    <li><strong>v1.1</strong>: 데이터 클리닝 후 이상치 5건 제거</li>
+                    <li><strong>v1.2</strong>: 결측값 10건 보완 (의무기록 확인)</li>
+                    <li><strong>v2.0</strong>: 추가 변수 3개 포함 (6개월 추적 결과)</li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <h3>▶ 버전 정보 기록</h3>
+                <pre><code>-- 버전 정보 입력
+INSERT INTO dataset_versions (dataset_id, version_number, release_date, description, record_count)
+VALUES
+    (1, '1.0', '2024-03-15', '초기 데이터 수집 완료', 120),
+    (1, '1.1', '2024-03-20', '이상치 5건 제거, 데이터 클리닝 완료', 115),
+    (1, '1.2', '2024-04-01', '결측값 보완 (의무기록 대조)', 115),
+    (1, '2.0', '2024-09-15', '6개월 추적 데이터 추가', 108);
+
+-- 최신 버전 조회
+SELECT
+    d.dataset_name,
+    dv.version_number,
+    dv.release_date,
+    dv.description,
+    dv.record_count
+FROM dataset_versions dv
+JOIN datasets d ON dv.dataset_id = d.dataset_id
+WHERE d.dataset_id = 1
+ORDER BY dv.release_date DESC
+LIMIT 1;</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>5. 데이터 문서화 표준</h2>
+
+            <h3>5.1 DDI (Data Documentation Initiative)</h3>
+
+            <div class="concept-box">
+                <h3>📋 DDI란?</h3>
+                <p><strong>DDI(Data Documentation Initiative)</strong>는 사회과학 및 행동과학 데이터를 위한 국제 메타데이터 표준입니다. XML 기반으로 데이터의 전체 생애주기를 문서화합니다.</p>
+            </div>
+
+            <p>DDI의 주요 영역:</p>
+
+            <div class="table-container">
+                <table>
+                    <tr><th>영역</th><th>내용</th><th>예시</th></tr>
+                    <tr><td>Study Description</td><td>연구 개요</td><td>제목, 연구자, 기간, 자금원</td></tr>
+                    <tr><td>Methodology</td><td>연구 방법</td><td>표본 추출, 데이터 수집 방법</td></tr>
+                    <tr><td>Data Files</td><td>파일 정보</td><td>파일 형식, 레코드 수, 버전</td></tr>
+                    <tr><td>Variable Description</td><td>변수 설명</td><td>변수명, 레이블, 값 범위</td></tr>
+                    <tr><td>Data Access</td><td>접근 정보</td><td>사용 조건, 인용 방법</td></tr>
+                </table>
+            </div>
+
+            <div class="sql-box">
+                <h3>▶ DDI 스타일 연구 기술 테이블</h3>
+                <pre><code>-- 연구 기술(Study Description) 확장
+ALTER TABLE studies ADD COLUMN abstract TEXT;
+ALTER TABLE studies ADD COLUMN funding_source TEXT;
+ALTER TABLE studies ADD COLUMN data_collection_start DATE;
+ALTER TABLE studies ADD COLUMN data_collection_end DATE;
+ALTER TABLE studies ADD COLUMN geographic_scope TEXT;
+ALTER TABLE studies ADD COLUMN population_description TEXT;
+
+-- 연구 정보 업데이트
+UPDATE studies
+SET
+    abstract = '본 연구는 만성 요통 환자를 대상으로 균형 훈련의 효과를 검증하기 위한 무작위 대조 실험이다.',
+    funding_source = '한국연구재단 (NRF-2024-xxx)',
+    data_collection_start = '2024-01-15',
+    data_collection_end = '2024-06-30',
+    geographic_scope = '서울특별시',
+    population_description = '서울 소재 정형외과 내원 만성 요통 환자(유병기간 3개월 이상), 19-65세'
+WHERE study_id = 1;</code></pre>
+            </div>
+
+            <h3>5.2 Dublin Core</h3>
+
+            <div class="concept-box">
+                <h3>📋 Dublin Core란?</h3>
+                <p><strong>Dublin Core</strong>는 디지털 자원 기술을 위한 범용 메타데이터 표준입니다. 15개의 핵심 요소로 구성되며, 학술 데이터 공유에도 널리 사용됩니다.</p>
+            </div>
+
+            <p>Dublin Core 15개 핵심 요소:</p>
+
+            <div class="table-container">
+                <table>
+                    <tr><th>요소</th><th>설명</th><th>연구 데이터 적용</th></tr>
+                    <tr><td>Title</td><td>제목</td><td>연구 제목</td></tr>
+                    <tr><td>Creator</td><td>작성자</td><td>책임연구자</td></tr>
+                    <tr><td>Subject</td><td>주제</td><td>키워드</td></tr>
+                    <tr><td>Description</td><td>설명</td><td>연구 초록</td></tr>
+                    <tr><td>Publisher</td><td>발행처</td><td>소속 기관</td></tr>
+                    <tr><td>Contributor</td><td>기여자</td><td>공동연구자</td></tr>
+                    <tr><td>Date</td><td>날짜</td><td>수집/발행일</td></tr>
+                    <tr><td>Type</td><td>유형</td><td>데이터셋</td></tr>
+                    <tr><td>Format</td><td>형식</td><td>CSV, SQLite</td></tr>
+                    <tr><td>Identifier</td><td>식별자</td><td>DOI</td></tr>
+                    <tr><td>Source</td><td>출처</td><td>원본 연구</td></tr>
+                    <tr><td>Language</td><td>언어</td><td>ko, en</td></tr>
+                    <tr><td>Relation</td><td>관련</td><td>관련 논문</td></tr>
+                    <tr><td>Coverage</td><td>범위</td><td>지리적/시간적 범위</td></tr>
+                    <tr><td>Rights</td><td>권리</td><td>CC-BY 등</td></tr>
+                </table>
+            </div>
+
+            <h3>5.3 학술 데이터 저장소 표준</h3>
+            <p>주요 학술 데이터 저장소의 메타데이터 요구사항:</p>
+
+            <div class="table-container">
+                <table>
+                    <tr><th>저장소</th><th>표준</th><th>특징</th></tr>
+                    <tr><td>ICPSR</td><td>DDI</td><td>사회과학 데이터 전문</td></tr>
+                    <tr><td>Figshare</td><td>DataCite</td><td>범용, DOI 자동 발급</td></tr>
+                    <tr><td>Zenodo</td><td>DataCite</td><td>CERN 운영, 무료</td></tr>
+                    <tr><td>Harvard Dataverse</td><td>DDI</td><td>학술 데이터 중심</td></tr>
+                    <tr><td>KISTI</td><td>Dublin Core</td><td>국내 연구데이터</td></tr>
+                </table>
+            </div>
+
+            <hr>
+
+            <h2>6. 코드북 자동 생성</h2>
+
+            <h3>6.1 SQL로 코드북 생성</h3>
+
+            <div class="sql-box">
+                <h3>▶ 변수 목록 코드북 생성 쿼리</h3>
+                <pre><code>-- 전체 변수 코드북 생성
+SELECT
+    dd.position AS '순서',
+    dd.variable_name AS '변수명',
+    dd.variable_label AS '변수 레이블',
+    dd.data_type AS '데이터 타입',
+    dd.measurement_level AS '측정 수준',
+    CASE
+        WHEN dd.min_value IS NOT NULL AND dd.max_value IS NOT NULL
+        THEN dd.min_value || ' - ' || dd.max_value
+        ELSE '-'
+    END AS '허용 범위',
+    COALESCE(dd.unit, '-') AS '단위',
+    COALESCE(dd.instrument, '-') AS '측정 도구',
+    COALESCE(dd.missing_codes, '-') AS '결측 코드'
+FROM data_dictionary dd
+WHERE dd.dataset_id = 1
+ORDER BY dd.position;
+
+/* 결과:
+순서 | 변수명   | 변수 레이블        | 데이터 타입 | 측정 수준 | 허용 범위 | 단위   | 측정 도구
+1    | part_id  | 참가자 ID          | TEXT        | -         | -         | -      | -
+2    | age      | 나이               | INTEGER     | ratio     | 19-80     | 세     | 자기보고
+3    | sex      | 성별               | INTEGER     | nominal   | 1-2       | -      | 자기보고
+...
+*/</code></pre>
+            </div>
+
+            <h3>6.2 값 레이블 포함 상세 코드북</h3>
+
+            <div class="sql-box">
+                <h3>▶ 값 레이블 포함 코드북</h3>
+                <pre><code>-- 값 레이블이 있는 변수의 상세 정보
+SELECT
+    dd.variable_name AS '변수명',
+    dd.variable_label AS '레이블',
+    GROUP_CONCAT(vl.code_value || '=' || vl.label, '; ') AS '값 레이블'
+FROM data_dictionary dd
+LEFT JOIN value_labels vl ON dd.variable_id = vl.variable_id
+WHERE dd.dataset_id = 1
+GROUP BY dd.variable_id
+HAVING vl.label_id IS NOT NULL
+ORDER BY dd.position;
+
+/* 결과:
+변수명 | 레이블 | 값 레이블
+sex    | 성별   | 1=남성; 2=여성
+group  | 집단   | 1=실험군-A; 2=실험군-B; 3=대조군
+*/</code></pre>
+            </div>
+
+            <h3>6.3 변수 요약 통계 자동화</h3>
+
+            <div class="sql-box">
+                <h3>▶ 변수별 기술통계 자동 생성 (실제 데이터 테이블 기준)</h3>
+                <pre><code>-- 실제 데이터 테이블이 있다고 가정
+-- participants 테이블에서 변수 요약 생성
+
+-- 연속형 변수 요약
+SELECT
+    'age' AS variable_name,
+    COUNT(*) AS n,
+    ROUND(AVG(age), 2) AS mean,
+    ROUND(MIN(age), 2) AS min,
+    ROUND(MAX(age), 2) AS max,
+    COUNT(*) - COUNT(age) AS missing
+FROM participants
+
+UNION ALL
+
+SELECT
+    'vas_pre' AS variable_name,
+    COUNT(*) AS n,
+    ROUND(AVG(vas_pre), 2) AS mean,
+    ROUND(MIN(vas_pre), 2) AS min,
+    ROUND(MAX(vas_pre), 2) AS max,
+    COUNT(*) - COUNT(vas_pre) AS missing
+FROM participants
+
+UNION ALL
+
+SELECT
+    'vas_post' AS variable_name,
+    COUNT(*) AS n,
+    ROUND(AVG(vas_post), 2) AS mean,
+    ROUND(MIN(vas_post), 2) AS min,
+    ROUND(MAX(vas_post), 2) AS max,
+    COUNT(*) - COUNT(vas_post) AS missing
+FROM participants;</code></pre>
+            </div>
+
+            <h3>6.4 범주형 변수 빈도표 자동 생성</h3>
+
+            <div class="sql-box">
+                <h3>▶ 범주형 변수 빈도표</h3>
+                <pre><code>-- 성별 빈도표 (값 레이블 적용)
+SELECT
+    vl.label AS '성별',
+    COUNT(*) AS '빈도',
+    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM participants), 1) AS '백분율(%)'
+FROM participants p
+JOIN data_dictionary dd ON dd.variable_name = 'sex'
+JOIN value_labels vl ON dd.variable_id = vl.variable_id
+    AND CAST(p.sex AS TEXT) = vl.code_value
+GROUP BY p.sex
+ORDER BY p.sex;
+
+/* 결과:
+성별   | 빈도 | 백분율(%)
+남성   | 58   | 50.4
+여성   | 57   | 49.6
+*/
+
+-- 집단별 빈도표
+SELECT
+    vl.label AS '집단',
+    COUNT(*) AS '빈도',
+    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM participants), 1) AS '백분율(%)'
+FROM participants p
+JOIN data_dictionary dd ON dd.variable_name = 'group'
+JOIN value_labels vl ON dd.variable_id = vl.variable_id
+    AND CAST(p.group_id AS TEXT) = vl.code_value
+GROUP BY p.group_id
+ORDER BY vl.display_order;</code></pre>
+            </div>
+
+            <h3>6.5 HTML 형식 코드북 생성용 뷰</h3>
+
+            <div class="sql-box">
+                <h3>▶ 코드북 출력용 뷰 생성</h3>
+                <pre><code>-- 코드북 전체 정보를 하나의 뷰로
+CREATE VIEW codebook_full AS
+SELECT
+    s.study_code,
+    s.title AS study_title,
+    d.dataset_name,
+    d.version,
+    dd.position,
+    dd.variable_name,
+    dd.variable_label,
+    dd.description,
+    dd.data_type,
+    dd.measurement_level,
+    dd.min_value,
+    dd.max_value,
+    dd.unit,
+    dd.instrument,
+    dd.missing_codes,
+    dd.missing_description,
+    (
+        SELECT GROUP_CONCAT(vl.code_value || '=' || vl.label, '; ')
+        FROM value_labels vl
+        WHERE vl.variable_id = dd.variable_id
+    ) AS value_labels
+FROM studies s
+JOIN datasets d ON s.study_id = d.study_id
+JOIN data_dictionary dd ON d.dataset_id = dd.dataset_id
+ORDER BY s.study_id, d.dataset_id, dd.position;
+
+-- 코드북 뷰 조회
+SELECT * FROM codebook_full WHERE study_code = 'PT2024-BPS';</code></pre>
+            </div>
+
+            <h3>6.6 코드북 메타데이터 내보내기</h3>
+
+            <div class="example-box">
+                <h3>💡 코드북 활용 팁</h3>
+                <ul>
+                    <li><strong>CSV 내보내기</strong>: DB Browser for SQLite에서 쿼리 결과 → Export to CSV</li>
+                    <li><strong>Excel</strong>: CSV를 Excel로 열어 서식 적용</li>
+                    <li><strong>R/Python</strong>: 쿼리 결과를 데이터프레임으로 불러와 R Markdown이나 Jupyter로 보고서 생성</li>
+                    <li><strong>논문 부록</strong>: 코드북을 PDF로 변환하여 논문 보충자료로 제출</li>
+                </ul>
+            </div>
+
+            <div class="summary-box">
+                <h3>📝 이 장의 핵심 정리</h3>
+                <ul>
+                    <li><strong>코드북</strong>은 데이터셋의 모든 변수를 설명하는 필수 문서입니다</li>
+                    <li><strong>변수 사전(Data Dictionary)</strong>에는 변수명, 레이블, 타입, 범위, 결측코드가 포함됩니다</li>
+                    <li><strong>값 레이블(Value Labels)</strong>은 코드화된 값의 의미를 명시합니다</li>
+                    <li><strong>메타데이터</strong> 관리에는 버전 관리와 변경 이력 추적이 포함됩니다</li>
+                    <li><strong>DDI, Dublin Core</strong>는 국제 데이터 문서화 표준입니다</li>
+                    <li><strong>코드북 자동 생성</strong>: SQL 쿼리로 변수 목록, 값 레이블, 기술통계를 추출할 수 있습니다</li>
+                    <li>잘 작성된 코드북은 <strong>연구 재현성</strong>의 기본입니다</li>
+                </ul>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-18.html" class="nav-btn">← 이전</a>
+                <span class="page-num">19 / 20</span>
+                <a href="chapter-20.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

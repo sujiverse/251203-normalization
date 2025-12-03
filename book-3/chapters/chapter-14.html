@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>14장: 치료사 실적 대시보드 - 물리치료사를 위한 데이터베이스 3권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "3"})
+
+    @@include('components/mobile-menu.html')
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📙 물리치료사를 위한</h1>
+                <p>실전 구축 & 대시보드 (3권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+<h1 class="title">치료사 실적 대시보드</h1>
+
+<h2>공정한 평가를 위한 데이터</h2>
+
+<p>힐링손 물리치료센터에는 김지훈 원장과 3명의 치료사가 있습니다. 월말이 되면 각 치료사의 실적을 정산하고 인센티브를 계산해야 합니다. 예전에는 엑셀로 하루 종일 걸리던 일이었죠.</p>
+
+<p>이제 데이터베이스가 있으니, 실시간으로 각 치료사의 실적을 확인하고 공정하게 평가할 수 있습니다. 치료사들도 자신의 실적을 직접 볼 수 있어서 동기부여가 됩니다.</p>
+
+<p>이번 장에서 만들 치료사 실적 대시보드에는 다음 내용이 포함됩니다:</p>
+
+<ul>
+<li>치료사별 치료 건수와 매출</li>
+<li>월별 실적 추이</li>
+<li>치료 항목별 분석</li>
+<li>환자 만족도 지표 (재방문율)</li>
+<li>인센티브 계산</li>
+</ul>
+
+<hr>
+
+<h2>1. 대시보드 생성</h2>
+
+<ol>
+<li>Metabase 상단 <strong>➕ 새로 만들기</strong> → <strong>대시보드</strong></li>
+<li>이름: "👨‍⚕️ 치료사 실적 대시보드"</li>
+<li>컬렉션: "힐링손 물리치료센터"</li>
+<li><strong>만들기</strong> 클릭</li>
+</ol>
+
+<hr>
+
+<h2>2. 전체 실적 요약</h2>
+
+<h3>카드 1: 이번 달 전체 치료 건수</h3>
+
+<pre><code>SELECT COUNT(*) as 총치료건수
+FROM treatment_sessions
+WHERE DATE_FORMAT(session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+AND session_status = '완료';</code></pre>
+
+<p>시각화: 숫자, 저장: "이번 달 총 치료 건수"</p>
+
+<h3>카드 2: 이번 달 전체 매출</h3>
+
+<pre><code>SELECT COALESCE(SUM(b.total_amount), 0) as 총매출
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+AND b.payment_status = '완료';</code></pre>
+
+<p>시각화: 숫자 (₩ 접두사), 저장: "이번 달 총 매출"</p>
+
+<h3>카드 3: 치료사 수</h3>
+
+<pre><code>SELECT COUNT(*) as 치료사수
+FROM therapists
+WHERE is_active = 'Y';</code></pre>
+
+<p>시각화: 숫자, 저장: "활성 치료사 수"</p>
+
+<h3>카드 4: 치료사당 평균 매출</h3>
+
+<pre><code>SELECT ROUND(
+(SELECT SUM(b.total_amount)
+ FROM billings b
+ JOIN treatment_sessions ts ON b.session_id = ts.session_id
+ WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+   AND b.payment_status = '완료')
+/
+(SELECT COUNT(*) FROM therapists WHERE is_active = 'Y')
+) as 평균매출;</code></pre>
+
+<p>시각화: 숫자 (₩ 접두사), 저장: "치료사당 평균 매출"</p>
+
+<hr>
+
+<h2>3. 치료사별 실적 비교</h2>
+
+<h3>카드 5: 치료사별 이번 달 실적</h3>
+
+<pre><code>SELECT
+t.name as 치료사,
+COUNT(ts.session_id) as 치료건수,
+COALESCE(SUM(b.total_amount), 0) as 매출,
+ROUND(COALESCE(SUM(b.total_amount), 0) / NULLIF(COUNT(ts.session_id), 0)) as 건당매출
+FROM therapists t
+LEFT JOIN treatment_sessions ts ON t.therapist_id = ts.therapist_id
+AND DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+AND ts.session_status = '완료'
+LEFT JOIN billings b ON ts.session_id = b.session_id
+AND b.payment_status = '완료'
+WHERE t.is_active = 'Y'
+GROUP BY t.therapist_id, t.name
+ORDER BY 매출 DESC;</code></pre>
+
+<p>시각화: 테이블, 저장: "치료사별 이번 달 실적"</p>
+
+<h3>카드 6: 치료사별 매출 비교 (막대)</h3>
+
+<pre><code>SELECT
+t.name as 치료사,
+COALESCE(SUM(b.total_amount), 0) as 매출
+FROM therapists t
+LEFT JOIN treatment_sessions ts ON t.therapist_id = ts.therapist_id
+AND DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+AND ts.session_status = '완료'
+LEFT JOIN billings b ON ts.session_id = b.session_id
+AND b.payment_status = '완료'
+WHERE t.is_active = 'Y'
+GROUP BY t.therapist_id, t.name
+ORDER BY 매출 DESC;</code></pre>
+
+<p>시각화: 막대형, 저장: "치료사별 매출 비교"</p>
+
+<h3>카드 7: 치료사별 치료 건수 비교</h3>
+
+<pre><code>SELECT
+t.name as 치료사,
+COUNT(ts.session_id) as 치료건수
+FROM therapists t
+LEFT JOIN treatment_sessions ts ON t.therapist_id = ts.therapist_id
+AND DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+AND ts.session_status = '완료'
+WHERE t.is_active = 'Y'
+GROUP BY t.therapist_id, t.name
+ORDER BY 치료건수 DESC;</code></pre>
+
+<p>시각화: 막대형, 저장: "치료사별 치료 건수"</p>
+
+<hr>
+
+<h2>4. 월별 추이 분석</h2>
+
+<h3>카드 8: 치료사별 월별 매출 추이</h3>
+
+<pre><code>SELECT
+DATE_FORMAT(ts.session_date, '%Y-%m') as 월,
+t.name as 치료사,
+SUM(b.total_amount) as 매출
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+JOIN billings b ON ts.session_id = b.session_id
+WHERE ts.session_status = '완료'
+AND b.payment_status = '완료'
+AND ts.session_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+GROUP BY DATE_FORMAT(ts.session_date, '%Y-%m'), t.therapist_id, t.name
+ORDER BY 월, t.name;</code></pre>
+
+<p>시각화: 선형, X축: 월, 색상: 치료사, Y축: 매출, 저장: "치료사별 월별 매출"</p>
+
+<h3>카드 9: 치료사별 월별 치료 건수 추이</h3>
+
+<pre><code>SELECT
+DATE_FORMAT(ts.session_date, '%Y-%m') as 월,
+t.name as 치료사,
+COUNT(*) as 건수
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+WHERE ts.session_status = '완료'
+AND ts.session_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+GROUP BY DATE_FORMAT(ts.session_date, '%Y-%m'), t.therapist_id, t.name
+ORDER BY 월, t.name;</code></pre>
+
+<p>시각화: 선형, 저장: "치료사별 월별 건수"</p>
+
+<hr>
+
+<h2>5. 치료 항목별 분석</h2>
+
+<h3>카드 10: 치료사별 항목 비중</h3>
+
+<pre><code>SELECT
+t.name as 치료사,
+f.fee_name as 항목,
+COUNT(*) as 건수,
+SUM(b.total_amount) as 매출
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+JOIN billings b ON ts.session_id = b.session_id
+JOIN fee_items f ON b.fee_code = f.fee_code
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+AND ts.session_status = '완료'
+AND b.total_amount > 0
+GROUP BY t.therapist_id, t.name, f.fee_code, f.fee_name
+ORDER BY t.name, 매출 DESC;</code></pre>
+
+<p>시각화: 테이블, 저장: "치료사별 항목 분석"</p>
+
+<h3>카드 11: 치료사별 주력 항목 (가장 많이 한 치료)</h3>
+
+<pre><code>SELECT
+t.name as 치료사,
+f.fee_name as 주력항목,
+COUNT(*) as 건수
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+JOIN billings b ON ts.session_id = b.session_id
+JOIN fee_items f ON b.fee_code = f.fee_code
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+AND ts.session_status = '완료'
+AND b.total_amount > 0
+GROUP BY t.therapist_id, t.name, f.fee_code, f.fee_name
+HAVING COUNT(*) = (
+SELECT MAX(cnt) FROM (
+    SELECT t2.therapist_id, COUNT(*) as cnt
+    FROM treatment_sessions ts2
+    JOIN billings b2 ON ts2.session_id = b2.session_id
+    WHERE ts2.therapist_id = t.therapist_id
+      AND DATE_FORMAT(ts2.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+      AND ts2.session_status = '완료'
+      AND b2.total_amount > 0
+    GROUP BY ts2.therapist_id, b2.fee_code
+) sub WHERE sub.therapist_id = t.therapist_id
+)
+ORDER BY t.name;</code></pre>
+
+<p>시각화: 테이블, 저장: "치료사별 주력 항목"</p>
+
+<hr>
+
+<h2>6. 환자 관리 지표</h2>
+
+<h3>카드 12: 치료사별 담당 환자 수</h3>
+
+<pre><code>SELECT
+t.name as 치료사,
+COUNT(DISTINCT ts.patient_id) as 담당환자수
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+AND ts.session_status = '완료'
+GROUP BY t.therapist_id, t.name
+ORDER BY 담당환자수 DESC;</code></pre>
+
+<p>시각화: 막대형, 저장: "치료사별 담당 환자 수"</p>
+
+<h3>카드 13: 치료사별 신규 환자 유치</h3>
+
+<pre><code>SELECT
+t.name as 치료사,
+COUNT(DISTINCT ts.patient_id) as 신규환자수
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+AND ts.session_status = '완료'
+AND NOT EXISTS (
+  SELECT 1 FROM treatment_sessions ts2
+  WHERE ts2.patient_id = ts.patient_id
+    AND ts2.session_date < DATE_FORMAT(CURDATE(), '%Y-%m-01')
+)
+GROUP BY t.therapist_id, t.name
+ORDER BY 신규환자수 DESC;</code></pre>
+
+<p>시각화: 막대형, 저장: "치료사별 신규 환자"</p>
+
+<h3>카드 14: 치료사별 환자당 평균 방문 횟수</h3>
+
+<pre><code>SELECT
+t.name as 치료사,
+COUNT(*) as 총치료건수,
+COUNT(DISTINCT ts.patient_id) as 환자수,
+ROUND(COUNT(*) / COUNT(DISTINCT ts.patient_id), 1) as 환자당방문횟수
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+AND ts.session_status = '완료'
+GROUP BY t.therapist_id, t.name
+ORDER BY 환자당방문횟수 DESC;</code></pre>
+
+<p>시각화: 테이블, 저장: "환자당 평균 방문 횟수"</p>
+
+<div class="tip"><strong>💡 환자당 방문 횟수의 의미</strong><br>
+이 숫자가 높으면 환자가 꾸준히 다닌다는 뜻입니다. 치료 효과가 좋거나, 환자와의 신뢰 관계가 좋다는 지표가 될 수 있어요. 너무 낮으면 환자 이탈이 많다는 신호일 수 있습니다.</div>
+
+<hr>
+
+<h2>7. 시간대별 분석</h2>
+
+<h3>카드 15: 치료사별 시간대 분포</h3>
+
+<pre><code>SELECT
+t.name as 치료사,
+CASE
+    WHEN HOUR(ts.start_time) < 12 THEN '오전 (9-12)'
+    WHEN HOUR(ts.start_time) < 15 THEN '오후1 (12-15)'
+    WHEN HOUR(ts.start_time) < 18 THEN '오후2 (15-18)'
+    ELSE '저녁 (18-20)'
+END as 시간대,
+COUNT(*) as 건수
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+AND ts.session_status = '완료'
+GROUP BY t.therapist_id, t.name, 시간대
+ORDER BY t.name;</code></pre>
+
+<p>시각화: 누적 막대형, 저장: "치료사별 시간대 분포"</p>
+
+<h3>카드 16: 치료사별 요일 분포</h3>
+
+<pre><code>SELECT
+t.name as 치료사,
+CASE DAYOFWEEK(ts.session_date)
+    WHEN 1 THEN '일'
+    WHEN 2 THEN '월'
+    WHEN 3 THEN '화'
+    WHEN 4 THEN '수'
+    WHEN 5 THEN '목'
+    WHEN 6 THEN '금'
+    WHEN 7 THEN '토'
+END as 요일,
+COUNT(*) as 건수
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+AND ts.session_status = '완료'
+GROUP BY t.therapist_id, t.name, DAYOFWEEK(ts.session_date)
+ORDER BY t.name, DAYOFWEEK(ts.session_date);</code></pre>
+
+<p>시각화: 히트맵 또는 테이블, 저장: "치료사별 요일 분포"</p>
+
+<hr>
+
+<h2>8. 인센티브 계산</h2>
+
+<p>힐링손의 인센티브 정책을 가정해봅시다:</p>
+
+<table>
+<tr><th>기준</th><th>인센티브</th></tr>
+<tr><td>월 매출 200만원 이상</td><td>초과분의 10%</td></tr>
+<tr><td>신규 환자 유치</td><td>1인당 5만원</td></tr>
+<tr><td>월 치료 건수 50건 이상</td><td>초과 건당 1만원</td></tr>
+</table>
+
+<h3>카드 17: 인센티브 계산표</h3>
+
+<pre><code>SELECT
+t.name as 치료사,
+COALESCE(SUM(b.total_amount), 0) as 매출,
+COUNT(DISTINCT ts.session_id) as 치료건수,
+(SELECT COUNT(DISTINCT ts2.patient_id)
+ FROM treatment_sessions ts2
+ WHERE ts2.therapist_id = t.therapist_id
+   AND DATE_FORMAT(ts2.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+   AND ts2.session_status = '완료'
+   AND NOT EXISTS (
+       SELECT 1 FROM treatment_sessions ts3
+       WHERE ts3.patient_id = ts2.patient_id
+         AND ts3.session_date < DATE_FORMAT(CURDATE(), '%Y-%m-01')
+   )) as 신규환자,
+-- 매출 인센티브: 200만원 초과분의 10%
+GREATEST(0, (COALESCE(SUM(b.total_amount), 0) - 2000000)) * 0.1 as 매출인센티브,
+-- 신규환자 인센티브: 1인당 5만원
+(SELECT COUNT(DISTINCT ts2.patient_id) * 50000
+ FROM treatment_sessions ts2
+ WHERE ts2.therapist_id = t.therapist_id
+   AND DATE_FORMAT(ts2.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+   AND ts2.session_status = '완료'
+   AND NOT EXISTS (
+       SELECT 1 FROM treatment_sessions ts3
+       WHERE ts3.patient_id = ts2.patient_id
+         AND ts3.session_date < DATE_FORMAT(CURDATE(), '%Y-%m-01')
+   )) as 신규인센티브,
+-- 건수 인센티브: 50건 초과분 × 1만원
+GREATEST(0, COUNT(DISTINCT ts.session_id) - 50) * 10000 as 건수인센티브
+FROM therapists t
+LEFT JOIN treatment_sessions ts ON t.therapist_id = ts.therapist_id
+AND DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+AND ts.session_status = '완료'
+LEFT JOIN billings b ON ts.session_id = b.session_id
+AND b.payment_status = '완료'
+WHERE t.is_active = 'Y'
+GROUP BY t.therapist_id, t.name
+ORDER BY 매출 DESC;</code></pre>
+
+<p>시각화: 테이블, 저장: "인센티브 계산표"</p>
+
+<h3>카드 18: 총 인센티브</h3>
+
+<pre><code>SELECT
+t.name as 치료사,
+(
+    GREATEST(0, (COALESCE(SUM(b.total_amount), 0) - 2000000)) * 0.1 +
+    (SELECT COUNT(DISTINCT ts2.patient_id) * 50000
+     FROM treatment_sessions ts2
+     WHERE ts2.therapist_id = t.therapist_id
+       AND DATE_FORMAT(ts2.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+       AND ts2.session_status = '완료'
+       AND NOT EXISTS (
+           SELECT 1 FROM treatment_sessions ts3
+           WHERE ts3.patient_id = ts2.patient_id
+             AND ts3.session_date < DATE_FORMAT(CURDATE(), '%Y-%m-01')
+       )) +
+    GREATEST(0, COUNT(DISTINCT ts.session_id) - 50) * 10000
+) as 총인센티브
+FROM therapists t
+LEFT JOIN treatment_sessions ts ON t.therapist_id = ts.therapist_id
+AND DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+AND ts.session_status = '완료'
+LEFT JOIN billings b ON ts.session_id = b.session_id
+AND b.payment_status = '완료'
+WHERE t.is_active = 'Y'
+GROUP BY t.therapist_id, t.name
+ORDER BY 총인센티브 DESC;</code></pre>
+
+<p>시각화: 막대형, 저장: "치료사별 총 인센티브"</p>
+
+<hr>
+
+<h2>9. 개인별 상세 카드</h2>
+
+<h3>카드 19: 치료사 프로필 (변수 사용)</h3>
+
+<p>특정 치료사를 선택해서 상세 정보를 볼 수 있는 카드입니다.</p>
+
+<pre><code>SELECT
+t.name as 치료사명,
+t.specialization as 전문분야,
+t.hire_date as 입사일,
+TIMESTAMPDIFF(MONTH, t.hire_date, CURDATE()) as 근속개월,
+(SELECT COUNT(*) FROM treatment_sessions ts
+ WHERE ts.therapist_id = t.therapist_id AND ts.session_status = '완료') as 누적치료건수,
+(SELECT COUNT(DISTINCT patient_id) FROM treatment_sessions ts
+ WHERE ts.therapist_id = t.therapist_id AND ts.session_status = '완료') as 누적담당환자
+FROM therapists t
+WHERE t.name = {{치료사명}};</code></pre>
+
+<p>변수 <code>{{치료사명}}</code>을 추가하면 드롭다운으로 치료사를 선택할 수 있습니다.</p>
+
+<hr>
+
+<h2>10. 대시보드 레이아웃</h2>
+
+<h3>권장 레이아웃</h3>
+
+<pre><code>┌─────────────────────────────────────────────────────────┐
+│ 👨‍⚕️ 치료사 실적 대시보드                                  │
+├──────────┬──────────┬──────────┬──────────────────────────┤
+│ 총치료건수 │ 총매출    │ 치료사수  │ 평균매출               │
+│   87건   │ ₩5.2M   │   4명    │ ₩1.3M                 │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│   치료사별 이번 달 실적 (테이블)                           │
+│                                                         │
+├──────────────────────────────┬──────────────────────────┤
+│ 치료사별 매출 비교 (막대)      │ 치료사별 치료 건수 (막대)  │
+├──────────────────────────────┴──────────────────────────┤
+│                                                         │
+│   치료사별 월별 매출 추이 (선형)                           │
+│                                                         │
+├──────────────────────────────┬──────────────────────────┤
+│ 치료사별 담당 환자 수          │ 치료사별 신규 환자        │
+├──────────────────────────────┼──────────────────────────┤
+│ 시간대 분포                   │ 요일 분포               │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│   인센티브 계산표 (테이블)                                │
+│                                                         │
+├─────────────────────────────────────────────────────────┤
+│   치료사별 총 인센티브 (막대)                              │
+└─────────────────────────────────────────────────────────┘</code></pre>
+
+<hr>
+
+<h2>11. 필터 설정</h2>
+
+<h3>월 선택 필터</h3>
+
+<ol>
+<li>편집 모드 → 필터 추가</li>
+<li>시간 필터 (월 단위)</li>
+<li>기본값: 이번 달</li>
+<li>모든 카드에 연결</li>
+</ol>
+
+<h3>치료사 선택 필터</h3>
+
+<ol>
+<li>필터 추가 → 카테고리</li>
+<li>치료사 이름 컬럼 연결</li>
+<li>모두 선택 / 개별 선택 가능</li>
+</ol>
+
+<p>이렇게 하면 특정 치료사만 골라서 볼 수도 있고, 전체를 비교할 수도 있습니다.</p>
+
+<hr>
+
+<h2>12. 활용 시나리오</h2>
+
+<h3>월초: 목표 설정</h3>
+
+<ol>
+<li>지난달 실적 확인</li>
+<li>치료사별 강점/약점 파악</li>
+<li>이번 달 목표 설정</li>
+</ol>
+
+<h3>월중: 진행 상황 체크</h3>
+
+<ol>
+<li>목표 대비 진척률 확인</li>
+<li>뒤처지는 치료사 지원</li>
+<li>잘하는 치료사 노하우 공유</li>
+</ol>
+
+<h3>월말: 정산 및 평가</h3>
+
+<ol>
+<li>최종 실적 확인</li>
+<li>인센티브 계산</li>
+<li>개인별 피드백</li>
+</ol>
+
+<div class="tip"><strong>💡 공정한 평가를 위해</strong><br>
+<ul>
+<li>데이터로 평가하면 감정적 분쟁이 줄어듭니다</li>
+<li>치료사들도 자신의 실적을 실시간으로 확인 가능</li>
+<li>투명한 인센티브 정책으로 동기부여</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>완성된 치료사 실적 대시보드</h2>
+
+<p>치료사 실적 대시보드가 완성되었습니다!</p>
+
+<p>이제 김지훈 원장은:</p>
+
+<ul>
+<li>✅ 실시간으로 각 치료사의 실적 파악</li>
+<li>✅ 공정한 기준으로 인센티브 계산</li>
+<li>✅ 월별 추이로 성장세 확인</li>
+<li>✅ 강점/약점 분석으로 코칭 가능</li>
+<li>✅ 데이터 기반 의사결정</li>
+</ul>
+
+<hr>
+
+<h2>이번 장 요약</h2>
+
+<p>이번 장에서 만든 카드:</p>
+
+<table>
+<tr><th>영역</th><th>카드</th></tr>
+<tr><td>전체 요약</td><td>총 치료건수, 총 매출, 치료사수, 평균매출</td></tr>
+<tr><td>실적 비교</td><td>치료사별 실적 테이블, 매출/건수 막대</td></tr>
+<tr><td>추이 분석</td><td>월별 매출/건수 추이</td></tr>
+<tr><td>환자 지표</td><td>담당 환자수, 신규 환자, 방문 횟수</td></tr>
+<tr><td>시간 분석</td><td>시간대 분포, 요일 분포</td></tr>
+<tr><td>인센티브</td><td>계산표, 총 인센티브</td></tr>
+</table>
+
+<p>다음 장은 마지막 장입니다! 지금까지 만든 모든 것을 정리하고, 앞으로의 활용 방법을 다룹니다.</p>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

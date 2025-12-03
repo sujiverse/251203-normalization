@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[4장] 치료사 실적 관리 - 물리치료사를 위한 DB 2권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>🏥</span> DB 완전정복</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2 active">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📙 2권: SQL 기초 편</h1><p>데이터베이스 활용</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <h1 class="title">[4장] 치료사 실적 관리</h1>
+
+            <div class="intro-box">
+                <p>이번 장에서는 <strong>치료사별 실적을 분석</strong>하는 쿼리를 배웁니다. 치료 횟수, 담당 환자 수, 매출 등을 치료사별로 집계하는 방법을 알아보고, 이를 통해 인사 평가나 업무 배분에 활용할 수 있어요.</p>
+            </div>
+
+            <hr>
+
+            <!-- ===== 쿼리 1: 치료사별 월간 치료 횟수 ===== -->
+            <h2>1. 치료사별 월간 치료 횟수</h2>
+
+            <div class="concept-box">
+                <h3>🎯 이 쿼리가 필요한 상황</h3>
+                <p>"이번 달 누가 제일 많이 치료했지?" - 치료사별 업무량을 파악하고 공정한 업무 배분을 위한 기초 자료로 활용합니다.</p>
+            </div>
+
+            <pre><code>SELECT
+    t.name AS 치료사,
+    COUNT(*) AS 치료횟수
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+WHERE ts.session_date >= '2024-01-01'
+  AND ts.session_date < '2024-02-01'
+GROUP BY t.therapist_id, t.name
+ORDER BY 치료횟수 DESC;</code></pre>
+
+            <div class="explanation-box">
+                <h3>📖 쿼리 뜯어보기</h3>
+
+                <div class="line-explain">
+                    <div class="code-line">COUNT(*) AS 치료횟수</div>
+                    <div class="explain-text">
+                        <strong>COUNT(*)</strong>는 <strong>행의 개수</strong>를 세는 함수예요.<br><br>
+                        각 치료사별로 그룹화했으니까, <strong>각 치료사가 진행한 세션 수</strong>를 세는 거죠.
+
+                        <div class="tip-inline">
+                            <strong>COUNT(*) vs COUNT(컬럼)</strong><br>
+                            • <code>COUNT(*)</code>: 모든 행 개수 (NULL 포함)<br>
+                            • <code>COUNT(컬럼)</code>: 해당 컬럼이 NULL이 아닌 행만
+                        </div>
+                    </div>
+                </div>
+
+                <div class="line-explain highlight-line">
+                    <div class="code-line">WHERE ts.session_date >= '2024-01-01' AND ts.session_date < '2024-02-01'</div>
+                    <div class="explain-text">
+                        <strong>날짜 범위 조건</strong>을 지정하는 패턴입니다.<br><br>
+
+                        <div class="why-box">
+                            <h4>❓ 왜 BETWEEN 대신 이렇게 쓸까요?</h4>
+                            <p><code>BETWEEN '2024-01-01' AND '2024-01-31'</code>도 가능하지만...</p>
+                            <ul>
+                                <li>매달 마지막 날이 다름 (28, 29, 30, 31일)</li>
+                                <li>시간 정보가 있으면 BETWEEN이 부정확할 수 있음</li>
+                            </ul>
+                            <p><strong>권장 패턴</strong>: <code>>= 시작일 AND < 다음달 1일</code></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="line-explain">
+                    <div class="code-line">GROUP BY t.therapist_id, t.name</div>
+                    <div class="explain-text">
+                        <strong>치료사별로 묶기</strong>! 같은 치료사의 모든 세션을 하나로 합칩니다.<br><br>
+
+                        <div class="analogy-box">
+                            <h4>🎭 비유로 이해하기</h4>
+                            <p>반별 학생 수를 세는 것과 같아요.</p>
+                            <p>"1반 30명, 2반 28명, 3반 32명" 처럼<br>
+                            "박치료 45건, 김재활 38건, 이물리 42건"</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="line-explain">
+                    <div class="code-line">ORDER BY 치료횟수 DESC</div>
+                    <div class="explain-text">
+                        치료 횟수가 <strong>많은 순서대로</strong> 정렬합니다.<br>
+                        랭킹처럼 1등부터 보여주는 거예요!
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-example">
+                <h4>📋 실행 결과 예시</h4>
+                <table class="result-table">
+                    <tr><th>치료사</th><th>치료횟수</th></tr>
+                    <tr><td>박치료</td><td>127</td></tr>
+                    <tr><td>이물리</td><td>115</td></tr>
+                    <tr><td>김재활</td><td>98</td></tr>
+                </table>
+            </div>
+
+            <hr>
+
+            <!-- ===== 쿼리 2: 치료사별 담당 환자 수 ===== -->
+            <h2>2. 치료사별 담당 환자 수</h2>
+
+            <div class="concept-box">
+                <h3>🎯 이 쿼리가 필요한 상황</h3>
+                <p>"이 치료사가 몇 명의 환자를 케어하고 있지?" - 단순히 치료 횟수가 아니라, <strong>얼마나 다양한 환자</strong>를 담당하는지 파악합니다.</p>
+            </div>
+
+            <pre><code>SELECT
+    t.name AS 치료사,
+    COUNT(DISTINCT ts.patient_id) AS 담당환자수,
+    COUNT(*) AS 총치료횟수,
+    ROUND(COUNT(*) * 1.0 / COUNT(DISTINCT ts.patient_id), 1) AS 환자당평균치료
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+WHERE ts.session_date >= '2024-01-01'
+  AND ts.session_date < '2024-02-01'
+GROUP BY t.therapist_id, t.name
+ORDER BY 담당환자수 DESC;</code></pre>
+
+            <div class="explanation-box">
+                <h3>📖 새로운 개념: COUNT(DISTINCT)와 ROUND</h3>
+
+                <div class="line-explain highlight-line">
+                    <div class="code-line">COUNT(DISTINCT ts.patient_id) AS 담당환자수</div>
+                    <div class="explain-text">
+                        <strong>DISTINCT</strong>는 "중복 제거"라는 뜻이에요!<br><br>
+
+                        <code>COUNT(DISTINCT 컬럼)</code> = 고유한 값의 개수<br><br>
+
+                        <div class="analogy-box">
+                            <h4>🎭 비유로 이해하기</h4>
+                            <p>출석부를 생각해보세요.</p>
+                            <table class="mini-table">
+                                <tr><th>날짜</th><th>환자ID</th><th>치료사</th></tr>
+                                <tr><td>1/5</td><td>P001</td><td>박치료</td></tr>
+                                <tr><td>1/8</td><td>P001</td><td>박치료</td></tr>
+                                <tr><td>1/10</td><td>P002</td><td>박치료</td></tr>
+                                <tr><td>1/12</td><td>P001</td><td>박치료</td></tr>
+                            </table>
+                            <p><br>박치료의 <code>COUNT(*)</code> = 4 (총 치료 횟수)</p>
+                            <p>박치료의 <code>COUNT(DISTINCT patient_id)</code> = 2 (P001, P002 두 명)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="line-explain highlight-line">
+                    <div class="code-line">ROUND(COUNT(*) * 1.0 / COUNT(DISTINCT ts.patient_id), 1)</div>
+                    <div class="explain-text">
+                        이 부분이 좀 복잡해 보이죠? 천천히 분해해봅시다!<br><br>
+
+                        <strong>1. 계산 내용</strong>: 총치료횟수 ÷ 담당환자수 = 환자당 평균 치료 횟수<br><br>
+
+                        <strong>2. * 1.0을 곱하는 이유</strong>:<br>
+                        SQL에서 정수 ÷ 정수 = 정수가 됩니다!<br>
+                        <code>5 / 2 = 2</code> (소수점 버림 😱)<br>
+                        <code>5 * 1.0 / 2 = 2.5</code> (소수점 유지 ✓)<br><br>
+
+                        <strong>3. ROUND(값, 자릿수)</strong>: 반올림<br>
+                        <code>ROUND(3.567, 1)</code> → 3.6 (소수점 첫째자리까지)<br>
+                        <code>ROUND(3.567, 0)</code> → 4 (정수로)<br><br>
+
+                        <div class="why-box">
+                            <h4>❓ 환자당 평균 치료가 왜 중요할까요?</h4>
+                            <p>• 평균이 높으면 → 소수 환자를 꾸준히 케어 (충성도 높은 환자)</p>
+                            <p>• 평균이 낮으면 → 많은 환자를 조금씩 (신환 위주)</p>
+                            <p>치료사의 업무 스타일을 파악할 수 있어요!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-example">
+                <h4>📋 실행 결과 예시</h4>
+                <table class="result-table">
+                    <tr><th>치료사</th><th>담당환자수</th><th>총치료횟수</th><th>환자당평균치료</th></tr>
+                    <tr><td>박치료</td><td>35</td><td>127</td><td>3.6</td></tr>
+                    <tr><td>이물리</td><td>42</td><td>115</td><td>2.7</td></tr>
+                    <tr><td>김재활</td><td>28</td><td>98</td><td>3.5</td></tr>
+                </table>
+                <p class="result-note">박치료는 적은 환자를 자주, 이물리는 많은 환자를 가끔 치료하는 스타일!</p>
+            </div>
+
+            <hr>
+
+            <!-- ===== 쿼리 3: 치료사별 매출 ===== -->
+            <h2>3. 치료사별 매출</h2>
+
+            <div class="concept-box">
+                <h3>🎯 이 쿼리가 필요한 상황</h3>
+                <p>"이번 달 매출 기여도가 높은 치료사는?" - 치료 횟수뿐 아니라 <strong>실제 매출 기여도</strong>를 파악합니다. 인센티브 산정의 기초 자료가 됩니다.</p>
+            </div>
+
+            <pre><code>SELECT
+    t.name AS 치료사,
+    COUNT(DISTINCT ts.session_id) AS 치료건,
+    SUM(b.total_amount) AS 총매출,
+    ROUND(SUM(b.total_amount) / COUNT(DISTINCT ts.session_id), 0) AS 건당매출
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+JOIN billings b ON ts.session_id = b.session_id
+WHERE ts.session_date >= '2024-01-01'
+  AND ts.session_date < '2024-02-01'
+GROUP BY t.therapist_id, t.name
+ORDER BY 총매출 DESC;</code></pre>
+
+            <div class="explanation-box">
+                <h3>📖 SUM 함수와 건당 매출 계산</h3>
+
+                <div class="line-explain">
+                    <div class="code-line">SUM(b.total_amount) AS 총매출</div>
+                    <div class="explain-text">
+                        <strong>SUM</strong>은 합계를 구하는 함수예요.<br><br>
+                        각 치료사별로 그룹화했으니까, <strong>각 치료사가 만든 총 매출</strong>을 합산합니다.<br><br>
+
+                        <div class="tip-inline">
+                            <strong>집계 함수 정리</strong><br>
+                            • <code>COUNT()</code>: 개수<br>
+                            • <code>SUM()</code>: 합계<br>
+                            • <code>AVG()</code>: 평균<br>
+                            • <code>MAX()</code>: 최대값<br>
+                            • <code>MIN()</code>: 최소값
+                        </div>
+                    </div>
+                </div>
+
+                <div class="line-explain">
+                    <div class="code-line">ROUND(SUM(b.total_amount) / COUNT(DISTINCT ts.session_id), 0)</div>
+                    <div class="explain-text">
+                        <strong>건당 매출</strong> = 총매출 ÷ 치료 건수<br><br>
+
+                        이 값이 높으면 → 단가가 높은 치료(도수치료 등)를 많이 한 것<br>
+                        이 값이 낮으면 → 단가가 낮은 치료(물리치료 등) 위주<br><br>
+
+                        <code>ROUND(..., 0)</code>: 정수로 반올림 (원 단위는 소수점 필요 없으니까)
+                    </div>
+                </div>
+
+                <div class="line-explain">
+                    <div class="code-line">JOIN billings b ON ts.session_id = b.session_id</div>
+                    <div class="explain-text">
+                        <strong>billings 테이블을 JOIN</strong>해서 매출 정보를 가져옵니다.<br><br>
+
+                        <div class="why-box">
+                            <h4>❓ 왜 billings를 JOIN할까요?</h4>
+                            <p>treatment_sessions에는 "언제, 누가 치료했는지"만 있어요.</p>
+                            <p>"얼마를 받았는지"는 billings 테이블에 있습니다!</p>
+                            <p>그래서 매출 분석을 하려면 반드시 billings를 연결해야 해요.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-example">
+                <h4>📋 실행 결과 예시</h4>
+                <table class="result-table">
+                    <tr><th>치료사</th><th>치료건</th><th>총매출</th><th>건당매출</th></tr>
+                    <tr><td>박치료</td><td>127</td><td>5,080,000</td><td>40,000</td></tr>
+                    <tr><td>김재활</td><td>98</td><td>4,410,000</td><td>45,000</td></tr>
+                    <tr><td>이물리</td><td>115</td><td>2,300,000</td><td>20,000</td></tr>
+                </table>
+                <p class="result-note">김재활은 치료 건수는 적지만 건당 매출이 높아요! (도수치료 전문?)</p>
+            </div>
+
+            <div class="summary-box">
+                <h3>📝 이번 장 핵심 정리</h3>
+                <table class="summary-table">
+                    <tr>
+                        <th>함수/문법</th>
+                        <th>역할</th>
+                        <th>예시</th>
+                    </tr>
+                    <tr>
+                        <td><strong>COUNT(*)</strong></td>
+                        <td>전체 행 개수</td>
+                        <td>총 치료 횟수</td>
+                    </tr>
+                    <tr>
+                        <td><strong>COUNT(DISTINCT)</strong></td>
+                        <td>중복 제거 후 개수</td>
+                        <td>고유한 환자 수</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SUM()</strong></td>
+                        <td>합계</td>
+                        <td>총 매출 합산</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ROUND(값, 자릿수)</strong></td>
+                        <td>반올림</td>
+                        <td>소수점 정리</td>
+                    </tr>
+                    <tr>
+                        <td><strong>* 1.0</strong></td>
+                        <td>정수 → 실수 변환</td>
+                        <td>나눗셈 시 소수점 유지</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="tip">
+                <strong>💡 실무 활용 팁</strong><br><br>
+                이 쿼리들을 조합하면 <strong>치료사 성과 리포트</strong>를 만들 수 있어요!<br>
+                • 치료 횟수: 업무량 지표<br>
+                • 담당 환자 수: 환자 관리 능력<br>
+                • 총 매출: 매출 기여도<br>
+                • 건당 매출: 치료 효율성
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-3.html" class="nav-btn">← 이전</a>
+                <span class="page-num">4 / 12</span>
+                <a href="chapter-5.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

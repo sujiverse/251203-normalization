@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>25장: 매출 현황 시트 - 물리치료사를 위한 DB 4권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "4"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📕 물리치료사를 위한</h1>
+                <p>웹 앱 만들기 (4권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">매출 현황 시트</h1>
+
+            <h2>매출 시트 구조</h2>
+
+            <pre class="file-tree">┌─────────────────────────────────────────────────────────────────┐
+│  💰 매출 현황   기간: [2024-12] ▼   [조회]                       │
+├───────────┬─────────┬─────────┬─────────┬─────────┬────────────┤
+│ 날짜      │ 환자명  │ 치료 종류│ 금액    │ 결제방법 │ 치료사     │
+├───────────┼─────────┼─────────┼─────────┼─────────┼────────────┤
+│ 12/01     │ 김철수  │ 물리치료│ 50,000  │ 카드    │ 김치료     │
+│ 12/01     │ 이영희  │ 도수치료│ 80,000  │ 현금    │ 이치료     │
+│ 12/02     │ 박민수  │ 물리치료│ 50,000  │ 카드    │ 박치료     │
+├───────────┴─────────┴─────────┼─────────┼─────────┴────────────┤
+│                     합계      │ 180,000 │                      │
+└───────────────────────────────┴─────────┴──────────────────────┘</pre>
+
+            <hr>
+
+            <h2>매출 데이터 API</h2>
+
+            <pre><code># app.py
+
+@app.route('/api/revenue/sheet')
+def get_revenue_for_sheet():
+    year = request.args.get('year', datetime.now().year)
+    month = request.args.get('month', datetime.now().month)
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT
+                ts.session_date,
+                p.name as patient_name,
+                tt.treatment_name,
+                ts.fee,
+                ts.payment_method,
+                t.name as therapist_name
+            FROM treatment_sessions ts
+            JOIN patients p ON ts.patient_id = p.patient_id
+            JOIN treatment_types tt ON ts.treatment_type_id = tt.treatment_type_id
+            JOIN therapists t ON ts.therapist_id = t.therapist_id
+            WHERE YEAR(ts.session_date) = %s
+              AND MONTH(ts.session_date) = %s
+              AND ts.status = '완료'
+            ORDER BY ts.session_date, ts.start_time
+        """, (year, month))
+
+        sessions = cursor.fetchall()
+
+        # 합계 계산
+        total = sum(s['fee'] or 0 for s in sessions)
+
+        # 결제방법별 합계
+        by_payment = {}
+        for s in sessions:
+            method = s['payment_method'] or '미정'
+            by_payment[method] = by_payment.get(method, 0) + (s['fee'] or 0)
+
+        return jsonify({
+            'success': True,
+            'sessions': sessions,
+            'total': total,
+            'by_payment': by_payment
+        })
+    finally:
+        conn.close()</code></pre>
+
+            <hr>
+
+            <h2>시트 데이터 생성</h2>
+
+            <pre><code>// static/js/revenue-sheet.js
+
+const REVENUE_COLUMNS = [
+    { key: 'session_date', title: '날짜', width: 100 },
+    { key: 'patient_name', title: '환자명', width: 80 },
+    { key: 'treatment_name', title: '치료 종류', width: 100 },
+    { key: 'fee', title: '금액', width: 100 },
+    { key: 'payment_method', title: '결제방법', width: 80 },
+    { key: 'therapist_name', title: '치료사', width: 80 }
+];
+
+function createRevenueSheetData(sessions, total, byPayment) {
+    const celldata = [];
+
+    // 헤더 행
+    REVENUE_COLUMNS.forEach((col, i) => {
+        celldata.push({
+            r: 0, c: i,
+            v: {
+                v: col.key,
+                m: col.title,
+                bg: '#1e293b',
+                fc: '#ffffff',
+                bl: 1,
+                ht: 1
+            }
+        });
+    });
+
+    // 데이터 행
+    sessions.forEach((session, rowIdx) => {
+        REVENUE_COLUMNS.forEach((col, colIdx) => {
+            let value = session[col.key];
+            let displayValue = value;
+            let style = { ht: 1 };
+
+            // 날짜 포맷
+            if (col.key === 'session_date') {
+                displayValue = formatDateShort(value);
+            }
+
+            // 금액 포맷
+            if (col.key === 'fee') {
+                displayValue = formatCurrency(value);
+                style.ht = 2;  // 오른쪽 정렬
+            }
+
+            // 결제방법 색상
+            if (col.key === 'payment_method') {
+                if (value === '카드') {
+                    style.bg = '#dbeafe';
+                    style.fc = '#1e40af';
+                } else if (value === '현금') {
+                    style.bg = '#dcfce7';
+                    style.fc = '#166534';
+                }
+            }
+
+            celldata.push({
+                r: rowIdx + 1,
+                c: colIdx,
+                v: { v: value, m: displayValue || '', ...style }
+            });
+        });
+    });
+
+    // 합계 행
+    const totalRow = sessions.length + 1;
+
+    // "합계" 라벨
+    celldata.push({
+        r: totalRow, c: 0,
+        v: {
+            v: 'total',
+            m: '합계',
+            bg: '#fef3c7',
+            fc: '#92400e',
+            bl: 1,
+            ht: 1
+        }
+    });
+
+    // 합계 금액
+    celldata.push({
+        r: totalRow, c: 3,
+        v: {
+            v: total,
+            m: formatCurrency(total),
+            bg: '#fef3c7',
+            fc: '#92400e',
+            bl: 1,
+            ht: 2
+        }
+    });
+
+    return celldata;
+}
+
+function formatDateShort(dateStr) {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+function formatCurrency(amount) {
+    if (!amount) return '0';
+    return amount.toLocaleString() + '원';
+}</code></pre>
+
+            <hr>
+
+            <h2>시트 초기화</h2>
+
+            <pre><code>async function initRevenueSheet() {
+    const yearMonth = document.getElementById('yearMonth').value;
+    const [year, month] = yearMonth.split('-');
+
+    const response = await fetch(
+        `/api/revenue/sheet?year=${year}&month=${month}`
+    );
+    const { sessions, total, by_payment } = await response.json();
+
+    const celldata = createRevenueSheetData(sessions, total, by_payment);
+
+    // 열 너비
+    const columnlen = {};
+    REVENUE_COLUMNS.forEach((col, i) => {
+        columnlen[i] = col.width;
+    });
+
+    if (window.luckysheet && luckysheet.destroy) {
+        luckysheet.destroy();
+    }
+
+    luckysheet.create({
+        container: 'luckysheet',
+        title: '매출 현황',
+        lang: 'ko',
+        showtoolbar: false,
+        showsheetbar: false,
+        showstatisticBar: false,
+        allowEdit: false,  // 읽기 전용
+        data: [{
+            name: '매출',
+            celldata: celldata,
+            row: sessions.length + 2,
+            column: REVENUE_COLUMNS.length,
+            frozen: {
+                type: 'rangeRow',
+                range: { row_focus: 0 }
+            },
+            config: { columnlen }
+        }]
+    });
+
+    // 요약 정보 표시
+    updateSummary(total, by_payment);
+}
+
+function updateSummary(total, byPayment) {
+    const summary = document.getElementById('summary');
+    summary.innerHTML = `
+        &lt;div class="summary-item"&gt;
+            &lt;span&gt;총 매출&lt;/span&gt;
+            &lt;strong&gt;${formatCurrency(total)}&lt;/strong&gt;
+        &lt;/div&gt;
+        ${Object.entries(byPayment).map(([method, amount]) => `
+            &lt;div class="summary-item"&gt;
+                &lt;span&gt;${method}&lt;/span&gt;
+                &lt;span&gt;${formatCurrency(amount)}&lt;/span&gt;
+            &lt;/div&gt;
+        `).join('')}
+    `;
+}</code></pre>
+
+            <hr>
+
+            <h2>HTML 구조</h2>
+
+            <pre><code>&lt;!-- templates/revenue.html --&gt;
+{% extends "base.html" %}
+
+{% block content %}
+&lt;div class="sheet-page"&gt;
+    &lt;div class="sheet-header"&gt;
+        &lt;h1&gt;💰 매출 현황&lt;/h1&gt;
+
+        &lt;div class="controls"&gt;
+            &lt;label&gt;기간&lt;/label&gt;
+            &lt;input type="month" id="yearMonth"&gt;
+            &lt;button onclick="initRevenueSheet()"&gt;조회&lt;/button&gt;
+            &lt;button onclick="exportExcel()"&gt;엑셀 다운로드&lt;/button&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;!-- 요약 정보 --&gt;
+    &lt;div class="summary" id="summary"&gt;&lt;/div&gt;
+
+    &lt;!-- 시트 --&gt;
+    &lt;div id="luckysheet"&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;style&gt;
+.summary {
+    display: flex;
+    gap: 30px;
+    padding: 15px 20px;
+    background: white;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+.summary-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.summary-item span { color: #64748b; font-size: 13px; }
+.summary-item strong { font-size: 20px; color: #1e293b; }
+&lt;/style&gt;
+
+&lt;script&gt;
+document.addEventListener('DOMContentLoaded', () => {
+    // 이번 달로 초기화
+    const now = new Date();
+    const yearMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    document.getElementById('yearMonth').value = yearMonth;
+
+    initRevenueSheet();
+});
+&lt;/script&gt;
+{% endblock %}</code></pre>
+
+            <hr>
+
+            <h2>엑셀 다운로드</h2>
+
+            <pre><code>// Luckysheet 데이터를 엑셀로 내보내기
+function exportExcel() {
+    // luckysheet의 exportXlsx 기능 사용
+    luckysheet.download('xlsx');
+}
+
+// 또는 서버에서 생성
+async function exportExcelFromServer() {
+    const yearMonth = document.getElementById('yearMonth').value;
+    const [year, month] = yearMonth.split('-');
+
+    // 엑셀 파일 다운로드
+    window.location.href =
+        `/api/revenue/export?year=${year}&month=${month}`;
+}
+
+# 백엔드 (openpyxl 사용)
+from openpyxl import Workbook
+from flask import send_file
+import io
+
+@app.route('/api/revenue/export')
+def export_revenue_excel():
+    year = request.args.get('year')
+    month = request.args.get('month')
+
+    # 데이터 조회 (기존 쿼리 재사용)
+    # ...
+
+    # 엑셀 생성
+    wb = Workbook()
+    ws = wb.active
+    ws.title = f'{year}년 {month}월 매출'
+
+    # 헤더
+    headers = ['날짜', '환자명', '치료 종류', '금액', '결제방법', '치료사']
+    ws.append(headers)
+
+    # 데이터
+    for session in sessions:
+        ws.append([
+            session['session_date'],
+            session['patient_name'],
+            session['treatment_name'],
+            session['fee'],
+            session['payment_method'],
+            session['therapist_name']
+        ])
+
+    # 합계
+    ws.append(['', '', '합계', total, '', ''])
+
+    # 파일로 저장
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=f'매출_{year}_{month}.xlsx'
+    )</code></pre>
+
+            <hr>
+
+            <h2>월별 비교 차트 (선택)</h2>
+
+            <pre><code>&lt;!-- Chart.js CDN --&gt;
+&lt;script src="https://cdn.jsdelivr.net/npm/chart.js"&gt;&lt;/script&gt;
+
+&lt;canvas id="revenueChart" height="100"&gt;&lt;/canvas&gt;
+
+&lt;script&gt;
+async function loadRevenueChart() {
+    const response = await fetch('/api/revenue/monthly');
+    const { data } = await response.json();
+
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.map(d => d.month),
+            datasets: [{
+                label: '월별 매출',
+                data: data.map(d => d.total),
+                backgroundColor: '#ef4444'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: value => value.toLocaleString() + '원'
+                    }
+                }
+            }
+        }
+    });
+}
+&lt;/script&gt;</code></pre>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li>매출 데이터를 시트 형태로 표시했습니다</li>
+                <li>합계와 결제방법별 요약을 계산합니다</li>
+                <li>엑셀 다운로드 기능을 구현했습니다</li>
+                <li>읽기 전용 시트로 데이터 보호</li>
+            </ul>
+
+            <blockquote>다음 장에서는 로그인 기능을 추가합니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>29장: 완성! 운영 가이드 - 물리치료사를 위한 DB 4권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "4"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📕 물리치료사를 위한</h1>
+                <p>웹 앱 만들기 (4권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">완성! 운영 가이드</h1>
+
+            <h2>축하합니다! 🎉</h2>
+
+            <p>4권을 완료했습니다. 이제 여러분은:</p>
+
+            <ul>
+                <li>✅ 웹 애플리케이션의 구조를 이해합니다</li>
+                <li>✅ Flask로 백엔드 API를 만들 수 있습니다</li>
+                <li>✅ JavaScript로 프론트엔드를 구현할 수 있습니다</li>
+                <li>✅ Luckysheet로 엑셀 같은 UI를 만들 수 있습니다</li>
+                <li>✅ DB와 화면을 연동할 수 있습니다</li>
+            </ul>
+
+            <hr>
+
+            <h2>완성된 시스템 구조</h2>
+
+            <pre class="file-tree">healing_hands/
+├── app.py                    # Flask 메인 앱
+├── run_server.py             # Waitress 서버
+├── requirements.txt          # Python 패키지
+├── .env                      # 환경변수
+│
+├── static/
+│   ├── css/
+│   │   └── style.css
+│   ├── js/
+│   │   ├── sheet.js          # 예약 시트
+│   │   ├── patients-sheet.js # 환자 시트
+│   │   └── revenue-sheet.js  # 매출 시트
+│   └── luckysheet/           # Luckysheet 라이브러리
+│
+├── templates/
+│   ├── base.html
+│   ├── login.html
+│   ├── index.html
+│   ├── reservations.html
+│   ├── patients.html
+│   └── revenue.html
+│
+└── backup/                   # 백업 폴더</pre>
+
+            <hr>
+
+            <h2>일일 운영 체크리스트</h2>
+
+            <table>
+                <tr>
+                    <th>시간</th>
+                    <th>작업</th>
+                    <th>확인</th>
+                </tr>
+                <tr>
+                    <td>출근 시</td>
+                    <td>서버 정상 동작 확인</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>출근 시</td>
+                    <td>오늘 예약 확인</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>수시</td>
+                    <td>예약 변경사항 반영</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>퇴근 시</td>
+                    <td>오늘 치료 완료 체크</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>퇴근 시</td>
+                    <td>백업 확인</td>
+                    <td>☐</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>주간 운영 체크리스트</h2>
+
+            <table>
+                <tr>
+                    <th>요일</th>
+                    <th>작업</th>
+                </tr>
+                <tr>
+                    <td>월요일</td>
+                    <td>이번 주 예약 현황 확인</td>
+                </tr>
+                <tr>
+                    <td>금요일</td>
+                    <td>주간 매출 확인</td>
+                </tr>
+                <tr>
+                    <td>금요일</td>
+                    <td>다음 주 예약 준비</td>
+                </tr>
+                <tr>
+                    <td>토요일</td>
+                    <td>주간 백업 확인</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>월간 운영 체크리스트</h2>
+
+            <ul>
+                <li>☐ 월간 매출 리포트 생성</li>
+                <li>☐ 환자 데이터 정리 (비활성 환자 확인)</li>
+                <li>☐ 백업 파일 정리 (오래된 백업 삭제)</li>
+                <li>☐ 사용자 계정 점검</li>
+                <li>☐ 로그 파일 확인</li>
+            </ul>
+
+            <hr>
+
+            <h2>문제 해결 가이드</h2>
+
+            <h3>서버가 안 켜져요</h3>
+
+            <pre><code>1. 포트 충돌 확인
+   netstat -an | findstr 5000
+
+2. 다른 프로세스가 5000 포트 사용 중이면 종료
+   또는 다른 포트로 변경
+
+3. Python 오류 확인
+   python app.py  # 에러 메시지 확인</code></pre>
+
+            <h3>DB 연결 오류</h3>
+
+            <pre><code>1. MySQL 서비스 실행 확인
+   - 서비스 → MySQL 시작
+
+2. 연결 정보 확인
+   - .env 파일의 DB_HOST, DB_PASSWORD 확인
+
+3. 직접 접속 테스트
+   mysql -u root -p healing_hands</code></pre>
+
+            <h3>화면이 느려요</h3>
+
+            <pre><code>1. 데이터 양 확인
+   - 너무 많은 날짜 범위를 한 번에 표시하면 느림
+   - 2주 정도가 적당
+
+2. 인덱스 확인 (3권 참고)
+
+3. 브라우저 캐시 지우기</code></pre>
+
+            <h3>예약이 안 보여요</h3>
+
+            <pre><code>1. 날짜 범위 확인
+   - 예약이 있는 날짜가 표시 범위 내인지
+
+2. 새로고침 버튼 클릭
+
+3. 브라우저 개발자 도구 → Network 탭에서 API 응답 확인</code></pre>
+
+            <hr>
+
+            <h2>확장 아이디어</h2>
+
+            <h3>기능 추가</h3>
+
+            <ul>
+                <li><strong>문자 알림</strong>: 예약 전날 환자에게 문자 발송</li>
+                <li><strong>대시보드</strong>: 실시간 현황 요약</li>
+                <li><strong>리포트</strong>: 월간/연간 통계</li>
+                <li><strong>모바일 앱</strong>: 외부에서도 확인</li>
+            </ul>
+
+            <h3>시스템 개선</h3>
+
+            <ul>
+                <li><strong>HTTPS</strong>: SSL 인증서 적용</li>
+                <li><strong>클라우드</strong>: AWS, GCP 등 클라우드 배포</li>
+                <li><strong>모니터링</strong>: 서버 상태 모니터링</li>
+            </ul>
+
+            <hr>
+
+            <h2>4권 전체 요약</h2>
+
+            <table>
+                <tr>
+                    <th>파트</th>
+                    <th>내용</th>
+                </tr>
+                <tr>
+                    <td>Part 1</td>
+                    <td>웹 앱 소개, 프로젝트 구조</td>
+                </tr>
+                <tr>
+                    <td>Part 2</td>
+                    <td>Flask 기초, 라우팅, JSON</td>
+                </tr>
+                <tr>
+                    <td>Part 3</td>
+                    <td>DB 연결, API 만들기</td>
+                </tr>
+                <tr>
+                    <td>Part 4</td>
+                    <td>HTML, CSS, JavaScript</td>
+                </tr>
+                <tr>
+                    <td>Part 5</td>
+                    <td>Luckysheet 엑셀 UI</td>
+                </tr>
+                <tr>
+                    <td>Part 6</td>
+                    <td>DB ↔ 화면 연동</td>
+                </tr>
+                <tr>
+                    <td>Part 7</td>
+                    <td>실전 화면 구현</td>
+                </tr>
+                <tr>
+                    <td>Part 8</td>
+                    <td>배포와 보안</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>시리즈 완료!</h2>
+
+            <pre class="file-tree">물리치료사를 위한 데이터베이스 시리즈
+├── 📗 1권: 정규화 기초 편
+│   └── 왜 테이블을 쪼개야 하는지
+│
+├── 📙 2권: SQL 기초 편
+│   └── 데이터를 어떻게 다루는지
+│
+├── 📘 3권: 실전 DB 구축 편
+│   └── 실제로 DB를 어떻게 만드는지
+│
+└── 📕 4권: 웹 앱 만들기 편
+    └── DB를 화면으로 어떻게 보는지</pre>
+
+            <hr>
+
+            <h2>마무리 인사</h2>
+
+            <p>
+                긴 여정을 함께해 주셔서 감사합니다.
+            </p>
+
+            <p>
+                처음에는 복잡해 보이던 데이터베이스와 웹 애플리케이션이
+                이제는 조금 친숙해졌기를 바랍니다.
+            </p>
+
+            <p>
+                완벽할 필요는 없습니다.
+                조금씩 배우고, 조금씩 만들어 가면 됩니다.
+            </p>
+
+            <p>
+                <strong>수고하셨습니다! 🎉</strong>
+            </p>
+
+            <hr>
+
+            <h2>도움이 필요하면</h2>
+
+            <ul>
+                <li><strong>Flask 문서</strong>: flask.palletsprojects.com</li>
+                <li><strong>Luckysheet</strong>: github.com/mengshukeji/Luckysheet</li>
+                <li><strong>MySQL 문서</strong>: dev.mysql.com/doc</li>
+            </ul>
+
+            <blockquote>
+                데이터베이스와 웹 개발의 세계에서<br>
+                여러분의 클리닉이 더욱 효율적으로 운영되기를 바랍니다!
+            </blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn" disabled style="opacity:0.5;">완료</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>부록: 쿼리 레시피북 - 물리치료사를 위한 DB 2권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>🏥</span> DB 완전정복</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2 active">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📙 2권: SQL 기초 편</h1><p>데이터베이스 활용</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <h1 class="title">📋 부록: 쿼리 레시피북</h1>
+            <p>복사해서 바로 쓸 수 있는 실무 쿼리 모음입니다.<br>
+            날짜와 이름만 바꿔서 사용하세요!</p>
+            <hr>
+
+            <h2>🔍 환자 조회</h2>
+
+            <h3>이름으로 환자 찾기</h3>
+            <pre><code>SELECT * FROM patients WHERE name LIKE '%홍길동%';</code></pre>
+
+            <h3>전화번호로 환자 찾기</h3>
+            <pre><code>SELECT * FROM patients WHERE phone LIKE '%1234%';</code></pre>
+
+            <h3>오늘 생일인 환자</h3>
+            <pre><code>SELECT name, phone, birth_date
+FROM patients
+WHERE MONTH(birth_date) = MONTH(CURDATE())
+  AND DAY(birth_date) = DAY(CURDATE());</code></pre>
+            <hr>
+
+            <h2>📅 예약/일정 관리</h2>
+
+            <h3>오늘 예약 목록</h3>
+            <pre><code>SELECT
+    TIME_FORMAT(ts.start_time, '%H:%i') AS 시간,
+    p.name AS 환자,
+    t.name AS 치료사
+FROM treatment_sessions ts
+JOIN patients p ON ts.patient_id = p.patient_id
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+WHERE ts.session_date = CURDATE()
+ORDER BY ts.start_time;</code></pre>
+
+            <h3>내일 예약 목록</h3>
+            <pre><code>SELECT
+    TIME_FORMAT(ts.start_time, '%H:%i') AS 시간,
+    p.name AS 환자,
+    p.phone AS 연락처,
+    t.name AS 치료사
+FROM treatment_sessions ts
+JOIN patients p ON ts.patient_id = p.patient_id
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+WHERE ts.session_date = DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+ORDER BY ts.start_time;</code></pre>
+            <hr>
+
+            <h2>📞 해피콜/리콜 관리</h2>
+
+            <h3>7일 이상 미방문 환자</h3>
+            <pre><code>SELECT
+    p.name, p.phone,
+    MAX(ts.session_date) AS 마지막방문,
+    DATEDIFF(CURDATE(), MAX(ts.session_date)) AS 경과일
+FROM patients p
+JOIN treatment_sessions ts ON p.patient_id = ts.patient_id
+GROUP BY p.patient_id, p.name, p.phone
+HAVING DATEDIFF(CURDATE(), MAX(ts.session_date)) >= 7
+ORDER BY 경과일 DESC;</code></pre>
+
+            <h3>14일 이상 미방문 환자</h3>
+            <pre><code>SELECT
+    p.name, p.phone,
+    MAX(ts.session_date) AS 마지막방문,
+    DATEDIFF(CURDATE(), MAX(ts.session_date)) AS 경과일
+FROM patients p
+JOIN treatment_sessions ts ON p.patient_id = ts.patient_id
+GROUP BY p.patient_id, p.name, p.phone
+HAVING DATEDIFF(CURDATE(), MAX(ts.session_date)) >= 14
+ORDER BY 경과일 DESC;</code></pre>
+            <hr>
+
+            <h2>💰 매출 관리</h2>
+
+            <h3>오늘 매출</h3>
+            <pre><code>SELECT
+    SUM(b.total_amount) AS 총매출,
+    SUM(CASE WHEN b.payment_status = '완료' THEN b.total_amount ELSE 0 END) AS 수납완료,
+    SUM(CASE WHEN b.payment_status = '대기' THEN b.total_amount ELSE 0 END) AS 미수금
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+WHERE ts.session_date = CURDATE();</code></pre>
+
+            <h3>이번 달 매출</h3>
+            <pre><code>SELECT
+    SUM(b.total_amount) AS 총매출
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+WHERE ts.session_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
+  AND ts.session_date < DATE_ADD(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 1 MONTH);</code></pre>
+            <hr>
+
+            <h2>👨‍⚕️ 치료사 실적</h2>
+
+            <h3>치료사별 이번 달 치료 횟수</h3>
+            <pre><code>SELECT
+    t.name AS 치료사,
+    COUNT(*) AS 치료횟수
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+WHERE ts.session_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
+GROUP BY t.therapist_id, t.name
+ORDER BY 치료횟수 DESC;</code></pre>
+
+            <h3>치료사별 이번 달 매출</h3>
+            <pre><code>SELECT
+    t.name AS 치료사,
+    SUM(b.total_amount) AS 매출
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+JOIN billings b ON ts.session_id = b.session_id
+WHERE ts.session_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
+GROUP BY t.therapist_id, t.name
+ORDER BY 매출 DESC;</code></pre>
+            <hr>
+
+            <div class="tip"><strong>💡 날짜 변경 팁</strong><br>
+            <code>CURDATE()</code> → 오늘 날짜<br>
+            <code>'2024-01-01'</code> → 원하는 날짜로 바꿔서 사용</div>
+
+            <div class="nav-buttons">
+                <a href="chapter-11.html" class="nav-btn">← 이전</a>
+                <span class="page-num">12 / 12</span>
+                <button class="nav-btn" disabled>다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[4권] 제2정규형 (2NF) - 물리치료사를 위한 DB</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "1"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📗 1권: 정규화 편</h1>
+                <p>데이터베이스 기초 개념</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">[4권] 제2정규형 (2NF)</h1>
+
+            <h2>복합키란?</h2>
+            <p>두 개 이상의 컬럼을 합쳐서 만든 기본키</p>
+            <pre><code>[치료기록] - 기본키: (환자번호 + 치료일)
+환자번호 | 치료일     | 치료내용
+P001     | 2024-01-15 | 도수치료
+P001     | 2024-01-17 | 운동치료  ← 같은 환자도 다른 날이면 다른 행</code></pre>
+            <hr>
+
+            <h2>부분 종속이란?</h2>
+            <p><strong>부분 종속</strong>: 복합키의 <strong>일부</strong>에만 종속되는 것</p>
+            <pre><code>[치료기록] - 2NF 위반!
+환자번호(PK) | 치료일(PK) | 환자명 | 환자연락처 | 치료내용
+P001         | 2024-01-15 | 김철수 | 010-1234   | 도수치료
+P001         | 2024-01-17 | 김철수 | 010-1234   | 운동치료</code></pre>
+            <h3>판별 질문</h3>
+            <blockquote>"이 값을 알려면 기본키 전체가 필요한가, 일부만 있어도 되나?"</blockquote>
+            <ul>
+                <li><strong>환자명</strong> → 환자번호만 알면 됨! (부분 종속 ⚠️)</li>
+                <li><strong>치료내용</strong> → 둘 다 필요 (완전 종속 ✓)</li>
+            </ul>
+            <hr>
+
+            <h2 class="success">해결: 부분 종속 컬럼 분리</h2>
+            <pre><code>[환자] 테이블
+환자번호(PK) | 환자명 | 환자연락처
+P001         | 김철수 | 010-1234  ← 한 번만 저장!
+
+[치료기록] 테이블
+환자번호(FK) | 치료일(PK) | 치료내용
+P001         | 2024-01-15 | 도수치료
+P001         | 2024-01-17 | 운동치료</code></pre>
+
+            <div class="nav-buttons">
+                <a href="chapter-3.html" class="nav-btn">← 이전</a>
+                <span class="page-num">4 / 12</span>
+                <a href="chapter-5.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/nav.js"></script>
+</body>
+</html>

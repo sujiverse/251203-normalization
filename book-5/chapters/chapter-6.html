@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>6장: 인증과 세션 관리 - 물리치료사를 위한 DB 5권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "5"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>🛡️ 5권: 보안 편</h1>
+                <p>DB & 서버 보안</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">인증과 세션 관리</h1>
+
+            <h2>인증 vs 인가</h2>
+
+            <table>
+                <tr>
+                    <th>구분</th>
+                    <th>인증 (Authentication)</th>
+                    <th>인가 (Authorization)</th>
+                </tr>
+                <tr>
+                    <td>질문</td>
+                    <td>누구인가?</td>
+                    <td>뭘 할 수 있는가?</td>
+                </tr>
+                <tr>
+                    <td>예시</td>
+                    <td>로그인</td>
+                    <td>관리자 권한 확인</td>
+                </tr>
+                <tr>
+                    <td>방법</td>
+                    <td>비밀번호, 생체인식</td>
+                    <td>역할, 권한 체크</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>세션 기반 인증</h2>
+
+            <pre class="file-tree">세션 인증 흐름
+│
+├── 1. 로그인 요청 (ID/PW)
+│
+├── 2. 서버에서 검증
+│   ├── 성공 → 세션 ID 생성
+│   └── 세션 데이터를 서버에 저장
+│
+├── 3. 세션 ID를 쿠키로 전송
+│
+└── 4. 이후 요청마다 쿠키 자동 전송
+    └── 서버가 세션 데이터로 사용자 확인</pre>
+
+            <h3>Flask 세션 구현</h3>
+
+            <pre><code>from flask import Flask, session, request, redirect
+import secrets
+
+app = Flask(__name__)
+app.secret_key = secrets.token_hex(32)  # 비밀키 (환경변수로!)
+
+# 로그인
+@app.route('/login', methods=['POST'])
+def login():
+    username = request.form['username']
+    password = request.form['password']
+
+    user = get_user(username)
+
+    if user and verify_password(password, user['password_hash']):
+        # 세션에 사용자 정보 저장
+        session['user_id'] = user['id']
+        session['username'] = user['username']
+        session['role'] = user['role']
+
+        return redirect('/dashboard')
+
+    return {'error': '아이디 또는 비밀번호가 틀렸습니다'}, 401
+
+# 로그아웃
+@app.route('/logout')
+def logout():
+    session.clear()  # 세션 삭제
+    return redirect('/login')
+
+# 로그인 확인 데코레이터
+from functools import wraps
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect('/login')
+        return f(*args, **kwargs)
+    return decorated
+
+# 사용
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    return f"환영합니다, {session['username']}님!"</code></pre>
+
+            <hr>
+
+            <h2>세션 보안 설정</h2>
+
+            <pre><code>from datetime import timedelta
+
+app.config.update(
+    # 세션 쿠키 설정
+    SESSION_COOKIE_SECURE=True,      # HTTPS에서만 전송
+    SESSION_COOKIE_HTTPONLY=True,    # JavaScript 접근 차단
+    SESSION_COOKIE_SAMESITE='Lax',   # CSRF 방어
+
+    # 세션 수명
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=2),  # 2시간
+)
+
+@app.before_request
+def make_session_permanent():
+    session.permanent = True</code></pre>
+
+            <hr>
+
+            <h2>서버 측 세션 저장 (Redis)</h2>
+
+            <p>Flask 기본 세션은 쿠키에 저장됩니다. 보안을 위해 서버에 저장합니다.</p>
+
+            <pre><code>from flask import Flask
+from flask_session import Session
+import redis
+
+app = Flask(__name__)
+
+# Redis 세션 설정
+app.config['SESSION_TYPE'] = 'redis'
+app.config['SESSION_REDIS'] = redis.Redis(host='localhost', port=6379)
+app.config['SESSION_PERMANENT'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=2)
+
+Session(app)</code></pre>
+
+            <hr>
+
+            <h2>JWT 토큰 인증</h2>
+
+            <p>API 서버에서 많이 사용하는 토큰 기반 인증입니다.</p>
+
+            <pre class="file-tree">JWT 인증 흐름
+│
+├── 1. 로그인 요청 (ID/PW)
+│
+├── 2. 서버에서 검증
+│   └── 성공 → JWT 토큰 생성
+│
+├── 3. 토큰을 클라이언트에 전송
+│   └── 클라이언트가 저장 (localStorage 등)
+│
+└── 4. 이후 요청마다 토큰을 헤더에 포함
+    └── Authorization: Bearer {token}</pre>
+
+            <pre><code>import jwt
+from datetime import datetime, timedelta
+
+SECRET_KEY = 'your-secret-key'  # 환경변수로!
+
+def create_token(user_id, role):
+    """JWT 토큰 생성"""
+    payload = {
+        'user_id': user_id,
+        'role': role,
+        'exp': datetime.utcnow() + timedelta(hours=2),  # 만료시간
+        'iat': datetime.utcnow()  # 발급시간
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
+
+def verify_token(token):
+    """JWT 토큰 검증"""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        return payload
+    except jwt.ExpiredSignatureError:
+        return None  # 만료됨
+    except jwt.InvalidTokenError:
+        return None  # 유효하지 않음
+
+# 로그인 API
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    data = request.get_json()
+    user = get_user(data['username'])
+
+    if user and verify_password(data['password'], user['password_hash']):
+        token = create_token(user['id'], user['role'])
+        return {'token': token}
+
+    return {'error': '인증 실패'}, 401
+
+# 토큰 검증 데코레이터
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth_header = request.headers.get('Authorization')
+
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return {'error': '토큰이 필요합니다'}, 401
+
+        token = auth_header.split(' ')[1]
+        payload = verify_token(token)
+
+        if not payload:
+            return {'error': '유효하지 않은 토큰'}, 401
+
+        request.user = payload
+        return f(*args, **kwargs)
+    return decorated
+
+# 사용
+@app.route('/api/patients')
+@token_required
+def get_patients():
+    user_id = request.user['user_id']
+    ...</code></pre>
+
+            <hr>
+
+            <h2>세션 vs JWT</h2>
+
+            <table>
+                <tr>
+                    <th>구분</th>
+                    <th>세션</th>
+                    <th>JWT</th>
+                </tr>
+                <tr>
+                    <td>저장 위치</td>
+                    <td>서버</td>
+                    <td>클라이언트</td>
+                </tr>
+                <tr>
+                    <td>확장성</td>
+                    <td>서버 간 세션 공유 필요</td>
+                    <td>무상태 (Stateless)</td>
+                </tr>
+                <tr>
+                    <td>로그아웃</td>
+                    <td>서버에서 삭제 가능</td>
+                    <td>만료 전까지 유효</td>
+                </tr>
+                <tr>
+                    <td>적합한 경우</td>
+                    <td>웹 앱</td>
+                    <td>API, 모바일</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>역할 기반 접근 제어 (RBAC)</h2>
+
+            <pre><code># 역할 확인 데코레이터
+def role_required(required_role):
+    def decorator(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            if session.get('role') != required_role:
+                return {'error': '권한이 없습니다'}, 403
+            return f(*args, **kwargs)
+        return decorated
+    return decorator
+
+# 관리자만 접근
+@app.route('/admin/users')
+@login_required
+@role_required('admin')
+def admin_users():
+    return get_all_users()
+
+# 치료사 이상만 접근
+@app.route('/patients')
+@login_required
+@role_required('therapist')
+def patient_list():
+    return get_patients()</code></pre>
+
+            <hr>
+
+            <h2>로그인 보안 강화</h2>
+
+            <h3>1. 로그인 시도 제한</h3>
+            <pre><code>from flask_limiter import Limiter
+
+limiter = Limiter(app, key_func=get_remote_address)
+
+@app.route('/login', methods=['POST'])
+@limiter.limit("5 per minute")  # 분당 5회 제한
+def login():
+    ...</code></pre>
+
+            <h3>2. 계정 잠금</h3>
+            <pre><code>def check_login_attempts(username):
+    attempts = get_login_attempts(username)
+
+    if attempts >= 5:
+        lockout_time = get_lockout_time(username)
+        if datetime.now() < lockout_time:
+            remaining = (lockout_time - datetime.now()).seconds // 60
+            return {'error': f'{remaining}분 후 다시 시도하세요'}, 429
+        else:
+            reset_login_attempts(username)
+
+    return None
+
+@app.route('/login', methods=['POST'])
+def login():
+    username = request.form['username']
+
+    # 잠금 확인
+    lockout = check_login_attempts(username)
+    if lockout:
+        return lockout
+
+    # 로그인 시도
+    if not authenticate(username, request.form['password']):
+        increment_login_attempts(username)
+        return {'error': '로그인 실패'}, 401
+
+    # 성공 시 시도 횟수 초기화
+    reset_login_attempts(username)
+    ...</code></pre>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li><strong>인증</strong>은 "누구인가", <strong>인가</strong>는 "뭘 할 수 있는가"</li>
+                <li><strong>세션</strong>: 서버에 상태 저장, 웹 앱에 적합</li>
+                <li><strong>JWT</strong>: 클라이언트에 저장, API에 적합</li>
+                <li>세션 쿠키는 <strong>Secure, HttpOnly, SameSite</strong> 설정</li>
+                <li><strong>로그인 시도 제한</strong>으로 무차별 대입 방어</li>
+            </ul>
+
+            <blockquote>다음 장에서는 비밀번호를 안전하게 저장하는 방법을 배웁니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

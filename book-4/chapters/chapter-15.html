@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>15장: Luckysheet 설치 - 물리치료사를 위한 DB 4권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "4"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📕 물리치료사를 위한</h1>
+                <p>웹 앱 만들기 (4권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">Luckysheet 설치</h1>
+
+            <h2>Luckysheet란?</h2>
+
+            <p>Luckysheet는 웹에서 엑셀처럼 사용할 수 있는 오픈소스 스프레드시트입니다.</p>
+
+            <h3>주요 기능</h3>
+            <ul>
+                <li>셀 편집, 복사/붙여넣기</li>
+                <li>수식 (SUM, AVERAGE 등)</li>
+                <li>셀 스타일링 (색상, 폰트)</li>
+                <li>행/열 고정</li>
+                <li>다중 시트</li>
+                <li>필터, 정렬</li>
+            </ul>
+
+            <hr>
+
+            <h2>설치 방법 1: CDN</h2>
+
+            <p>가장 간단한 방법입니다. HTML에 스크립트 태그만 추가합니다.</p>
+
+            <pre><code>&lt;!-- CSS --&gt;
+&lt;link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet/dist/plugins/css/pluginsCss.css"&gt;
+&lt;link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet/dist/plugins/plugins.css"&gt;
+&lt;link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet/dist/css/luckysheet.css"&gt;
+&lt;link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet/dist/assets/iconfont/iconfont.css"&gt;
+
+&lt;!-- JavaScript --&gt;
+&lt;script src="https://cdn.jsdelivr.net/npm/luckysheet/dist/plugins/js/plugin.js"&gt;&lt;/script&gt;
+&lt;script src="https://cdn.jsdelivr.net/npm/luckysheet/dist/luckysheet.umd.js"&gt;&lt;/script&gt;</code></pre>
+
+            <hr>
+
+            <h2>설치 방법 2: 직접 다운로드</h2>
+
+            <p>인터넷 연결 없이 사용하려면 파일을 다운로드합니다.</p>
+
+            <ol>
+                <li>GitHub에서 Luckysheet 다운로드</li>
+                <li><code>dist/</code> 폴더를 프로젝트의 <code>static/lib/luckysheet/</code>에 복사</li>
+                <li>경로 수정</li>
+            </ol>
+
+            <pre class="file-tree">static/
+└── lib/
+    └── luckysheet/
+        ├── css/
+        ├── plugins/
+        └── luckysheet.umd.js</pre>
+
+            <hr>
+
+            <h2>기본 설정</h2>
+
+            <h3>HTML</h3>
+            <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+    &lt;title&gt;예약 관리&lt;/title&gt;
+    &lt;!-- Luckysheet CSS (위 참고) --&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;!-- 시트가 표시될 영역 --&gt;
+    &lt;div id="luckysheet" style="width: 100%; height: 600px;"&gt;&lt;/div&gt;
+
+    &lt;!-- Luckysheet JS (위 참고) --&gt;
+    &lt;script&gt;
+        // 시트 초기화
+        luckysheet.create({
+            container: 'luckysheet',
+            title: '예약 현황',
+            lang: 'ko'
+        });
+    &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+
+            <hr>
+
+            <h2>주요 옵션</h2>
+
+            <pre><code>luckysheet.create({
+    container: 'luckysheet',  // 컨테이너 ID
+    title: '예약 현황',        // 시트 제목
+    lang: 'ko',               // 언어 (ko, en, zh 등)
+
+    // 툴바 설정
+    showtoolbar: true,
+    showtoolbarConfig: {
+        paintFormat: false,   // 서식 복사
+        currencyFormat: false // 통화 서식
+    },
+
+    // 수식 바
+    showsheetbar: true,       // 시트 탭
+    showsheetbarConfig: {
+        add: false,           // 시트 추가 버튼
+        menu: false           // 시트 메뉴
+    },
+
+    // 기타
+    allowEdit: true,          // 편집 허용
+    enableAddRow: false,      // 행 추가 버튼
+    enableAddBackTop: false,  // 맨 위로 버튼
+
+    // 데이터
+    data: [{
+        name: 'Sheet1',
+        celldata: []
+    }]
+});</code></pre>
+
+            <hr>
+
+            <h2>셀 데이터 구조</h2>
+
+            <p>Luckysheet는 특정 형식의 데이터를 사용합니다.</p>
+
+            <pre><code>// celldata 형식
+[
+    {
+        r: 0,        // 행 (0부터)
+        c: 0,        // 열 (0부터)
+        v: {
+            v: '값',      // 실제 값
+            m: '표시값',   // 표시될 값
+            ct: { fa: 'General', t: 'g' },  // 셀 타입
+            bg: '#ffffff', // 배경색
+            fc: '#000000', // 글자색
+            bl: 0,        // 굵게 (1이면 굵게)
+            fs: 11        // 글자 크기
+        }
+    }
+]</code></pre>
+
+            <h3>간단한 예시</h3>
+            <pre><code>const celldata = [
+    // A1 셀
+    { r: 0, c: 0, v: { v: '환자명', m: '환자명', bg: '#f0f0f0' } },
+    // B1 셀
+    { r: 0, c: 1, v: { v: '12/1', m: '12/1', bg: '#f0f0f0' } },
+    // A2 셀
+    { r: 1, c: 0, v: { v: '김철수', m: '김철수' } },
+    // B2 셀
+    { r: 1, c: 1, v: { v: '10:00', m: '10:00', bg: '#dcfce7' } }
+];</code></pre>
+
+            <hr>
+
+            <h2>Flask 템플릿에 적용</h2>
+
+            <pre><code>{% extends "base.html" %}
+
+{% block title %}예약 관리{% endblock %}
+
+{% block head %}
+&lt;!-- Luckysheet CSS --&gt;
+&lt;link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet/dist/plugins/css/pluginsCss.css"&gt;
+&lt;link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet/dist/plugins/plugins.css"&gt;
+&lt;link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet/dist/css/luckysheet.css"&gt;
+&lt;link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet/dist/assets/iconfont/iconfont.css"&gt;
+{% endblock %}
+
+{% block content %}
+&lt;h1&gt;예약 현황&lt;/h1&gt;
+&lt;div id="luckysheet" style="width: 100%; height: calc(100vh - 150px);"&gt;&lt;/div&gt;
+{% endblock %}
+
+{% block scripts %}
+&lt;script src="https://cdn.jsdelivr.net/npm/luckysheet/dist/plugins/js/plugin.js"&gt;&lt;/script&gt;
+&lt;script src="https://cdn.jsdelivr.net/npm/luckysheet/dist/luckysheet.umd.js"&gt;&lt;/script&gt;
+&lt;script src="/static/js/sheet.js"&gt;&lt;/script&gt;
+{% endblock %}</code></pre>
+
+            <hr>
+
+            <h2>설치 확인</h2>
+
+            <p>브라우저에서 접속 시 빈 스프레드시트가 보이면 성공!</p>
+
+            <div class="tip"><strong>💡 에러가 난다면?</strong><br>
+            1. 개발자 도구(F12) → Console 탭 확인<br>
+            2. CDN 연결 확인<br>
+            3. 컨테이너 ID가 맞는지 확인</div>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li>Luckysheet는 웹 기반 스프레드시트입니다</li>
+                <li>CDN 또는 다운로드로 설치합니다</li>
+                <li><code>luckysheet.create()</code>로 초기화합니다</li>
+                <li>celldata 형식으로 셀 데이터를 정의합니다</li>
+            </ul>
+
+            <blockquote>다음 장에서는 실제 시트를 만들고 데이터를 채워봅니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

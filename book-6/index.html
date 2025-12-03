@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>연구자를 위한 데이터 설계 완전정복 - 6권</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../index.html" class="top-nav-brand">
+            <span>📊</span> 연구 데이터 설계
+        </a>
+        <div class="top-nav-links">
+            <a href="../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../book-2/index.html" class="top-nav-link book-2">2권</a>
+            <a href="../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../book-5/index.html" class="top-nav-link book-5">5권</a>
+            <a href="../book-6/index.html" class="top-nav-link book-6 active">6권</a>
+        </div>
+    </nav>
+
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📘 6권: 연구 데이터 설계</h1>
+                <p>변수부터 회귀분석까지</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">연구자를 위한 데이터 설계 완전정복</h1>
+
+            <div class="intro-box">
+                <p><strong>"내 연구 데이터, 어떻게 정리해야 할지 모르겠어요"</strong></p>
+                <p>이 책은 연구 설계부터 회귀분석까지, <strong>데이터를 어떻게 구조화하고 저장해야 하는지</strong>를 체계적으로 다룹니다. 엑셀의 한계를 넘어, 재현 가능하고 분석하기 좋은 데이터 구조를 만드는 법을 배웁니다.</p>
+            </div>
+
+            <hr>
+
+            <h2>이 책을 쓴 이유</h2>
+            <p>많은 연구자들이 이런 고민을 합니다:</p>
+            <ul>
+                <li>📁 "데이터 파일이 10개가 넘는데 어떤 게 최신인지 모르겠어요"</li>
+                <li>📊 "SPSS에 넣으려니까 형식이 안 맞아요"</li>
+                <li>🔄 "분석할 때마다 데이터를 다시 정리해야 해요"</li>
+                <li>❓ "이 변수는 어떤 타입으로 저장해야 하죠?"</li>
+                <li>📈 "회귀분석 돌리려면 데이터가 어떤 구조여야 하나요?"</li>
+            </ul>
+
+            <p>이 책은 이런 질문들에 대한 <strong>체계적인 답</strong>을 제공합니다.</p>
+
+            <hr>
+
+            <h2>누구를 위한 책인가요?</h2>
+            <ul>
+                <li>📌 학위 논문을 준비하는 대학원생</li>
+                <li>📌 연구 프로젝트를 진행하는 연구원</li>
+                <li>📌 데이터 수집/관리를 담당하는 연구보조원</li>
+                <li>📌 통계 분석을 배우고 싶은 모든 분</li>
+                <li>📌 엑셀의 한계를 느낀 모든 연구자</li>
+            </ul>
+
+            <hr>
+
+            <h2>전체 구성: 5부 20장</h2>
+
+            <div class="part-header">1부: 연구와 데이터의 기초 (1-4장)</div>
+            <table>
+                <tr><th>장</th><th>제목</th><th>핵심 내용</th></tr>
+                <tr><td>1장</td><td>엑셀이 연구를 망치는 이유</td><td>Wide vs Long, 복붙의 저주</td></tr>
+                <tr><td>2장</td><td>연구 설계의 기본 구조</td><td>모집단, 표본, 가설</td></tr>
+                <tr><td>3장</td><td>변수란 무엇인가</td><td>조작적 정의, 측정 오차</td></tr>
+                <tr><td>4장</td><td>변수의 역할별 분류</td><td>독립/종속/매개/조절/통제</td></tr>
+            </table>
+
+            <div class="part-header">2부: 변수 유형과 저장 원칙 (5-9장)</div>
+            <table>
+                <tr><th>장</th><th>제목</th><th>핵심 내용</th></tr>
+                <tr><td>5장</td><td>척도의 4가지 수준</td><td>명목/서열/등간/비율</td></tr>
+                <tr><td>6장</td><td>범주형 변수 완전정복</td><td>코드화, 더미변수</td></tr>
+                <tr><td>7장</td><td>연속형 변수 완전정복</td><td>정규성, 변환, 표준화</td></tr>
+                <tr><td>8장</td><td>특수 변수 처리</td><td>결측치, 이상치, 날짜</td></tr>
+                <tr><td>9장</td><td>복합 변수와 척도</td><td>역코딩, 신뢰도</td></tr>
+            </table>
+
+            <div class="part-header">3부: 연구 형태별 DB 설계 (10-14장)</div>
+            <table>
+                <tr><th>장</th><th>제목</th><th>핵심 내용</th></tr>
+                <tr><td>10장</td><td>횡단 연구</td><td>1회 측정, 비교집단</td></tr>
+                <tr><td>11장</td><td>종단 연구</td><td>반복측정, 패널, 코호트</td></tr>
+                <tr><td>12장</td><td>실험 연구</td><td>피험자간/피험자내/혼합</td></tr>
+                <tr><td>13장</td><td>설문 연구</td><td>문항 정규화, 리커트</td></tr>
+                <tr><td>14장</td><td>질적/혼합 연구</td><td>코딩, 테마, 통합</td></tr>
+            </table>
+
+            <div class="part-header">4부: 기술통계와 추론통계 (15-18장)</div>
+            <table>
+                <tr><th>장</th><th>제목</th><th>핵심 내용</th></tr>
+                <tr><td>15장</td><td>기술통계의 모든 것</td><td>평균, 표준편차, 분포</td></tr>
+                <tr><td>16장</td><td>집단 비교 분석</td><td>t-test, ANOVA, 비모수</td></tr>
+                <tr><td>17장</td><td>관계 분석</td><td>상관, 교차분석</td></tr>
+                <tr><td>18장</td><td>회귀분석</td><td>단순/다중/위계적 회귀</td></tr>
+            </table>
+
+            <div class="part-header">5부: 실전 데이터 관리 (19-20장)</div>
+            <table>
+                <tr><th>장</th><th>제목</th><th>핵심 내용</th></tr>
+                <tr><td>19장</td><td>코드북과 메타데이터</td><td>변수 정의, 값 레이블</td></tr>
+                <tr><td>20장</td><td>분석 도구 연동</td><td>SPSS/R/Python 연동</td></tr>
+            </table>
+
+            <hr>
+
+            <blockquote>
+                <strong>💡 이 책을 읽고 나면...</strong><br><br>
+                ✅ 연구 설계에 맞는 데이터 구조를 스스로 설계할 수 있습니다<br>
+                ✅ 변수 유형에 따른 올바른 저장 방법을 알게 됩니다<br>
+                ✅ 분석 도구에 바로 넣을 수 있는 깔끔한 데이터를 만들 수 있습니다<br>
+                ✅ 어떤 통계 분석을 써야 하는지 판단할 수 있습니다
+            </blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" disabled>← 이전</button>
+                <span class="page-num">0 / 20</span>
+                <a href="chapters/chapter-1.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/nav.js"></script>
+</body>
+</html>

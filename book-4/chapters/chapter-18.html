@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>18장: 열/행 고정 설정 - 물리치료사를 위한 DB 4권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "4"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📕 물리치료사를 위한</h1>
+                <p>웹 앱 만들기 (4권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">열/행 고정 설정</h1>
+
+            <h2>고정(Freeze)이란?</h2>
+
+            <p>스크롤해도 특정 행이나 열이 항상 보이도록 고정하는 기능입니다.</p>
+
+            <ul>
+                <li><strong>첫 행 고정</strong>: 날짜 헤더가 항상 보임</li>
+                <li><strong>첫 열 고정</strong>: 환자명이 항상 보임</li>
+            </ul>
+
+            <hr>
+
+            <h2>Luckysheet 고정 설정</h2>
+
+            <pre><code>luckysheet.create({
+    container: 'luckysheet',
+    data: [{
+        name: '예약',
+        celldata: celldata,
+
+        // 고정 설정
+        frozen: {
+            type: 'rangeBoth',  // 행과 열 모두 고정
+
+            range: {
+                row_focus: 0,    // 0행까지 고정 (첫 행)
+                column_focus: 0  // 0열까지 고정 (첫 열)
+            }
+        }
+    }]
+});</code></pre>
+
+            <h3>고정 타입</h3>
+            <table>
+                <tr>
+                    <th>type</th>
+                    <th>설명</th>
+                </tr>
+                <tr>
+                    <td>row</td>
+                    <td>행만 고정</td>
+                </tr>
+                <tr>
+                    <td>column</td>
+                    <td>열만 고정</td>
+                </tr>
+                <tr>
+                    <td>both</td>
+                    <td>행과 열 모두 고정</td>
+                </tr>
+                <tr>
+                    <td>rangeRow</td>
+                    <td>지정 범위 행 고정</td>
+                </tr>
+                <tr>
+                    <td>rangeColumn</td>
+                    <td>지정 범위 열 고정</td>
+                </tr>
+                <tr>
+                    <td>rangeBoth</td>
+                    <td>지정 범위 행+열 고정</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>완성된 시트 설정</h2>
+
+            <pre><code>async function initReservationSheet() {
+    // 데이터 가져오기
+    const today = new Date().toISOString().split('T')[0];
+    const dates = getDateRange(today, 30);  // 30일간
+
+    const startDate = dates[0].date;
+    const endDate = dates[dates.length - 1].date;
+
+    const [patientsRes, reservationsRes] = await Promise.all([
+        fetch('/api/patients').then(r => r.json()),
+        fetch(`/api/reservations/sheet?start_date=${startDate}&end_date=${endDate}`)
+            .then(r => r.json())
+    ]);
+
+    const patients = patientsRes.data;
+    const reservations = reservationsRes.reservations;
+
+    // 셀 데이터 생성
+    let celldata = [
+        ...createHeaderRow(dates),
+        ...createPatientRows(patients),
+        ...createReservationCells(patients, dates, reservations)
+    ];
+
+    // Luckysheet 생성
+    luckysheet.create({
+        container: 'luckysheet',
+        title: '예약 현황',
+        lang: 'ko',
+
+        // 툴바 간소화
+        showtoolbar: false,
+        showsheetbar: false,
+        showstatisticBar: false,
+
+        // 편집 설정
+        allowEdit: true,
+        enableAddRow: false,
+        enableAddBackTop: false,
+
+        data: [{
+            name: '예약',
+            celldata: celldata,
+            row: patients.length + 1,
+            column: dates.length + 1,
+
+            // ★ 고정 설정
+            frozen: {
+                type: 'rangeBoth',
+                range: {
+                    row_focus: 0,     // 첫 행 (날짜) 고정
+                    column_focus: 0   // 첫 열 (환자명) 고정
+                }
+            },
+
+            // 열 너비
+            config: {
+                columnlen: {
+                    0: 100  // 첫 열 (환자명) 너비
+                }
+            }
+        }]
+    });
+}</code></pre>
+
+            <hr>
+
+            <h2>스크롤 테스트</h2>
+
+            <p>가로/세로로 스크롤해도:</p>
+            <ul>
+                <li>✅ 첫 행(날짜)이 항상 보임</li>
+                <li>✅ 첫 열(환자명)이 항상 보임</li>
+            </ul>
+
+            <div class="tip"><strong>💡 30일 이상 표시하려면?</strong><br>
+            날짜 범위를 늘리면 됩니다. 가로 스크롤로 모든 날짜를 볼 수 있습니다. 다만 데이터가 많아지면 로딩이 느려질 수 있으니 적절한 범위를 설정하세요.</div>
+
+            <hr>
+
+            <h2>날짜 범위 컨트롤 추가</h2>
+
+            <pre><code>&lt;!-- HTML --&gt;
+&lt;div class="date-control"&gt;
+    &lt;label&gt;시작일&lt;/label&gt;
+    &lt;input type="date" id="startDate"&gt;
+
+    &lt;label&gt;기간&lt;/label&gt;
+    &lt;select id="dateRange"&gt;
+        &lt;option value="7"&gt;1주일&lt;/option&gt;
+        &lt;option value="14" selected&gt;2주일&lt;/option&gt;
+        &lt;option value="30"&gt;1개월&lt;/option&gt;
+    &lt;/select&gt;
+
+    &lt;button onclick="reloadSheet()"&gt;적용&lt;/button&gt;
+&lt;/div&gt;
+
+// JavaScript
+async function reloadSheet() {
+    const startDate = document.getElementById('startDate').value;
+    const days = parseInt(document.getElementById('dateRange').value);
+
+    // 기존 시트 제거
+    luckysheet.destroy();
+
+    // 새로 생성
+    await initReservationSheet(startDate, days);
+}</code></pre>
+
+            <hr>
+
+            <h2>현재 날짜로 이동</h2>
+
+            <pre><code>// 오늘 날짜 열로 스크롤
+function scrollToToday(dates) {
+    const today = new Date().toISOString().split('T')[0];
+    const todayIndex = dates.findIndex(d => d.date === today);
+
+    if (todayIndex > 0) {
+        // 해당 셀로 포커스 이동
+        luckysheet.setRangeShow({
+            row: [1, 1],
+            column: [todayIndex + 1, todayIndex + 1]
+        });
+    }
+}
+
+// 시트 생성 후 호출
+luckysheet.create({ ... });
+setTimeout(() => scrollToToday(dates), 500);</code></pre>
+
+            <hr>
+
+            <h2>완성된 모습</h2>
+
+            <pre class="file-tree">┌──────────────────────────────────────────────────────────────┐
+│ [시작일: 2024-12-01]  [기간: 2주일 ▼]  [적용]  [오늘로 이동]  │
+├──────────────────────────────────────────────────────────────┤
+│ 치료사: ■김치료  ■이치료  ■박치료                              │
+├──────────┬────────┬────────┬────────┬────────┬────────┬─────│
+│ 환자명    │ 12/1   │ 12/2   │ 12/3   │ 12/4   │ 12/5   │ ... │
+│          │ (월)   │ (화)   │ (수)   │ (목)   │ (금)   │     │
+├──────────┼────────┼────────┼────────┼────────┼────────┼─────│
+│ 김철수    │ 10:00  │        │ 14:00  │        │ 11:00  │     │
+│ 이영희    │        │ 11:00  │        │ 10:00  │        │     │
+│ 박민수    │ 15:00  │ 15:00  │        │ 16:00  │        │     │
+│ ...      │        │        │        │        │        │     │
+└──────────┴────────┴────────┴────────┴────────┴────────┴─────┘
+   ↑ 고정          → 가로 스크롤 →</pre>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li><code>frozen</code> 옵션으로 행/열을 고정합니다</li>
+                <li><code>rangeBoth</code>로 첫 행과 첫 열을 동시에 고정합니다</li>
+                <li>날짜 범위 컨트롤로 표시 기간을 조절합니다</li>
+            </ul>
+
+            <blockquote>다음 장에서는 DB 데이터를 Luckysheet에 표시하는 전체 흐름을 정리합니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

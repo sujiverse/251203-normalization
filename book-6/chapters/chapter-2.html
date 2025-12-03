@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[2장] 연구 설계의 기본 구조 - 연구 데이터 설계</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>📊</span> 연구 데이터 설계</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+            <a href="../../book-6/index.html" class="top-nav-link book-6 active">6권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📘 6권: 연구 데이터 설계</h1><p>변수부터 회귀분석까지</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <div class="part-header">1부: 연구와 데이터의 기초</div>
+            <h1 class="title">[2장] 연구 설계의 기본 구조</h1>
+
+            <div class="intro-box">
+                <p>이 장에서는 <strong>연구 질문에서 데이터 구조까지</strong> 어떻게 연결되는지를 배웁니다. 좋은 연구 설계가 좋은 데이터 구조의 출발점입니다.</p>
+            </div>
+
+            <hr>
+
+            <h2>1. 연구 질문에서 시작하기</h2>
+
+            <p>모든 연구는 질문에서 시작합니다. 연구 질문(Research Question)은 연구를 통해 답하고자 하는 구체적인 물음입니다.</p>
+
+            <div class="concept-box">
+                <h3>좋은 연구 질문의 조건 (FINER)</h3>
+                <ul>
+                    <li><strong>Feasible (실현 가능):</strong> 주어진 자원으로 수행 가능</li>
+                    <li><strong>Interesting (흥미로움):</strong> 연구자와 학계의 관심사</li>
+                    <li><strong>Novel (새로움):</strong> 기존 연구와 차별점</li>
+                    <li><strong>Ethical (윤리적):</strong> 윤리적으로 수행 가능</li>
+                    <li><strong>Relevant (관련성):</strong> 학문적/실용적 가치</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>연구 질문의 유형</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>유형</th><th>질문 형태</th><th>예시</th><th>필요한 변수</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>기술적</td>
+                                <td>"~은 어떠한가?"</td>
+                                <td>한국 성인의 평균 수면 시간은?</td>
+                                <td>수면 시간 (1개)</td>
+                            </tr>
+                            <tr>
+                                <td>관계적</td>
+                                <td>"~과 ~의 관계는?"</td>
+                                <td>운동량과 우울감의 관계는?</td>
+                                <td>운동량, 우울감 (2개)</td>
+                            </tr>
+                            <tr>
+                                <td>비교적</td>
+                                <td>"~과 ~은 다른가?"</td>
+                                <td>남녀의 수면 시간 차이는?</td>
+                                <td>성별, 수면 시간 (2개)</td>
+                            </tr>
+                            <tr>
+                                <td>인과적</td>
+                                <td>"~이 ~에 영향을?"</td>
+                                <td>수면 교육이 수면의 질을 높이나?</td>
+                                <td>처치, 결과, 통제변수 (3개+)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="explanation-box">
+                <h3>연구 질문 → 변수 도출</h3>
+                <p>연구 질문을 분석하면 필요한 변수가 드러납니다:</p>
+                <p><strong>질문:</strong> "물리치료가 만성 요통 환자의 통증과 기능에 미치는 효과는?"</p>
+                <ul>
+                    <li><strong>독립변수:</strong> 물리치료 여부 (실험군/대조군)</li>
+                    <li><strong>종속변수:</strong> 통증 점수, 기능 점수</li>
+                    <li><strong>대상:</strong> 만성 요통 환자</li>
+                    <li><strong>암묵적 통제변수:</strong> 나이, 성별, 통증 기간 등</li>
+                </ul>
+            </div>
+
+            <hr>
+
+            <h2>2. 모집단과 표본</h2>
+
+            <p>연구는 특정 집단에 대한 결론을 도출합니다. 그 집단이 모집단입니다.</p>
+
+            <div class="concept-box">
+                <h3>모집단 (Population)</h3>
+                <p>연구 결과를 적용하고자 하는 <strong>전체 집단</strong>입니다.</p>
+                <ul>
+                    <li><strong>목표 모집단(Target Population):</strong> 결론을 일반화하고 싶은 집단
+                        <br>예: 한국의 모든 만성 요통 환자</li>
+                    <li><strong>접근 가능 모집단(Accessible Population):</strong> 실제 접근 가능한 집단
+                        <br>예: 서울 소재 3개 병원의 만성 요통 환자</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>표본 (Sample)</h3>
+                <p>모집단에서 실제로 연구에 참여하는 <strong>일부</strong>입니다.</p>
+                <ul>
+                    <li>표본은 모집단을 대표해야 합니다</li>
+                    <li>표본 크기는 통계적 검정력에 영향을 미칩니다</li>
+                    <li>편향된 표본은 일반화를 제한합니다</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>표본 추출 방법</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>방법</th><th>설명</th><th>장단점</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>단순 무작위 추출</td>
+                                <td>모집단에서 무작위로 선택</td>
+                                <td>대표성 높음, 실행 어려움</td>
+                            </tr>
+                            <tr>
+                                <td>층화 추출</td>
+                                <td>하위 집단별로 무작위 추출</td>
+                                <td>하위 집단 대표성 확보</td>
+                            </tr>
+                            <tr>
+                                <td>군집 추출</td>
+                                <td>집단 단위로 추출 후 전수 조사</td>
+                                <td>효율적, 대표성 낮을 수 있음</td>
+                            </tr>
+                            <tr>
+                                <td>편의 추출</td>
+                                <td>접근 가능한 대상 선택</td>
+                                <td>쉬움, 편향 위험 높음</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="sql-box">
+                <p><strong>DB 설계:</strong> 표본 추출 정보 저장</p>
+                <pre>CREATE TABLE sampling_info (
+    id INTEGER PRIMARY KEY,
+    method TEXT,  -- 'random', 'stratified', 'convenience' 등
+    target_population TEXT,
+    accessible_population TEXT,
+    sampling_date DATE,
+    total_invited INTEGER,
+    total_enrolled INTEGER
+);
+
+CREATE TABLE participants (
+    id INTEGER PRIMARY KEY,
+    sampling_info_id INTEGER REFERENCES sampling_info(id),
+    stratum TEXT,  -- 층화 추출 시 하위 집단
+    enrolled_date DATE
+);</pre>
+            </div>
+
+            <hr>
+
+            <h2>3. 가설 설정</h2>
+
+            <p>가설(Hypothesis)은 연구 질문에 대한 잠정적 답변입니다. 통계적 검정의 대상이 됩니다.</p>
+
+            <div class="concept-box">
+                <h3>귀무가설 (H₀, Null Hypothesis)</h3>
+                <p>차이나 효과가 <strong>없다</strong>는 가설입니다.</p>
+                <ul>
+                    <li>"두 집단의 평균에 차이가 없다"</li>
+                    <li>"두 변수 간 상관이 없다"</li>
+                    <li>"처치의 효과가 없다"</li>
+                </ul>
+                <p>통계 검정은 귀무가설을 <strong>기각</strong>하거나 <strong>기각하지 못함</strong>으로 결론짓습니다. 귀무가설을 "증명"하지는 않습니다.</p>
+            </div>
+
+            <div class="concept-box">
+                <h3>대립가설 (H₁, Alternative Hypothesis)</h3>
+                <p>차이나 효과가 <strong>있다</strong>는 가설입니다. 연구자가 검증하고자 하는 가설입니다.</p>
+
+                <p><strong>비방향성 가설 (양측 검정):</strong></p>
+                <ul>
+                    <li>"두 집단의 평균이 다르다" (크거나 작거나)</li>
+                    <li>H₁: μ₁ ≠ μ₂</li>
+                </ul>
+
+                <p><strong>방향성 가설 (단측 검정):</strong></p>
+                <ul>
+                    <li>"실험군의 평균이 대조군보다 높다"</li>
+                    <li>H₁: μ₁ > μ₂</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>가설과 오류</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th></th><th>H₀가 참</th><th>H₀가 거짓</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>H₀ 기각</strong></td>
+                                <td>1종 오류 (α)<br>없는 효과를 있다고 함</td>
+                                <td>올바른 결정<br>(검정력 = 1-β)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>H₀ 기각 못함</strong></td>
+                                <td>올바른 결정</td>
+                                <td>2종 오류 (β)<br>있는 효과를 못 찾음</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p><strong>유의수준(α):</strong> 1종 오류를 허용하는 확률. 보통 0.05 사용</p>
+                <p><strong>검정력(Power):</strong> 실제 효과가 있을 때 이를 탐지할 확률. 보통 0.80 이상 권장</p>
+            </div>
+
+            <hr>
+
+            <h2>4. 연구 설계 → DB 구조 매핑</h2>
+
+            <p>연구의 각 요소는 데이터베이스 구조로 변환됩니다.</p>
+
+            <div class="concept-box">
+                <h3>연구 요소와 DB 요소 대응</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>연구 요소</th><th>DB 요소</th><th>예시</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>참가자/피험자</td>
+                                <td>participants 테이블의 행</td>
+                                <td>id, age, gender</td>
+                            </tr>
+                            <tr>
+                                <td>변수</td>
+                                <td>테이블의 열(column)</td>
+                                <td>pain_score, function_score</td>
+                            </tr>
+                            <tr>
+                                <td>측정값</td>
+                                <td>셀(cell)의 값</td>
+                                <td>75, 82</td>
+                            </tr>
+                            <tr>
+                                <td>측정 시점</td>
+                                <td>waves/timepoints 테이블</td>
+                                <td>pre, post, follow_up</td>
+                            </tr>
+                            <tr>
+                                <td>실험 조건</td>
+                                <td>conditions 테이블</td>
+                                <td>treatment, control</td>
+                            </tr>
+                            <tr>
+                                <td>척도/검사</td>
+                                <td>instruments 테이블</td>
+                                <td>VAS, ODI, SF-36</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="concept-box">
+                <h3>기본 연구 DB 스키마</h3>
+                <div class="sql-box">
+                    <pre>-- 연구 정보
+CREATE TABLE studies (
+    id INTEGER PRIMARY KEY,
+    title TEXT NOT NULL,
+    start_date DATE,
+    end_date DATE,
+    design_type TEXT  -- 'cross-sectional', 'longitudinal', 'experimental'
+);
+
+-- 참가자 (시간 불변 정보)
+CREATE TABLE participants (
+    id INTEGER PRIMARY KEY,
+    study_id INTEGER REFERENCES studies(id),
+    enrollment_date DATE,
+    birth_year INTEGER,
+    gender TEXT CHECK(gender IN ('M', 'F', 'Other'))
+);
+
+-- 측정 도구
+CREATE TABLE instruments (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    abbreviation TEXT,
+    min_score REAL,
+    max_score REAL,
+    higher_is_better BOOLEAN
+);
+
+-- 측정값
+CREATE TABLE measurements (
+    id INTEGER PRIMARY KEY,
+    participant_id INTEGER REFERENCES participants(id),
+    instrument_id INTEGER REFERENCES instruments(id),
+    time_point TEXT,
+    measure_date DATE,
+    score REAL
+);</pre>
+                </div>
+            </div>
+
+            <div class="explanation-box">
+                <h3>설계 원칙</h3>
+                <ul>
+                    <li><strong>참가자 정보와 측정값 분리:</strong> 시간에 따라 변하지 않는 정보(성별, 출생연도)와 반복 측정값을 다른 테이블에 저장</li>
+                    <li><strong>측정 도구 메타데이터 분리:</strong> 검사 도구의 정보(점수 범위, 해석 방향)를 별도 테이블에 저장</li>
+                    <li><strong>Long 형식 유지:</strong> 각 측정은 별도의 행으로 저장</li>
+                </ul>
+            </div>
+
+            <hr>
+
+            <h2>5. 좋은 연구 설계의 조건</h2>
+
+            <p>연구의 질은 타당도(Validity)와 신뢰도(Reliability)로 평가합니다.</p>
+
+            <div class="concept-box">
+                <h3>내적 타당도 (Internal Validity)</h3>
+                <p>독립변수가 종속변수에 실제로 영향을 미쳤는지에 대한 확신의 정도입니다.</p>
+
+                <p><strong>위협 요인:</strong></p>
+                <ul>
+                    <li><strong>역사(History):</strong> 연구 기간 중 외부 사건의 영향</li>
+                    <li><strong>성숙(Maturation):</strong> 시간 경과에 따른 자연적 변화</li>
+                    <li><strong>검사 효과(Testing):</strong> 사전 검사가 사후 검사에 영향</li>
+                    <li><strong>도구 변화(Instrumentation):</strong> 측정 도구의 변화</li>
+                    <li><strong>통계적 회귀(Regression):</strong> 극단값이 평균으로 회귀</li>
+                    <li><strong>선택 편향(Selection):</strong> 집단 간 사전 차이</li>
+                    <li><strong>탈락(Attrition):</strong> 참가자 이탈로 인한 편향</li>
+                </ul>
+
+                <p><strong>통제 방법:</strong></p>
+                <ul>
+                    <li>무선 할당(Random Assignment)</li>
+                    <li>통제 집단 사용</li>
+                    <li>맹검(Blinding)</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>외적 타당도 (External Validity)</h3>
+                <p>연구 결과를 다른 상황, 다른 집단에 일반화할 수 있는 정도입니다.</p>
+
+                <p><strong>위협 요인:</strong></p>
+                <ul>
+                    <li><strong>표본 특수성:</strong> 특정 집단에서만 적용 가능</li>
+                    <li><strong>상황 특수성:</strong> 특정 환경에서만 적용 가능</li>
+                    <li><strong>시간 특수성:</strong> 특정 시기에만 적용 가능</li>
+                    <li><strong>실험실 인공성:</strong> 실제 상황과 다른 실험 조건</li>
+                </ul>
+
+                <p><strong>향상 방법:</strong></p>
+                <ul>
+                    <li>대표성 있는 표본 추출</li>
+                    <li>다양한 환경에서 반복 연구</li>
+                    <li>현장 연구(Field Study)</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>신뢰도 (Reliability)</h3>
+                <p>측정이 일관되게 반복되는 정도입니다.</p>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>유형</th><th>측정 방법</th><th>기준</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>검사-재검사 신뢰도</td>
+                                <td>같은 검사를 시간 간격 두고 반복, 상관 계산</td>
+                                <td>r ≥ 0.70</td>
+                            </tr>
+                            <tr>
+                                <td>내적 일관성</td>
+                                <td>Cronbach's α 계산</td>
+                                <td>α ≥ 0.70</td>
+                            </tr>
+                            <tr>
+                                <td>반분 신뢰도</td>
+                                <td>검사를 반으로 나누어 상관</td>
+                                <td>r ≥ 0.70</td>
+                            </tr>
+                            <tr>
+                                <td>평가자 간 신뢰도</td>
+                                <td>여러 평가자의 일치도 (ICC, Kappa)</td>
+                                <td>ICC ≥ 0.75, κ ≥ 0.60</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="explanation-box">
+                <h3>타당도와 신뢰도의 관계</h3>
+                <p><strong>신뢰도는 타당도의 필요조건입니다.</strong></p>
+                <ul>
+                    <li>신뢰도가 낮으면 타당도도 낮습니다 (측정이 일관되지 않으면 무엇을 측정하는지 알 수 없음)</li>
+                    <li>그러나 신뢰도가 높다고 타당도가 보장되지는 않습니다 (일관되게 엉뚱한 것을 측정할 수 있음)</li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <p><strong>DB 설계:</strong> 신뢰도 정보 저장</p>
+                <pre>-- 측정 도구 신뢰도 정보
+CREATE TABLE instrument_reliability (
+    id INTEGER PRIMARY KEY,
+    instrument_id INTEGER REFERENCES instruments(id),
+    reliability_type TEXT,  -- 'test_retest', 'internal', 'inter_rater'
+    coefficient REAL,
+    sample_size INTEGER,
+    reference TEXT
+);
+
+-- 평가자 간 신뢰도를 위한 다중 평가
+CREATE TABLE ratings (
+    id INTEGER PRIMARY KEY,
+    participant_id INTEGER REFERENCES participants(id),
+    instrument_id INTEGER REFERENCES instruments(id),
+    rater_id INTEGER,
+    score REAL
+);</pre>
+            </div>
+
+            <div class="summary-box">
+                <h3>📝 이 장의 핵심 정리</h3>
+                <table>
+                    <thead>
+                        <tr><th>개념</th><th>설명</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>연구 질문</td><td>연구를 통해 답하고자 하는 구체적 물음</td></tr>
+                        <tr><td>모집단</td><td>결과를 일반화하고자 하는 전체 집단</td></tr>
+                        <tr><td>표본</td><td>모집단에서 실제 연구에 참여하는 일부</td></tr>
+                        <tr><td>귀무가설(H₀)</td><td>효과가 없다는 가설, 기각의 대상</td></tr>
+                        <tr><td>대립가설(H₁)</td><td>효과가 있다는 가설, 검증 대상</td></tr>
+                        <tr><td>내적 타당도</td><td>독립변수가 실제로 종속변수에 영향을 미쳤는지</td></tr>
+                        <tr><td>외적 타당도</td><td>결과를 다른 상황에 일반화할 수 있는지</td></tr>
+                        <tr><td>신뢰도</td><td>측정의 일관성 (타당도의 필요조건)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-1.html" class="nav-btn">← 이전</a>
+                <span class="page-num">2 / 20</span>
+                <a href="chapter-3.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

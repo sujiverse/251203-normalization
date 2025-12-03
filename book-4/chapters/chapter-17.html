@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>17장: 셀 스타일 커스터마이징 - 물리치료사를 위한 DB 4권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "4"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📕 물리치료사를 위한</h1>
+                <p>웹 앱 만들기 (4권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">셀 스타일 커스터마이징</h1>
+
+            <h2>셀 스타일 속성</h2>
+
+            <table>
+                <tr>
+                    <th>속성</th>
+                    <th>설명</th>
+                    <th>예시</th>
+                </tr>
+                <tr>
+                    <td>bg</td>
+                    <td>배경색</td>
+                    <td>#ffffff</td>
+                </tr>
+                <tr>
+                    <td>fc</td>
+                    <td>글자색</td>
+                    <td>#000000</td>
+                </tr>
+                <tr>
+                    <td>fs</td>
+                    <td>글자 크기</td>
+                    <td>12</td>
+                </tr>
+                <tr>
+                    <td>bl</td>
+                    <td>굵게</td>
+                    <td>1 (활성), 0 (비활성)</td>
+                </tr>
+                <tr>
+                    <td>it</td>
+                    <td>기울임</td>
+                    <td>1 (활성)</td>
+                </tr>
+                <tr>
+                    <td>ht</td>
+                    <td>가로 정렬</td>
+                    <td>0:왼쪽, 1:가운데, 2:오른쪽</td>
+                </tr>
+                <tr>
+                    <td>vt</td>
+                    <td>세로 정렬</td>
+                    <td>0:위, 1:가운데, 2:아래</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>스타일 적용 예시</h2>
+
+            <pre><code>// 헤더 셀 스타일
+const headerStyle = {
+    bg: '#1e293b',     // 진한 배경
+    fc: '#ffffff',     // 흰 글자
+    bl: 1,             // 굵게
+    ht: 1,             // 가운데 정렬
+    vt: 1,             // 세로 가운데
+    fs: 12             // 글자 크기
+};
+
+// 환자명 셀 스타일
+const patientNameStyle = {
+    bg: '#fee2e2',     // 연한 빨강
+    fc: '#991b1b',     // 진한 빨강
+    bl: 1,
+    ht: 0              // 왼쪽 정렬
+};
+
+// 예약 셀 스타일 (치료사별)
+const therapistStyles = {
+    '김치료': { bg: '#dbeafe', fc: '#1e40af' },  // 파랑
+    '이치료': { bg: '#fef3c7', fc: '#92400e' },  // 노랑
+    '박치료': { bg: '#dcfce7', fc: '#166534' },  // 초록
+    '최치료': { bg: '#f3e8ff', fc: '#6b21a8' }   // 보라
+};</code></pre>
+
+            <hr>
+
+            <h2>스타일 함수 만들기</h2>
+
+            <pre><code>// 셀 값 생성 헬퍼
+function createCell(value, displayValue, style = {}) {
+    return {
+        v: value,
+        m: displayValue || value,
+        ...style
+    };
+}
+
+// 헤더 셀
+function createHeaderCell(value) {
+    return createCell(value, value, {
+        bg: '#1e293b',
+        fc: '#ffffff',
+        bl: 1,
+        ht: 1,
+        vt: 1
+    });
+}
+
+// 환자명 셀
+function createPatientCell(id, name) {
+    return createCell(id, name, {
+        bg: '#fee2e2',
+        fc: '#991b1b',
+        bl: 1
+    });
+}
+
+// 예약 셀
+function createReservationCell(time, therapist) {
+    const style = therapistStyles[therapist] || { bg: '#f1f5f9' };
+    return createCell(time, time, {
+        ...style,
+        ht: 1  // 가운데 정렬
+    });
+}</code></pre>
+
+            <hr>
+
+            <h2>개선된 시트 생성 코드</h2>
+
+            <pre><code>function createHeaderRow(dates) {
+    const cells = [
+        {
+            r: 0, c: 0,
+            v: createHeaderCell('환자명')
+        }
+    ];
+
+    dates.forEach((d, i) => {
+        cells.push({
+            r: 0,
+            c: i + 1,
+            v: createHeaderCell(d.display)
+        });
+    });
+
+    return cells;
+}
+
+function createPatientRows(patients) {
+    return patients.map((patient, i) => ({
+        r: i + 1,
+        c: 0,
+        v: createPatientCell(patient.patient_id, patient.name)
+    }));
+}
+
+function createReservationCells(patients, dates, reservations) {
+    const cells = [];
+
+    patients.forEach((patient, rowIdx) => {
+        const patientRes = reservations[patient.patient_id] || {};
+
+        dates.forEach((d, colIdx) => {
+            const res = patientRes[d.date];
+            if (res) {
+                cells.push({
+                    r: rowIdx + 1,
+                    c: colIdx + 1,
+                    v: createReservationCell(res.time, res.therapist)
+                });
+            }
+        });
+    });
+
+    return cells;
+}</code></pre>
+
+            <hr>
+
+            <h2>주말 표시하기</h2>
+
+            <pre><code>function getDateStyle(dateObj) {
+    const day = dateObj.getDay();
+
+    if (day === 0) {  // 일요일
+        return { bg: '#fef2f2', fc: '#dc2626' };
+    } else if (day === 6) {  // 토요일
+        return { bg: '#eff6ff', fc: '#2563eb' };
+    }
+
+    return { bg: '#f8fafc', fc: '#334155' };
+}
+
+function createHeaderRow(dates) {
+    const cells = [
+        { r: 0, c: 0, v: createHeaderCell('환자명') }
+    ];
+
+    dates.forEach((d, i) => {
+        const dateObj = new Date(d.date);
+        const style = getDateStyle(dateObj);
+
+        cells.push({
+            r: 0,
+            c: i + 1,
+            v: {
+                v: d.date,
+                m: d.display,
+                bl: 1,
+                ht: 1,
+                ...style
+            }
+        });
+    });
+
+    return cells;
+}</code></pre>
+
+            <hr>
+
+            <h2>범례 추가</h2>
+
+            <p>치료사별 색상 범례를 페이지에 표시합니다.</p>
+
+            <pre><code>&lt;!-- HTML --&gt;
+&lt;div class="legend"&gt;
+    &lt;h3&gt;치료사&lt;/h3&gt;
+    &lt;div class="legend-items" id="therapistLegend"&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+// JavaScript
+async function loadTherapistLegend() {
+    const res = await fetch('/api/therapists');
+    const { data: therapists } = await res.json();
+
+    const container = document.getElementById('therapistLegend');
+    container.innerHTML = therapists.map(t => {
+        const color = therapistStyles[t.name]?.bg || '#f1f5f9';
+        return `
+            &lt;div class="legend-item"&gt;
+                &lt;span class="color-box" style="background: ${color}"&gt;&lt;/span&gt;
+                &lt;span&gt;${t.name}&lt;/span&gt;
+            &lt;/div&gt;
+        `;
+    }).join('');
+}</code></pre>
+
+            <pre><code>/* CSS */
+.legend {
+    padding: 10px 20px;
+    background: white;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.legend-items {
+    display: flex;
+    gap: 15px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.color-box {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    border: 1px solid #ddd;
+}</code></pre>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li>셀 스타일 속성: bg, fc, fs, bl, ht, vt 등</li>
+                <li>치료사별 색상으로 구분합니다</li>
+                <li>주말은 다른 색으로 표시합니다</li>
+                <li>범례로 색상 의미를 설명합니다</li>
+            </ul>
+
+            <blockquote>다음 장에서는 행/열 고정을 설정합니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

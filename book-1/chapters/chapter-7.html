@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[7권] 실전 DB 설계 - 물리치료사를 위한 DB</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "1"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📗 1권: 정규화 편</h1>
+                <p>데이터베이스 기초 개념</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">[7권] 실전: 물리치료 클리닉 DB 설계</h1>
+
+            <h2>필요한 테이블들</h2>
+            <pre><code>[환자]           - 환자 기본 정보
+[보험]           - 보험사 정보
+[진단코드]       - 진단명 목록
+[환자진단]       - 환자-진단 연결 (N:M)
+[치료사]         - 치료사 기본 정보
+[치료세션]       - 치료 기록
+[SOAP기록]       - 세션별 SOAP</code></pre>
+            <hr>
+
+            <h2>ERD (관계도)</h2>
+            <pre><code>[보험] 1───N [환자] 1───N [환자진단] N───1 [진단코드]
+                │
+                N
+          [치료세션] N───1 [치료사]
+                │
+                1
+           [SOAP기록]</code></pre>
+            <hr>
+
+            <h2>핵심 CREATE TABLE</h2>
+            <pre><code>-- 환자 테이블
+CREATE TABLE patients (
+    patient_id VARCHAR(10) PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    phone VARCHAR(20),
+    birth_date DATE,
+    insurance_code VARCHAR(10),
+    FOREIGN KEY (insurance_code)
+        REFERENCES insurances(insurance_code)
+);
+
+-- 치료세션 테이블
+CREATE TABLE treatment_sessions (
+    session_id INT AUTO_INCREMENT PRIMARY KEY,
+    patient_id VARCHAR(10) NOT NULL,
+    therapist_id VARCHAR(10) NOT NULL,
+    session_date DATE NOT NULL,
+    FOREIGN KEY (patient_id)
+        REFERENCES patients(patient_id),
+    FOREIGN KEY (therapist_id)
+        REFERENCES therapists(therapist_id)
+);</code></pre>
+
+            <div class="nav-buttons">
+                <a href="chapter-6.html" class="nav-btn">← 이전</a>
+                <span class="page-num">7 / 12</span>
+                <a href="chapter-8.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/nav.js"></script>
+</body>
+</html>

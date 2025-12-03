@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>부록 C: 용어 사전 - 물리치료사를 위한 데이터베이스 3권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "3"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📙 물리치료사를 위한</h1>
+                <p>실전 구축 & 대시보드 (3권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">부록 C: 용어 사전</h1>
+
+<h2>데이터베이스 & SQL 용어</h2>
+
+<p>이 책에서 사용된 용어들을 알파벳/가나다순으로 정리했습니다. 모르는 용어가 나오면 여기서 찾아보세요.</p>
+
+<hr>
+
+<h2>A ~ Z</h2>
+
+<table>
+<tr><th>용어</th><th>설명</th></tr>
+<tr>
+<td><strong>AUTO_INCREMENT</strong></td>
+<td>자동 증가. 새 행이 추가될 때마다 자동으로 1씩 증가하는 숫자를 생성합니다. 주로 기본키에 사용됩니다.<br><code>session_id INT AUTO_INCREMENT PRIMARY KEY</code></td>
+</tr>
+<tr>
+<td><strong>CHAR</strong></td>
+<td>고정 길이 문자열 타입. CHAR(1)은 정확히 1글자, CHAR(10)은 정확히 10글자를 저장합니다. 항상 고정된 길이가 필요할 때 사용합니다.<br><code>gender CHAR(1) -- 'M' 또는 'F'</code></td>
+</tr>
+<tr>
+<td><strong>CHECK</strong></td>
+<td>값의 유효성을 검사하는 제약조건. 조건에 맞지 않는 값은 입력이 거부됩니다.<br><code>CHECK (gender IN ('M', 'F'))</code></td>
+</tr>
+<tr>
+<td><strong>COALESCE</strong></td>
+<td>NULL이 아닌 첫 번째 값을 반환하는 함수. NULL 대신 기본값을 표시할 때 유용합니다.<br><code>COALESCE(memo, '없음') -- memo가 NULL이면 '없음' 반환</code></td>
+</tr>
+<tr>
+<td><strong>COMMIT</strong></td>
+<td>트랜잭션에서 변경 사항을 확정(저장)하는 명령. COMMIT 후에는 변경을 취소할 수 없습니다.</td>
+</tr>
+<tr>
+<td><strong>COUNT</strong></td>
+<td>행의 개수를 세는 집계 함수.<br><code>SELECT COUNT(*) FROM patients -- 전체 환자 수</code></td>
+</tr>
+<tr>
+<td><strong>CREATE</strong></td>
+<td>데이터베이스, 테이블, 인덱스 등을 생성하는 명령.<br><code>CREATE TABLE patients (...)</code></td>
+</tr>
+<tr>
+<td><strong>CRUD</strong></td>
+<td>Create(생성), Read(조회), Update(수정), Delete(삭제)의 약자. 데이터베이스의 기본 4가지 작업을 의미합니다.</td>
+</tr>
+<tr>
+<td><strong>CURDATE()</strong></td>
+<td>현재 날짜를 반환하는 MySQL 함수.<br><code>WHERE session_date = CURDATE() -- 오늘 날짜</code></td>
+</tr>
+<tr>
+<td><strong>DATE</strong></td>
+<td>날짜를 저장하는 데이터 타입. 'YYYY-MM-DD' 형식입니다.<br><code>birth_date DATE -- 예: '1985-03-15'</code></td>
+</tr>
+<tr>
+<td><strong>DATETIME</strong></td>
+<td>날짜와 시간을 함께 저장하는 타입. 'YYYY-MM-DD HH:MM:SS' 형식입니다.<br><code>created_at DATETIME DEFAULT CURRENT_TIMESTAMP</code></td>
+</tr>
+<tr>
+<td><strong>DELETE</strong></td>
+<td>데이터를 삭제하는 명령. WHERE 없이 사용하면 전체 데이터가 삭제되니 주의!<br><code>DELETE FROM patients WHERE patient_id = 'P001'</code></td>
+</tr>
+<tr>
+<td><strong>DESC / DESCRIBE</strong></td>
+<td>테이블 구조를 확인하는 명령.<br><code>DESCRIBE patients -- 컬럼 목록과 타입 표시</code></td>
+</tr>
+<tr>
+<td><strong>DISTINCT</strong></td>
+<td>중복을 제거하고 고유한 값만 반환합니다.<br><code>SELECT DISTINCT therapist_id FROM treatment_sessions</code></td>
+</tr>
+<tr>
+<td><strong>Docker</strong></td>
+<td>컨테이너 기반 가상화 플랫폼. 이 책에서는 Metabase를 실행하는 데 사용합니다.</td>
+</tr>
+<tr>
+<td><strong>DROP</strong></td>
+<td>데이터베이스, 테이블 등을 완전히 삭제하는 명령. 복구 불가능하니 신중하게!<br><code>DROP TABLE patients -- 테이블 완전 삭제</code></td>
+</tr>
+<tr>
+<td><strong>ER 다이어그램</strong></td>
+<td>Entity-Relationship Diagram. 테이블 간의 관계를 시각적으로 표현한 그림입니다.</td>
+</tr>
+<tr>
+<td><strong>EXPLAIN</strong></td>
+<td>쿼리 실행 계획을 보여주는 명령. 쿼리 최적화에 사용합니다.<br><code>EXPLAIN SELECT * FROM patients WHERE name = '강민준'</code></td>
+</tr>
+<tr>
+<td><strong>FK (Foreign Key)</strong></td>
+<td>외래키. 다른 테이블의 기본키를 참조하여 테이블 간 관계를 만듭니다.<br><code>FOREIGN KEY (patient_id) REFERENCES patients(patient_id)</code></td>
+</tr>
+<tr>
+<td><strong>GROUP BY</strong></td>
+<td>데이터를 그룹으로 묶어서 집계할 때 사용합니다.<br><code>SELECT therapist_id, COUNT(*) FROM treatment_sessions GROUP BY therapist_id</code></td>
+</tr>
+<tr>
+<td><strong>HAVING</strong></td>
+<td>GROUP BY 결과에 조건을 거는 절. WHERE는 그룹화 전, HAVING은 그룹화 후 필터링입니다.<br><code>GROUP BY patient_id HAVING COUNT(*) > 5</code></td>
+</tr>
+<tr>
+<td><strong>INDEX</strong></td>
+<td>검색 속도를 높이기 위한 데이터 구조. 책의 색인과 같은 역할입니다.<br><code>CREATE INDEX idx_name ON patients(name)</code></td>
+</tr>
+<tr>
+<td><strong>INSERT</strong></td>
+<td>새 데이터를 추가하는 명령.<br><code>INSERT INTO patients (patient_id, name) VALUES ('P001', '강민준')</code></td>
+</tr>
+<tr>
+<td><strong>INT</strong></td>
+<td>정수를 저장하는 데이터 타입. 약 -21억 ~ +21억 범위입니다.</td>
+</tr>
+<tr>
+<td><strong>JOIN</strong></td>
+<td>두 개 이상의 테이블을 연결하여 조회하는 방법.<br><code>SELECT * FROM patients p JOIN treatment_sessions ts ON p.patient_id = ts.patient_id</code></td>
+</tr>
+<tr>
+<td><strong>LAST_INSERT_ID()</strong></td>
+<td>가장 최근에 AUTO_INCREMENT로 생성된 값을 반환합니다.</td>
+</tr>
+<tr>
+<td><strong>LEFT JOIN</strong></td>
+<td>왼쪽 테이블의 모든 행을 포함하고, 오른쪽 테이블에서 일치하는 행을 연결합니다. 일치하지 않으면 NULL이 됩니다.</td>
+</tr>
+<tr>
+<td><strong>LIKE</strong></td>
+<td>패턴 매칭 검색. %는 아무 문자열, _는 한 글자를 의미합니다.<br><code>WHERE name LIKE '김%' -- '김'으로 시작하는 이름</code></td>
+</tr>
+<tr>
+<td><strong>LIMIT</strong></td>
+<td>결과 행 수를 제한합니다.<br><code>SELECT * FROM patients LIMIT 10 -- 최대 10개만</code></td>
+</tr>
+<tr>
+<td><strong>Metabase</strong></td>
+<td>오픈소스 BI(Business Intelligence) 도구. SQL 없이도 데이터를 시각화하고 대시보드를 만들 수 있습니다.</td>
+</tr>
+<tr>
+<td><strong>MySQL</strong></td>
+<td>가장 널리 사용되는 오픈소스 관계형 데이터베이스 시스템입니다.</td>
+</tr>
+<tr>
+<td><strong>NOT NULL</strong></td>
+<td>NULL 값을 허용하지 않는 제약조건. 반드시 값이 있어야 합니다.<br><code>name VARCHAR(50) NOT NULL</code></td>
+</tr>
+<tr>
+<td><strong>NULL</strong></td>
+<td>값이 없음을 나타내는 특수 값. 0이나 빈 문자열과는 다릅니다.</td>
+</tr>
+<tr>
+<td><strong>ORDER BY</strong></td>
+<td>결과를 정렬합니다. ASC는 오름차순, DESC는 내림차순입니다.<br><code>ORDER BY session_date DESC -- 최신순</code></td>
+</tr>
+<tr>
+<td><strong>PK (Primary Key)</strong></td>
+<td>기본키. 테이블에서 각 행을 고유하게 식별하는 컬럼입니다. 중복과 NULL이 불가능합니다.</td>
+</tr>
+<tr>
+<td><strong>Query</strong></td>
+<td>쿼리. 데이터베이스에 보내는 요청/명령입니다. SQL 문장 자체를 의미하기도 합니다.</td>
+</tr>
+<tr>
+<td><strong>ROLLBACK</strong></td>
+<td>트랜잭션에서 변경 사항을 취소하고 이전 상태로 되돌리는 명령입니다.</td>
+</tr>
+<tr>
+<td><strong>Schema</strong></td>
+<td>스키마. 데이터베이스의 구조(테이블, 컬럼, 관계 등)를 정의한 것입니다.</td>
+</tr>
+<tr>
+<td><strong>SELECT</strong></td>
+<td>데이터를 조회하는 명령. SQL에서 가장 많이 사용됩니다.<br><code>SELECT * FROM patients WHERE is_active = 'Y'</code></td>
+</tr>
+<tr>
+<td><strong>SQL</strong></td>
+<td>Structured Query Language. 데이터베이스를 다루는 표준 언어입니다.</td>
+</tr>
+<tr>
+<td><strong>SUM</strong></td>
+<td>합계를 계산하는 집계 함수.<br><code>SELECT SUM(total_amount) FROM billings</code></td>
+</tr>
+<tr>
+<td><strong>TEXT</strong></td>
+<td>긴 문자열을 저장하는 데이터 타입. 메모, 설명 등에 사용합니다.</td>
+</tr>
+<tr>
+<td><strong>TIME</strong></td>
+<td>시간을 저장하는 데이터 타입. 'HH:MM:SS' 형식입니다.<br><code>start_time TIME -- 예: '10:30:00'</code></td>
+</tr>
+<tr>
+<td><strong>Transaction</strong></td>
+<td>트랜잭션. 여러 작업을 하나의 단위로 묶어서 처리하는 것. 모두 성공하거나 모두 실패합니다.</td>
+</tr>
+<tr>
+<td><strong>UNIQUE</strong></td>
+<td>중복 값을 허용하지 않는 제약조건.<br><code>UNIQUE (name, birth_date, phone)</code></td>
+</tr>
+<tr>
+<td><strong>UPDATE</strong></td>
+<td>기존 데이터를 수정하는 명령.<br><code>UPDATE patients SET phone = '010-1234-5678' WHERE patient_id = 'P001'</code></td>
+</tr>
+<tr>
+<td><strong>VARCHAR</strong></td>
+<td>가변 길이 문자열 타입. VARCHAR(50)은 최대 50글자까지 저장 가능합니다.<br><code>name VARCHAR(50) NOT NULL</code></td>
+</tr>
+<tr>
+<td><strong>WHERE</strong></td>
+<td>조건을 지정하는 절. 조건에 맞는 행만 선택됩니다.<br><code>WHERE session_date = '2024-03-25'</code></td>
+</tr>
+</table>
+
+<hr>
+
+<h2>ㄱ ~ ㅎ</h2>
+
+<table>
+<tr><th>용어</th><th>설명</th></tr>
+<tr>
+<td><strong>기본키</strong></td>
+<td>Primary Key(PK). 테이블에서 각 행을 고유하게 식별하는 컬럼. 중복 불가, NULL 불가.</td>
+</tr>
+<tr>
+<td><strong>노쇼 (No-Show)</strong></td>
+<td>예약했지만 연락 없이 나타나지 않는 것. 클리닉 운영에서 큰 손실입니다.</td>
+</tr>
+<tr>
+<td><strong>다대다 관계</strong></td>
+<td>N:M 관계. 양쪽 테이블 모두 여러 개의 연결이 가능한 관계. 중간 테이블(연결 테이블)이 필요합니다. 예: 환자-진단</td>
+</tr>
+<tr>
+<td><strong>대시보드</strong></td>
+<td>여러 차트와 지표를 한 화면에 모아놓은 것. 현황을 한눈에 파악할 수 있습니다.</td>
+</tr>
+<tr>
+<td><strong>데이터 무결성</strong></td>
+<td>데이터의 정확성과 일관성을 유지하는 것. 제약조건으로 보장합니다.</td>
+</tr>
+<tr>
+<td><strong>데이터베이스</strong></td>
+<td>체계적으로 구조화된 데이터의 집합. 여러 테이블로 구성됩니다.</td>
+</tr>
+<tr>
+<td><strong>레코드 (Record)</strong></td>
+<td>테이블의 한 행(Row). 하나의 데이터 단위를 의미합니다. 예: 환자 한 명의 정보</td>
+</tr>
+<tr>
+<td><strong>미수금</strong></td>
+<td>아직 받지 못한 돈. 치료는 완료했지만 수납이 안 된 상태입니다.</td>
+</tr>
+<tr>
+<td><strong>백업</strong></td>
+<td>데이터를 복사해서 안전한 곳에 보관하는 것. 문제 발생 시 복원에 사용합니다.</td>
+</tr>
+<tr>
+<td><strong>복원</strong></td>
+<td>백업 파일을 사용해서 데이터를 원래 상태로 되돌리는 것.</td>
+</tr>
+<tr>
+<td><strong>비정규화</strong></td>
+<td>정규화의 반대. 성능 향상을 위해 의도적으로 중복을 허용하는 것.</td>
+</tr>
+<tr>
+<td><strong>수가</strong></td>
+<td>의료 서비스의 가격. 치료 항목별로 정해진 금액입니다.</td>
+</tr>
+<tr>
+<td><strong>스키마</strong></td>
+<td>데이터베이스의 구조를 정의한 것. 테이블, 컬럼, 관계 등의 설계도입니다.</td>
+</tr>
+<tr>
+<td><strong>시각화</strong></td>
+<td>데이터를 차트, 그래프 등으로 시각적으로 표현하는 것.</td>
+</tr>
+<tr>
+<td><strong>실손보험</strong></td>
+<td>실제 발생한 의료비를 보상해주는 민간 보험. 도수치료 비용 청구에 사용됩니다.</td>
+</tr>
+<tr>
+<td><strong>외래키</strong></td>
+<td>Foreign Key(FK). 다른 테이블의 기본키를 참조하는 컬럼. 테이블 간 관계를 만듭니다.</td>
+</tr>
+<tr>
+<td><strong>이탈</strong></td>
+<td>환자가 더 이상 방문하지 않는 것. 30일 이상 미방문 시 이탈 위험으로 분류합니다.</td>
+</tr>
+<tr>
+<td><strong>인덱스</strong></td>
+<td>검색 속도를 높이기 위한 자료구조. 자주 검색하는 컬럼에 생성합니다.</td>
+</tr>
+<tr>
+<td><strong>인센티브</strong></td>
+<td>성과에 따른 추가 보상. 이 책에서는 치료사 실적에 따른 보너스를 계산합니다.</td>
+</tr>
+<tr>
+<td><strong>일대다 관계</strong></td>
+<td>1:N 관계. 한쪽이 여러 개와 연결되는 관계. 예: 환자 1명 - 치료 여러 건</td>
+</tr>
+<tr>
+<td><strong>일대일 관계</strong></td>
+<td>1:1 관계. 양쪽이 하나씩만 연결되는 관계. 예: 치료 세션 1건 - SOAP 노트 1개</td>
+</tr>
+<tr>
+<td><strong>정규화</strong></td>
+<td>데이터 중복을 제거하고 무결성을 높이기 위해 테이블을 분리하는 과정입니다.</td>
+</tr>
+<tr>
+<td><strong>제약조건</strong></td>
+<td>데이터의 무결성을 보장하기 위한 규칙. PRIMARY KEY, FOREIGN KEY, UNIQUE, CHECK, NOT NULL 등이 있습니다.</td>
+</tr>
+<tr>
+<td><strong>조인</strong></td>
+<td>두 개 이상의 테이블을 연결해서 조회하는 것. INNER JOIN, LEFT JOIN, RIGHT JOIN 등이 있습니다.</td>
+</tr>
+<tr>
+<td><strong>집계 함수</strong></td>
+<td>여러 행의 값을 계산하는 함수. COUNT, SUM, AVG, MAX, MIN 등이 있습니다.</td>
+</tr>
+<tr>
+<td><strong>질문 (Question)</strong></td>
+<td>Metabase 용어. 하나의 데이터 조회 또는 분석 단위입니다.</td>
+</tr>
+<tr>
+<td><strong>청구</strong></td>
+<td>치료 비용을 환자나 보험사에 요청하는 것.</td>
+</tr>
+<tr>
+<td><strong>초진</strong></td>
+<td>환자의 첫 방문 또는 첫 진료. 신규 환자 상담을 의미합니다.</td>
+</tr>
+<tr>
+<td><strong>컬럼 (Column)</strong></td>
+<td>테이블의 세로 열. 데이터의 속성을 나타냅니다. 예: name, phone, birth_date</td>
+</tr>
+<tr>
+<td><strong>컬렉션 (Collection)</strong></td>
+<td>Metabase 용어. 질문과 대시보드를 정리하는 폴더입니다.</td>
+</tr>
+<tr>
+<td><strong>쿼리</strong></td>
+<td>데이터베이스에 보내는 명령. SQL 문장을 의미합니다.</td>
+</tr>
+<tr>
+<td><strong>테이블</strong></td>
+<td>데이터를 행과 열로 구성한 표. 데이터베이스의 기본 저장 단위입니다.</td>
+</tr>
+<tr>
+<td><strong>트랜잭션</strong></td>
+<td>여러 작업을 하나의 단위로 묶은 것. 모두 성공(COMMIT)하거나 모두 취소(ROLLBACK)됩니다.</td>
+</tr>
+<tr>
+<td><strong>필드 (Field)</strong></td>
+<td>컬럼(Column)과 같은 의미로 사용됩니다.</td>
+</tr>
+<tr>
+<td><strong>해피콜</strong></td>
+<td>일정 기간 방문하지 않은 환자에게 안부를 묻고 재방문을 유도하는 전화입니다.</td>
+</tr>
+<tr>
+<td><strong>행 (Row)</strong></td>
+<td>테이블의 가로 줄. 하나의 데이터 레코드를 의미합니다.</td>
+</tr>
+</table>
+
+<hr>
+
+<h2>물리치료 용어</h2>
+
+<table>
+<tr><th>용어</th><th>설명</th></tr>
+<tr>
+<td><strong>ROM</strong></td>
+<td>Range of Motion. 관절가동범위. 관절이 움직일 수 있는 범위를 측정합니다.</td>
+</tr>
+<tr>
+<td><strong>SLR</strong></td>
+<td>Straight Leg Raise. 하지직거상검사. 디스크 탈출 여부를 확인하는 검사입니다.</td>
+</tr>
+<tr>
+<td><strong>SOAP</strong></td>
+<td>Subjective(주관적), Objective(객관적), Assessment(평가), Plan(계획). 의료 기록 형식입니다.</td>
+</tr>
+<tr>
+<td><strong>VDT 증후군</strong></td>
+<td>Visual Display Terminal 증후군. 컴퓨터 작업으로 인한 목, 어깨, 눈의 통증입니다.</td>
+</tr>
+<tr>
+<td><strong>도수치료</strong></td>
+<td>치료사의 손으로 직접 시행하는 치료. 관절가동술, 근막이완 등이 포함됩니다.</td>
+</tr>
+<tr>
+<td><strong>슈로스</strong></td>
+<td>Schroth. 측만증 교정을 위한 특수 운동치료법입니다.</td>
+</tr>
+<tr>
+<td><strong>오십견</strong></td>
+<td>유착성 관절낭염. 어깨가 굳어서 움직이기 어려운 상태입니다.</td>
+</tr>
+<tr>
+<td><strong>운동치료</strong></td>
+<td>재활 운동을 통해 치료하는 방법. 근력 강화, 유연성 향상 등이 목적입니다.</td>
+</tr>
+<tr>
+<td><strong>측만증</strong></td>
+<td>척추가 옆으로 휜 상태. Cobb angle로 각도를 측정합니다.</td>
+</tr>
+<tr>
+<td><strong>체외충격파</strong></td>
+<td>ESWT. 충격파를 이용한 치료. 건염, 석회화 등에 사용됩니다.</td>
+</tr>
+<tr>
+<td><strong>회전근개</strong></td>
+<td>어깨를 감싸고 있는 4개의 근육과 힘줄. 손상되면 어깨 통증이 발생합니다.</td>
+</tr>
+</table>
+
+<hr>
+
+<h2>약어 모음</h2>
+
+<table>
+<tr><th>약어</th><th>전체 이름</th><th>의미</th></tr>
+<tr><td>DB</td><td>Database</td><td>데이터베이스</td></tr>
+<tr><td>SQL</td><td>Structured Query Language</td><td>구조화된 질의 언어</td></tr>
+<tr><td>PK</td><td>Primary Key</td><td>기본키</td></tr>
+<tr><td>FK</td><td>Foreign Key</td><td>외래키</td></tr>
+<tr><td>CRUD</td><td>Create, Read, Update, Delete</td><td>생성, 조회, 수정, 삭제</td></tr>
+<tr><td>BI</td><td>Business Intelligence</td><td>비즈니스 인텔리전스</td></tr>
+<tr><td>ER</td><td>Entity-Relationship</td><td>개체-관계</td></tr>
+<tr><td>DDL</td><td>Data Definition Language</td><td>데이터 정의어 (CREATE, ALTER, DROP)</td></tr>
+<tr><td>DML</td><td>Data Manipulation Language</td><td>데이터 조작어 (SELECT, INSERT, UPDATE, DELETE)</td></tr>
+<tr><td>DCL</td><td>Data Control Language</td><td>데이터 제어어 (GRANT, REVOKE)</td></tr>
+<tr><td>RDBMS</td><td>Relational Database Management System</td><td>관계형 데이터베이스 관리 시스템</td></tr>
+</table>
+
+<hr>
+
+<h2>자주 사용하는 MySQL 함수</h2>
+
+<table>
+<tr><th>함수</th><th>설명</th><th>예시</th></tr>
+<tr><td>CURDATE()</td><td>오늘 날짜</td><td>'2024-03-25'</td></tr>
+<tr><td>CURTIME()</td><td>현재 시간</td><td>'14:30:00'</td></tr>
+<tr><td>NOW()</td><td>현재 날짜와 시간</td><td>'2024-03-25 14:30:00'</td></tr>
+<tr><td>DATE_FORMAT(date, format)</td><td>날짜 형식 변환</td><td>DATE_FORMAT(date, '%Y-%m') → '2024-03'</td></tr>
+<tr><td>DATEDIFF(d1, d2)</td><td>날짜 차이 (일)</td><td>DATEDIFF('2024-03-25', '2024-03-01') → 24</td></tr>
+<tr><td>DATE_SUB(date, INTERVAL n unit)</td><td>날짜 빼기</td><td>DATE_SUB(CURDATE(), INTERVAL 7 DAY)</td></tr>
+<tr><td>TIMESTAMPDIFF(unit, d1, d2)</td><td>시간 차이</td><td>TIMESTAMPDIFF(YEAR, birth_date, CURDATE())</td></tr>
+<tr><td>CONCAT(s1, s2, ...)</td><td>문자열 연결</td><td>CONCAT(name, ' (', phone, ')')</td></tr>
+<tr><td>COALESCE(v1, v2, ...)</td><td>첫 번째 NULL 아닌 값</td><td>COALESCE(memo, '없음')</td></tr>
+<tr><td>IFNULL(v1, v2)</td><td>NULL이면 대체값</td><td>IFNULL(memo, '없음')</td></tr>
+<tr><td>ROUND(n, d)</td><td>반올림</td><td>ROUND(123.456, 1) → 123.5</td></tr>
+<tr><td>FORMAT(n, d)</td><td>천 단위 구분</td><td>FORMAT(1234567, 0) → '1,234,567'</td></tr>
+<tr><td>GREATEST(v1, v2, ...)</td><td>가장 큰 값</td><td>GREATEST(0, amount - 100) → 음수면 0</td></tr>
+</table>
+
+<hr>
+
+<p>모르는 용어가 있을 때 이 페이지를 참고하세요. 데이터베이스를 다루다 보면 자연스럽게 익숙해질 거예요!</p>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2장: 개발 환경 세팅 - 물리치료사를 위한 데이터베이스 3권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "3"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📙 물리치료사를 위한</h1>
+                <p>실전 구축 & 대시보드 (3권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">개발 환경 완벽 세팅</h1>
+
+            <h2>이번 장에서 할 일</h2>
+
+            <p>본격적인 작업을 시작하기 전에, 필요한 도구들을 설치하고 연결해야 합니다. 요리를 시작하기 전에 칼, 도마, 냄비를 준비하는 것처럼요.</p>
+
+            <p>이미 1권, 2권을 따라오시면서 MySQL과 DBeaver를 설치하셨다면, 앞부분은 빠르게 확인만 하고 넘어가시면 됩니다. Docker와 Metabase는 이번에 새로 설치합니다.</p>
+
+            <h3>이번 장의 목표</h3>
+            <ul>
+                <li>✅ MySQL 서버가 실행 중인지 확인</li>
+                <li>✅ DBeaver에서 MySQL에 연결</li>
+                <li>✅ Docker Desktop 설치</li>
+                <li>✅ Metabase 실행</li>
+                <li>✅ 모든 도구가 서로 연결되어 작동하는 것 확인</li>
+            </ul>
+
+            <hr>
+
+            <h2>1. MySQL 확인하기</h2>
+
+            <p>MySQL은 우리의 데이터를 저장할 데이터베이스 서버입니다. 모든 환자 정보, 치료 기록, 청구 내역이 여기에 저장됩니다.</p>
+
+            <h3>이미 설치되어 있다면</h3>
+
+            <p>1권이나 2권에서 MySQL을 설치하셨다면, 실행 중인지만 확인하면 됩니다.</p>
+
+            <p><strong>Windows에서 확인:</strong></p>
+            <ol>
+                <li>키보드에서 <code>Win + R</code> 누르기</li>
+                <li><code>services.msc</code> 입력하고 Enter</li>
+                <li>목록에서 "MySQL" 또는 "MySQL80" 찾기</li>
+                <li>상태가 "실행 중"인지 확인</li>
+                <li>실행 중이 아니면 우클릭 → "시작"</li>
+            </ol>
+
+            <p><strong>Mac에서 확인:</strong></p>
+            <pre><code># 터미널에서 실행
+mysql.server status
+
+# 실행 중이 아니면 시작
+mysql.server start</code></pre>
+
+            <h3>설치가 안 되어 있다면</h3>
+
+            <p>MySQL 공식 사이트에서 다운로드하여 설치합니다.</p>
+
+            <ol>
+                <li><code>https://dev.mysql.com/downloads/mysql/</code> 접속</li>
+                <li>운영체제에 맞는 버전 다운로드 (MySQL Community Server 8.0)</li>
+                <li>설치 진행 (대부분 Next만 누르면 됨)</li>
+                <li>root 비밀번호 설정 (꼭 기억해두세요!)</li>
+            </ol>
+
+            <div class="warning"><strong>⚠️ root 비밀번호를 꼭 기억하세요!</strong><br>
+            설치할 때 설정한 root 비밀번호는 나중에 계속 사용합니다. 까먹으면 재설치해야 할 수도 있어요. 메모해두세요!</div>
+
+            <h3>✅ 체크포인트: MySQL 연결 테스트</h3>
+
+            <p>터미널(Windows는 명령 프롬프트)에서 다음을 입력해보세요:</p>
+
+            <pre><code>mysql -u root -p</code></pre>
+
+            <p>비밀번호를 입력하고 <code>mysql></code> 프롬프트가 나오면 성공입니다!</p>
+
+            <pre><code>Welcome to the MySQL monitor.  Commands end with ; or \g.
+mysql> </code></pre>
+
+            <p><code>exit</code>를 입력해서 나옵니다.</p>
+
+            <hr>
+
+            <h2>2. DBeaver 확인하기</h2>
+
+            <p>DBeaver는 데이터베이스를 편하게 관리할 수 있는 도구입니다. SQL을 직접 타이핑하지 않고도 테이블을 보고, 데이터를 수정하고, 쿼리를 실행할 수 있어요. 엑셀처럼 직관적인 화면으로 데이터베이스를 다룰 수 있습니다.</p>
+
+            <h3>이미 설치되어 있다면</h3>
+
+            <p>DBeaver를 실행하고, MySQL 연결이 잘 되는지 확인합니다.</p>
+
+            <ol>
+                <li>DBeaver 실행</li>
+                <li>왼쪽 Database Navigator에서 기존 MySQL 연결 더블클릭</li>
+                <li>연결이 되면 초록색 체크 표시가 나타남</li>
+            </ol>
+
+            <h3>설치가 안 되어 있다면</h3>
+
+            <ol>
+                <li><code>https://dbeaver.io/download/</code> 접속</li>
+                <li>운영체제에 맞는 Community Edition 다운로드</li>
+                <li>설치 진행</li>
+            </ol>
+
+            <h3>MySQL 연결 만들기</h3>
+
+            <p>DBeaver를 처음 설치했다면 MySQL 연결을 만들어야 합니다.</p>
+
+            <ol>
+                <li>DBeaver 실행</li>
+                <li>왼쪽 상단 플러그 모양 아이콘 클릭 (새 연결)</li>
+                <li>MySQL 선택 → Next</li>
+                <li>연결 정보 입력:
+                    <ul>
+                        <li>Server Host: <code>localhost</code></li>
+                        <li>Port: <code>3306</code></li>
+                        <li>Username: <code>root</code></li>
+                        <li>Password: MySQL 설치할 때 설정한 비밀번호</li>
+                    </ul>
+                </li>
+                <li>"Test Connection" 버튼 클릭</li>
+                <li>"Connected" 메시지가 나오면 성공!</li>
+                <li>Finish 클릭</li>
+            </ol>
+
+            <div class="tip"><strong>💡 드라이버 다운로드 메시지가 나오면?</strong><br>
+            처음 연결할 때 "드라이버를 다운로드하시겠습니까?" 메시지가 나올 수 있어요. "다운로드"를 클릭하면 자동으로 설치됩니다.</div>
+
+            <h3>✅ 체크포인트: DBeaver 연결 확인</h3>
+
+            <p>왼쪽 Database Navigator에서 연결 이름 옆에 초록색 동그라미가 보이면 성공입니다. 더블클릭해서 펼쳐보면 <code>Databases</code> 폴더가 보여야 해요.</p>
+
+            <hr>
+
+            <h2>3. Docker Desktop 설치하기</h2>
+
+            <p>자, 이제 새로운 도구입니다. Docker가 뭔지 잠깐 설명할게요.</p>
+
+            <h3>Docker가 뭔가요?</h3>
+
+            <p>Docker는 프로그램을 "컨테이너"라는 상자에 담아서 실행하는 도구입니다. 왜 이게 필요할까요?</p>
+
+            <p>예를 들어 Metabase를 설치하려면 원래는 Java도 설치해야 하고, 설정 파일도 만들어야 하고, 이것저것 복잡합니다. 운영체제마다 방법도 다르고요.</p>
+
+            <p>그런데 Docker를 쓰면? "Metabase 컨테이너 실행해줘" 한 줄이면 끝입니다. 필요한 모든 게 컨테이너 안에 다 들어있거든요. 마치 컵라면처럼요. 물만 부으면 되는 것처럼, 명령어 한 줄이면 복잡한 프로그램이 실행됩니다.</p>
+
+            <h3>Docker Desktop 설치</h3>
+
+            <p><strong>Windows:</strong></p>
+            <ol>
+                <li><code>https://www.docker.com/products/docker-desktop/</code> 접속</li>
+                <li>"Download for Windows" 클릭</li>
+                <li>다운로드된 설치 파일 실행</li>
+                <li>설치 진행 (기본 옵션 그대로 OK)</li>
+                <li>설치 완료 후 컴퓨터 재시작</li>
+                <li>Docker Desktop 실행</li>
+            </ol>
+
+            <p><strong>Mac:</strong></p>
+            <ol>
+                <li><code>https://www.docker.com/products/docker-desktop/</code> 접속</li>
+                <li>"Download for Mac" 클릭 (Intel 또는 Apple Silicon 선택)</li>
+                <li>다운로드된 .dmg 파일 실행</li>
+                <li>Docker 아이콘을 Applications 폴더로 드래그</li>
+                <li>Applications에서 Docker 실행</li>
+            </ol>
+
+            <div class="warning"><strong>⚠️ Windows 사용자: WSL 2 필요</strong><br>
+            Docker Desktop은 WSL 2(Windows Subsystem for Linux)가 필요합니다. 설치 중에 WSL 설치 안내가 나오면 따라하시면 됩니다. 보통 자동으로 처리됩니다.</div>
+
+            <h3>✅ 체크포인트: Docker 실행 확인</h3>
+
+            <p>Docker Desktop을 실행하면 화면 하단(Windows) 또는 상단 메뉴바(Mac)에 고래 아이콘이 나타납니다. 아이콘이 움직이지 않고 가만히 있으면 Docker가 준비된 것입니다.</p>
+
+            <p>터미널에서 확인하려면:</p>
+
+            <pre><code>docker --version</code></pre>
+
+            <p>버전 정보가 나오면 성공입니다:</p>
+
+            <pre><code>Docker version 24.0.6, build ed223bc</code></pre>
+
+            <hr>
+
+            <h2>4. Metabase 실행하기</h2>
+
+            <p>Metabase는 데이터를 예쁜 차트와 대시보드로 만들어주는 도구입니다. SQL을 몰라도 클릭만으로 그래프를 만들 수 있고, SQL을 알면 더 강력하게 쓸 수 있어요. 무엇보다 무료입니다!</p>
+
+            <h3>Metabase 컨테이너 실행</h3>
+
+            <p>Docker가 설치되어 있으니, 명령어 한 줄로 Metabase를 실행할 수 있습니다.</p>
+
+            <p>터미널(Windows는 PowerShell 또는 명령 프롬프트)을 열고 다음을 입력하세요:</p>
+
+            <pre><code>docker run -d -p 3000:3000 --name metabase metabase/metabase</code></pre>
+
+            <p>이 명령어가 하는 일:</p>
+            <ul>
+                <li><code>docker run</code> - 컨테이너 실행</li>
+                <li><code>-d</code> - 백그라운드에서 실행 (터미널 닫아도 계속 실행)</li>
+                <li><code>-p 3000:3000</code> - 3000번 포트 연결</li>
+                <li><code>--name metabase</code> - 컨테이너 이름을 "metabase"로</li>
+                <li><code>metabase/metabase</code> - Metabase 이미지 사용</li>
+            </ul>
+
+            <p>처음 실행하면 이미지를 다운로드하느라 몇 분 걸릴 수 있습니다. 기다리세요.</p>
+
+            <pre><code>Unable to find image 'metabase/metabase:latest' locally
+latest: Pulling from metabase/metabase
+...
+Status: Downloaded newer image for metabase/metabase:latest
+a1b2c3d4e5f6...</code></pre>
+
+            <p>긴 문자열(컨테이너 ID)이 출력되면 성공입니다!</p>
+
+            <h3>Metabase 접속하기</h3>
+
+            <p>웹 브라우저를 열고 주소창에 입력하세요:</p>
+
+            <pre><code>http://localhost:3000</code></pre>
+
+            <p>처음에는 Metabase가 시작되는 데 1~2분 걸릴 수 있습니다. "Metabase is starting" 화면이 나오면 기다리세요.</p>
+
+            <p>시작이 완료되면 환영 화면이 나옵니다!</p>
+
+            <h3>Metabase 초기 설정</h3>
+
+            <p>처음 접속하면 초기 설정 마법사가 나타납니다.</p>
+
+            <ol>
+                <li><strong>언어 선택:</strong> 한국어 선택 가능 (또는 English)</li>
+                <li><strong>관리자 계정 생성:</strong>
+                    <ul>
+                        <li>이름: 본인 이름</li>
+                        <li>이메일: 본인 이메일</li>
+                        <li>비밀번호: 기억할 수 있는 비밀번호</li>
+                    </ul>
+                </li>
+                <li><strong>데이터베이스 연결:</strong> 일단 "나중에 추가할게요" 선택 (나중에 연결합니다)</li>
+                <li><strong>사용 데이터:</strong> 익명 사용 데이터 수집 여부 선택 (아무거나 OK)</li>
+            </ol>
+
+            <p>설정이 끝나면 Metabase 메인 화면이 나타납니다!</p>
+
+            <div class="tip"><strong>💡 Metabase 관리자 정보도 기억해두세요!</strong><br>
+            설정한 이메일과 비밀번호는 나중에 로그인할 때 필요합니다.</div>
+
+            <h3>✅ 체크포인트: Metabase 접속 확인</h3>
+
+            <p><code>http://localhost:3000</code>에 접속해서 Metabase 화면이 보이면 성공입니다!</p>
+
+            <hr>
+
+            <h2>5. Metabase와 MySQL 연결하기</h2>
+
+            <p>이제 Metabase에서 MySQL 데이터베이스를 볼 수 있도록 연결합니다. 아직 우리의 데이터베이스를 만들지 않았지만, 연결 설정은 미리 해둘 수 있어요.</p>
+
+            <h3>연결 설정</h3>
+
+            <ol>
+                <li>Metabase 화면 오른쪽 상단의 톱니바퀴(⚙️) 클릭</li>
+                <li>"관리자" 클릭</li>
+                <li>왼쪽 메뉴에서 "데이터베이스" 클릭</li>
+                <li>"데이터베이스 추가" 버튼 클릭</li>
+                <li>데이터베이스 유형: <strong>MySQL</strong> 선택</li>
+                <li>연결 정보 입력:
+                    <ul>
+                        <li>표시 이름: <code>힐링손 DB</code> (원하는 이름)</li>
+                        <li>호스트: <code>host.docker.internal</code></li>
+                        <li>포트: <code>3306</code></li>
+                        <li>데이터베이스 이름: <code>healing_hands</code> (나중에 만들 DB)</li>
+                        <li>사용자 이름: <code>root</code></li>
+                        <li>비밀번호: MySQL root 비밀번호</li>
+                    </ul>
+                </li>
+                <li>"저장" 클릭</li>
+            </ol>
+
+            <div class="warning"><strong>⚠️ 호스트 이름 주의!</strong><br>
+            Metabase가 Docker 안에서 실행되고 있기 때문에, <code>localhost</code>가 아니라 <code>host.docker.internal</code>을 써야 합니다. 이래야 Docker 컨테이너 안에서 바깥의 MySQL에 접속할 수 있어요.</div>
+
+            <p>지금은 <code>healing_hands</code> 데이터베이스가 아직 없어서 에러가 날 수 있습니다. 괜찮아요! 다음 장에서 데이터베이스를 만들고 나면 연결이 될 거예요.</p>
+
+            <hr>
+
+            <h2>6. 자주 쓰는 Docker 명령어</h2>
+
+            <p>앞으로 Docker를 자주 쓰게 될 텐데, 몇 가지 명령어만 알아두면 됩니다.</p>
+
+            <table>
+                <tr><th>명령어</th><th>설명</th></tr>
+                <tr><td><code>docker ps</code></td><td>실행 중인 컨테이너 목록 보기</td></tr>
+                <tr><td><code>docker ps -a</code></td><td>모든 컨테이너 목록 (중지된 것 포함)</td></tr>
+                <tr><td><code>docker start metabase</code></td><td>metabase 컨테이너 시작</td></tr>
+                <tr><td><code>docker stop metabase</code></td><td>metabase 컨테이너 중지</td></tr>
+                <tr><td><code>docker restart metabase</code></td><td>metabase 컨테이너 재시작</td></tr>
+                <tr><td><code>docker logs metabase</code></td><td>metabase 로그 보기 (문제 발생 시)</td></tr>
+            </table>
+
+            <p><strong>컴퓨터 재시작 후 Metabase 접속이 안 된다면?</strong></p>
+
+            <p>컴퓨터를 재시작하면 Docker 컨테이너가 자동으로 시작되지 않을 수 있습니다. 이럴 때:</p>
+
+            <pre><code># Docker Desktop을 먼저 실행하고
+# 터미널에서
+docker start metabase</code></pre>
+
+            <p>그러면 다시 <code>http://localhost:3000</code>에 접속할 수 있습니다.</p>
+
+            <hr>
+
+            <h2>환경 설정 완료!</h2>
+
+            <p>수고하셨습니다! 이제 필요한 도구가 모두 준비되었습니다.</p>
+
+            <h3>설치 완료 체크리스트</h3>
+
+            <table>
+                <tr><th>도구</th><th>확인 방법</th><th>체크</th></tr>
+                <tr><td>MySQL</td><td><code>mysql -u root -p</code>로 접속 가능</td><td>☐</td></tr>
+                <tr><td>DBeaver</td><td>MySQL 연결 시 초록색 표시</td><td>☐</td></tr>
+                <tr><td>Docker</td><td><code>docker --version</code> 출력됨</td><td>☐</td></tr>
+                <tr><td>Metabase</td><td><code>http://localhost:3000</code> 접속 가능</td><td>☐</td></tr>
+            </table>
+
+            <p>모두 체크되었나요? 그러면 다음 장으로 넘어갑시다!</p>
+
+            <p>다음 장에서는 드디어 "healing_hands" 데이터베이스를 만들고, 테이블들을 생성합니다. 진짜 작업이 시작됩니다!</p>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/nav.js"></script>
+</body>
+</html>

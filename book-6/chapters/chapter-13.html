@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[13장] 설문 연구 - 연구 데이터 설계</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>📊</span> 연구 데이터 설계</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+            <a href="../../book-6/index.html" class="top-nav-link book-6 active">6권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📘 6권: 연구 데이터 설계</h1><p>변수부터 회귀분석까지</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <div class="part-header">3부: 연구 형태별 DB 설계</div>
+            <h1 class="title">[13장] 설문 연구 (Survey)</h1>
+
+            <div class="intro-box">
+                <p>이 장에서는 <strong>설문조사 데이터</strong>의 DB 설계를 배웁니다. 문항 정규화, 리커트 척도, 조건 분기 등 설문 특유의 문제를 다룹니다.</p>
+            </div>
+
+            <hr>
+
+            <h2>1. 설문 문항 정규화</h2>
+
+            <div class="concept-box">
+                <h3>💡 1참가자 = 1행의 한계</h3>
+                <p>많은 연구자가 설문 데이터를 "Wide 형식"으로 저장합니다:</p>
+                <pre>participant_id | q1 | q2 | q3 | q4 | ... | q50</pre>
+                <p>이 방식의 <strong>문제점</strong>:</p>
+                <ul>
+                    <li><strong>열 수 폭발</strong>: 50문항 설문이 5개면 열이 250개</li>
+                    <li><strong>유연성 부족</strong>: 문항 추가/삭제 시 테이블 구조 변경 필요</li>
+                    <li><strong>메타데이터 누락</strong>: 각 문항의 유형, 척도, 하위척도 정보를 저장할 곳이 없음</li>
+                    <li><strong>쿼리 복잡</strong>: "모든 문항의 평균"을 구하려면 열 이름을 모두 나열해야 함</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 정규화된 설문 구조</h3>
+                <p>문항을 <strong>행(row)</strong>으로 분리하면 유연성이 높아집니다:</p>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th colspan="3" style="text-align: center;">questions 테이블</th>
+                        </tr>
+                        <tr>
+                            <th>question_id</th>
+                            <th>question_text</th>
+                            <th>scale_type</th>
+                        </tr>
+                        <tr><td>1</td><td>허리 통증으로 일상생활이 어렵다</td><td>likert_5</td></tr>
+                        <tr><td>2</td><td>통증으로 수면에 방해를 받는다</td><td>likert_5</td></tr>
+                        <tr><td>3</td><td>주당 운동 횟수는?</td><td>numeric</td></tr>
+                    </table>
+                </div>
+                <div class="table-container" style="margin-top: 1rem;">
+                    <table>
+                        <tr>
+                            <th colspan="3" style="text-align: center;">responses 테이블</th>
+                        </tr>
+                        <tr>
+                            <th>participant_id</th>
+                            <th>question_id</th>
+                            <th>response_value</th>
+                        </tr>
+                        <tr><td>1</td><td>1</td><td>4</td></tr>
+                        <tr><td>1</td><td>2</td><td>3</td></tr>
+                        <tr><td>1</td><td>3</td><td>2</td></tr>
+                        <tr><td>2</td><td>1</td><td>2</td></tr>
+                        <tr><td>2</td><td>2</td><td>2</td></tr>
+                        <tr><td>2</td><td>3</td><td>5</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 정규화된 설문 테이블 생성</h3>
+                <pre><code>-- 설문지 정보
+CREATE TABLE surveys (
+    survey_id INTEGER PRIMARY KEY,
+    survey_name TEXT NOT NULL,
+    survey_version TEXT,
+    created_date DATE DEFAULT CURRENT_DATE
+);
+
+-- 문항 정보
+CREATE TABLE questions (
+    question_id INTEGER PRIMARY KEY,
+    survey_id INTEGER NOT NULL,
+    question_order INTEGER NOT NULL,
+    question_text TEXT NOT NULL,
+    scale_type TEXT NOT NULL,  -- likert_5, likert_7, numeric, text, binary
+    subscale_name TEXT,        -- 하위척도 소속
+    is_reverse_coded INTEGER DEFAULT 0,
+    FOREIGN KEY (survey_id) REFERENCES surveys(survey_id)
+);
+
+-- 응답 데이터
+CREATE TABLE responses (
+    response_id INTEGER PRIMARY KEY,
+    participant_id INTEGER NOT NULL,
+    question_id INTEGER NOT NULL,
+    response_value TEXT,       -- 숫자/텍스트 모두 저장 가능
+    response_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (participant_id) REFERENCES participants(participant_id),
+    FOREIGN KEY (question_id) REFERENCES questions(question_id),
+    UNIQUE(participant_id, question_id)  -- 중복 응답 방지
+);</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>2. 리커트 척도 저장</h2>
+
+            <div class="concept-box">
+                <h3>💡 리커트 척도(Likert Scale)란</h3>
+                <p>1932년 Rensis Likert가 개발한 태도 측정 척도입니다. 응답자가 진술문에 대한 동의 정도를 표시합니다.</p>
+                <p><strong>일반적인 유형:</strong></p>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>척도</th>
+                            <th>앵커 포인트</th>
+                            <th>사용 예</th>
+                        </tr>
+                        <tr>
+                            <td><strong>5점 척도</strong></td>
+                            <td>1=전혀 아니다 ~ 5=매우 그렇다</td>
+                            <td>가장 흔함, ODI, KOOS 등</td>
+                        </tr>
+                        <tr>
+                            <td><strong>7점 척도</strong></td>
+                            <td>1=전혀 아니다 ~ 7=매우 그렇다</td>
+                            <td>더 세밀한 구분 필요 시</td>
+                        </tr>
+                        <tr>
+                            <td><strong>4점 척도</strong></td>
+                            <td>1=전혀 아니다 ~ 4=매우 그렇다</td>
+                            <td>중립 응답 배제할 때</td>
+                        </tr>
+                        <tr>
+                            <td><strong>11점 NRS</strong></td>
+                            <td>0=없음 ~ 10=최악</td>
+                            <td>통증 강도 (NRS)</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="warning-box">
+                <h3>⚠️ 숫자로 저장하라</h3>
+                <p>리커트 응답은 반드시 <strong>숫자</strong>로 저장합니다:</p>
+                <ul>
+                    <li><span class="emoji">❌</span> "매우 그렇다", "그렇다", "보통이다"... (텍스트)</li>
+                    <li><span class="emoji">✅</span> 5, 4, 3, 2, 1 (숫자)</li>
+                </ul>
+                <p><strong>이유:</strong> 평균, 합계, 표준편차 등 통계 계산이 바로 가능합니다.</p>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 앵커 레이블 관리</h3>
+                <p>숫자와 레이블의 매핑은 별도 테이블로 관리합니다:</p>
+                <pre><code>-- 척도 유형 정의
+CREATE TABLE scale_types (
+    scale_type_id TEXT PRIMARY KEY,
+    scale_name TEXT NOT NULL,
+    min_value INTEGER NOT NULL,
+    max_value INTEGER NOT NULL
+);
+
+-- 각 값의 레이블
+CREATE TABLE scale_labels (
+    scale_type_id TEXT NOT NULL,
+    value INTEGER NOT NULL,
+    label_ko TEXT NOT NULL,
+    label_en TEXT,
+    PRIMARY KEY (scale_type_id, value),
+    FOREIGN KEY (scale_type_id) REFERENCES scale_types(scale_type_id)
+);
+
+-- 데이터 삽입
+INSERT INTO scale_types VALUES ('likert_5', '5점 리커트', 1, 5);
+INSERT INTO scale_types VALUES ('likert_7', '7점 리커트', 1, 7);
+INSERT INTO scale_types VALUES ('nrs_11', '11점 NRS', 0, 10);
+
+INSERT INTO scale_labels VALUES ('likert_5', 1, '전혀 아니다', 'Strongly disagree');
+INSERT INTO scale_labels VALUES ('likert_5', 2, '아니다', 'Disagree');
+INSERT INTO scale_labels VALUES ('likert_5', 3, '보통이다', 'Neutral');
+INSERT INTO scale_labels VALUES ('likert_5', 4, '그렇다', 'Agree');
+INSERT INTO scale_labels VALUES ('likert_5', 5, '매우 그렇다', 'Strongly agree');</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 레이블 포함 응답 조회</h3>
+                <pre><code>SELECT
+    r.participant_id,
+    q.question_text,
+    CAST(r.response_value AS INTEGER) AS score,
+    sl.label_ko AS response_label
+FROM responses r
+JOIN questions q ON r.question_id = q.question_id
+JOIN scale_labels sl
+    ON q.scale_type = sl.scale_type_id
+    AND CAST(r.response_value AS INTEGER) = sl.value
+WHERE r.participant_id = 1;</code></pre>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>participant_id</th>
+                            <th>question_text</th>
+                            <th>score</th>
+                            <th>response_label</th>
+                        </tr>
+                        <tr><td>1</td><td>허리 통증으로 일상생활이 어렵다</td><td>4</td><td>그렇다</td></tr>
+                        <tr><td>1</td><td>통증으로 수면에 방해를 받는다</td><td>3</td><td>보통이다</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <hr>
+
+            <h2>3. 조건 분기 문항</h2>
+
+            <div class="concept-box">
+                <h3>💡 Skip Logic (건너뛰기 로직)</h3>
+                <p>특정 조건에 따라 후속 문항을 건너뛰는 로직입니다.</p>
+                <p><strong>예시:</strong></p>
+                <ul>
+                    <li>Q1: "지난 1년간 낙상 경험이 있습니까?" → "아니오" 선택 시 Q2-Q5 건너뜀</li>
+                    <li>Q10: "현재 통증이 있습니까?" → "없음" 선택 시 통증 관련 문항 건너뜀</li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 분기 조건 테이블</h3>
+                <pre><code>-- 문항 간 분기 조건
+CREATE TABLE skip_logic (
+    skip_id INTEGER PRIMARY KEY,
+    trigger_question_id INTEGER NOT NULL,   -- 분기를 발생시키는 문항
+    trigger_value TEXT NOT NULL,            -- 이 값일 때 건너뜀
+    skip_to_question_id INTEGER,            -- 건너뛸 목표 문항 (NULL이면 설문 종료)
+    FOREIGN KEY (trigger_question_id) REFERENCES questions(question_id),
+    FOREIGN KEY (skip_to_question_id) REFERENCES questions(question_id)
+);
+
+-- 예: Q1에서 "0"(아니오)를 선택하면 Q6로 건너뜀
+INSERT INTO skip_logic (trigger_question_id, trigger_value, skip_to_question_id)
+VALUES (1, '0', 6);</code></pre>
+            </div>
+
+            <div class="warning-box">
+                <h3>⚠️ "해당 없음" vs "결측" 구분</h3>
+                <p>Skip Logic으로 건너뛴 문항은 <strong>"해당 없음(Not Applicable)"</strong>이지, <strong>"결측(Missing)"</strong>이 아닙니다.</p>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>상황</th>
+                            <th>의미</th>
+                            <th>저장 방식</th>
+                        </tr>
+                        <tr>
+                            <td>Skip Logic으로 건너뜀</td>
+                            <td>해당 없음 (논리적으로 답할 수 없음)</td>
+                            <td>response_value = 'NA' 또는 별도 플래그</td>
+                        </tr>
+                        <tr>
+                            <td>응답자가 답하지 않음</td>
+                            <td>결측 (답해야 하지만 안 함)</td>
+                            <td>response_value = NULL</td>
+                        </tr>
+                        <tr>
+                            <td>"응답 거부" 선택</td>
+                            <td>거부 (의도적 미응답)</td>
+                            <td>response_value = 'REFUSED'</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 응답 상태 추적</h3>
+                <pre><code>-- 응답 테이블에 상태 필드 추가
+CREATE TABLE responses (
+    response_id INTEGER PRIMARY KEY,
+    participant_id INTEGER NOT NULL,
+    question_id INTEGER NOT NULL,
+    response_value TEXT,
+    response_status TEXT DEFAULT 'answered',  -- answered, skipped, refused, missing
+    skip_reason TEXT,  -- 'skip_logic', 'not_applicable', etc.
+    FOREIGN KEY (participant_id) REFERENCES participants(participant_id),
+    FOREIGN KEY (question_id) REFERENCES questions(question_id)
+);
+
+-- 건너뛴 문항 기록
+INSERT INTO responses (participant_id, question_id, response_value, response_status, skip_reason)
+VALUES (1, 3, NULL, 'skipped', 'skip_logic');</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>4. 매트릭스 문항</h2>
+
+            <div class="concept-box">
+                <h3>💡 매트릭스(그리드) 문항이란</h3>
+                <p>여러 항목에 대해 동일한 척도로 응답하는 형태입니다:</p>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>항목</th>
+                            <th>전혀<br>아니다</th>
+                            <th>아니다</th>
+                            <th>보통</th>
+                            <th>그렇다</th>
+                            <th>매우<br>그렇다</th>
+                        </tr>
+                        <tr>
+                            <td>걷기</td>
+                            <td>○</td>
+                            <td>○</td>
+                            <td>●</td>
+                            <td>○</td>
+                            <td>○</td>
+                        </tr>
+                        <tr>
+                            <td>계단 오르기</td>
+                            <td>○</td>
+                            <td>○</td>
+                            <td>○</td>
+                            <td>●</td>
+                            <td>○</td>
+                        </tr>
+                        <tr>
+                            <td>앉았다 일어서기</td>
+                            <td>○</td>
+                            <td>●</td>
+                            <td>○</td>
+                            <td>○</td>
+                            <td>○</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 매트릭스 문항 저장 전략</h3>
+                <p>각 셀(행-열 조합)을 <strong>개별 문항</strong>으로 취급합니다:</p>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>question_id</th>
+                            <th>matrix_group</th>
+                            <th>row_label</th>
+                            <th>question_text</th>
+                        </tr>
+                        <tr><td>10</td><td>daily_activity</td><td>walking</td><td>걷기에 어려움이 있다</td></tr>
+                        <tr><td>11</td><td>daily_activity</td><td>stairs</td><td>계단 오르기에 어려움이 있다</td></tr>
+                        <tr><td>12</td><td>daily_activity</td><td>sit_stand</td><td>앉았다 일어서기에 어려움이 있다</td></tr>
+                    </table>
+                </div>
+                <p><code>matrix_group</code>으로 같은 그리드에 속한 문항들을 묶을 수 있습니다.</p>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 매트릭스 문항 스키마</h3>
+                <pre><code>CREATE TABLE questions (
+    question_id INTEGER PRIMARY KEY,
+    survey_id INTEGER NOT NULL,
+    question_order INTEGER NOT NULL,
+    question_text TEXT NOT NULL,
+    scale_type TEXT NOT NULL,
+    -- 매트릭스 관련 필드
+    matrix_group TEXT,          -- 같은 매트릭스에 속한 문항 그룹
+    matrix_row_order INTEGER,   -- 매트릭스 내 행 순서
+    matrix_row_label TEXT,      -- 행 레이블
+    subscale_name TEXT,
+    is_reverse_coded INTEGER DEFAULT 0,
+    FOREIGN KEY (survey_id) REFERENCES surveys(survey_id)
+);
+
+-- 매트릭스 그룹별 합계 조회
+SELECT
+    p.participant_id,
+    q.matrix_group,
+    SUM(CAST(r.response_value AS INTEGER)) AS matrix_total
+FROM responses r
+JOIN questions q ON r.question_id = q.question_id
+JOIN participants p ON r.participant_id = p.participant_id
+WHERE q.matrix_group IS NOT NULL
+GROUP BY p.participant_id, q.matrix_group;</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>5. 개방형 문항</h2>
+
+            <div class="concept-box">
+                <h3>💡 개방형(Open-ended) 문항</h3>
+                <p>응답자가 자유롭게 텍스트를 입력하는 문항입니다:</p>
+                <ul>
+                    <li><strong>완전 개방형</strong>: "치료에 대한 의견을 자유롭게 작성해주세요"</li>
+                    <li><strong>반개방형</strong>: "기타: ___________" (선택지 + 텍스트)</li>
+                    <li><strong>숫자 입력</strong>: "나이를 입력하세요: ___세"</li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 텍스트 응답 저장</h3>
+                <pre><code>-- response_value는 TEXT 타입이므로 긴 응답도 저장 가능
+INSERT INTO responses (participant_id, question_id, response_value)
+VALUES (1, 25, '물리치료 후 통증이 많이 줄었습니다. 특히 스트레칭을 배운 것이 도움이 되었어요.');
+
+-- 텍스트 응답만 조회
+SELECT
+    r.participant_id,
+    q.question_text,
+    r.response_value AS text_response
+FROM responses r
+JOIN questions q ON r.question_id = q.question_id
+WHERE q.scale_type = 'text'
+AND r.response_value IS NOT NULL
+AND LENGTH(r.response_value) > 0;</code></pre>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 텍스트 응답의 코딩(Coding)</h3>
+                <p>개방형 응답은 분석을 위해 범주화(코딩)할 수 있습니다:</p>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>원본 응답</th>
+                            <th>코드</th>
+                            <th>범주</th>
+                        </tr>
+                        <tr>
+                            <td>"통증이 줄었어요"</td>
+                            <td>1</td>
+                            <td>긍정적 효과</td>
+                        </tr>
+                        <tr>
+                            <td>"별 효과 없었습니다"</td>
+                            <td>2</td>
+                            <td>효과 없음</td>
+                        </tr>
+                        <tr>
+                            <td>"오히려 더 아팠어요"</td>
+                            <td>3</td>
+                            <td>부정적 효과</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 코딩 결과 저장</h3>
+                <pre><code>-- 코딩 카테고리 정의
+CREATE TABLE coding_categories (
+    category_id INTEGER PRIMARY KEY,
+    question_id INTEGER NOT NULL,
+    code INTEGER NOT NULL,
+    category_name TEXT NOT NULL,
+    category_description TEXT,
+    FOREIGN KEY (question_id) REFERENCES questions(question_id)
+);
+
+-- 코딩 결과 저장
+CREATE TABLE response_codes (
+    coding_id INTEGER PRIMARY KEY,
+    response_id INTEGER NOT NULL,
+    category_id INTEGER NOT NULL,
+    coder_id INTEGER,           -- 누가 코딩했는지
+    coding_date DATE,
+    FOREIGN KEY (response_id) REFERENCES responses(response_id),
+    FOREIGN KEY (category_id) REFERENCES coding_categories(category_id)
+);
+
+-- 한 응답에 여러 코드 부여 가능 (다중 코딩)
+INSERT INTO response_codes (response_id, category_id, coder_id, coding_date)
+VALUES
+    (100, 1, 1, '2024-03-15'),  -- 긍정적 효과
+    (100, 5, 1, '2024-03-15');  -- 스트레칭 언급</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>6. 설문 DB 설계 예시</h2>
+
+            <div class="example-box">
+                <h3>📋 예시: 환자 만족도 조사 DB</h3>
+                <p>물리치료실 환자 만족도 조사를 위한 완전한 스키마입니다.</p>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 완전한 스키마</h3>
+                <pre><code>-- ========================================
+-- 환자 만족도 조사 데이터베이스
+-- ========================================
+
+-- 1. 설문지 정보
+CREATE TABLE surveys (
+    survey_id INTEGER PRIMARY KEY,
+    survey_name TEXT NOT NULL,
+    survey_name_en TEXT,
+    version TEXT DEFAULT '1.0',
+    description TEXT,
+    created_date DATE DEFAULT CURRENT_DATE,
+    is_active INTEGER DEFAULT 1
+);
+
+-- 2. 척도 유형
+CREATE TABLE scale_types (
+    scale_type_id TEXT PRIMARY KEY,
+    scale_name TEXT NOT NULL,
+    min_value INTEGER NOT NULL,
+    max_value INTEGER NOT NULL,
+    description TEXT
+);
+
+-- 3. 척도 레이블
+CREATE TABLE scale_labels (
+    scale_type_id TEXT NOT NULL,
+    value INTEGER NOT NULL,
+    label_ko TEXT NOT NULL,
+    label_en TEXT,
+    PRIMARY KEY (scale_type_id, value),
+    FOREIGN KEY (scale_type_id) REFERENCES scale_types(scale_type_id)
+);
+
+-- 4. 하위척도 정의
+CREATE TABLE subscales (
+    subscale_id INTEGER PRIMARY KEY,
+    survey_id INTEGER NOT NULL,
+    subscale_name TEXT NOT NULL,
+    subscale_name_en TEXT,
+    description TEXT,
+    scoring_method TEXT DEFAULT 'mean',  -- sum, mean
+    FOREIGN KEY (survey_id) REFERENCES surveys(survey_id)
+);
+
+-- 5. 문항
+CREATE TABLE questions (
+    question_id INTEGER PRIMARY KEY,
+    survey_id INTEGER NOT NULL,
+    subscale_id INTEGER,
+    question_order INTEGER NOT NULL,
+    question_text TEXT NOT NULL,
+    question_text_en TEXT,
+    scale_type TEXT NOT NULL,
+    is_required INTEGER DEFAULT 1,
+    is_reverse_coded INTEGER DEFAULT 0,
+    matrix_group TEXT,
+    matrix_row_order INTEGER,
+    FOREIGN KEY (survey_id) REFERENCES surveys(survey_id),
+    FOREIGN KEY (subscale_id) REFERENCES subscales(subscale_id),
+    FOREIGN KEY (scale_type) REFERENCES scale_types(scale_type_id)
+);
+
+-- 6. 선택지 (객관식 문항용)
+CREATE TABLE question_options (
+    option_id INTEGER PRIMARY KEY,
+    question_id INTEGER NOT NULL,
+    option_order INTEGER NOT NULL,
+    option_value TEXT NOT NULL,
+    option_label TEXT NOT NULL,
+    FOREIGN KEY (question_id) REFERENCES questions(question_id)
+);
+
+-- 7. 분기 로직
+CREATE TABLE skip_logic (
+    skip_id INTEGER PRIMARY KEY,
+    trigger_question_id INTEGER NOT NULL,
+    trigger_operator TEXT DEFAULT '=',  -- =, !=, <, >, IN
+    trigger_value TEXT NOT NULL,
+    skip_to_question_id INTEGER,
+    FOREIGN KEY (trigger_question_id) REFERENCES questions(question_id),
+    FOREIGN KEY (skip_to_question_id) REFERENCES questions(question_id)
+);
+
+-- 8. 참가자
+CREATE TABLE participants (
+    participant_id INTEGER PRIMARY KEY,
+    participant_code TEXT UNIQUE NOT NULL,
+    age INTEGER,
+    sex TEXT CHECK(sex IN ('M', 'F')),
+    diagnosis TEXT,
+    treatment_count INTEGER,
+    enrollment_date DATE DEFAULT CURRENT_DATE
+);
+
+-- 9. 설문 세션 (참가자가 설문을 완료한 단위)
+CREATE TABLE survey_sessions (
+    session_id INTEGER PRIMARY KEY,
+    participant_id INTEGER NOT NULL,
+    survey_id INTEGER NOT NULL,
+    start_time DATETIME,
+    end_time DATETIME,
+    completion_status TEXT DEFAULT 'incomplete',  -- incomplete, complete, abandoned
+    FOREIGN KEY (participant_id) REFERENCES participants(participant_id),
+    FOREIGN KEY (survey_id) REFERENCES surveys(survey_id)
+);
+
+-- 10. 응답
+CREATE TABLE responses (
+    response_id INTEGER PRIMARY KEY,
+    session_id INTEGER NOT NULL,
+    question_id INTEGER NOT NULL,
+    response_value TEXT,
+    response_status TEXT DEFAULT 'answered',  -- answered, skipped, refused
+    response_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (session_id) REFERENCES survey_sessions(session_id),
+    FOREIGN KEY (question_id) REFERENCES questions(question_id),
+    UNIQUE(session_id, question_id)
+);</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 샘플 데이터</h3>
+                <pre><code>-- 설문지
+INSERT INTO surveys (survey_id, survey_name, survey_name_en, description)
+VALUES (1, '환자 만족도 조사', 'Patient Satisfaction Survey', '물리치료 서비스 만족도 평가');
+
+-- 척도
+INSERT INTO scale_types VALUES ('likert_5', '5점 리커트', 1, 5, '동의 정도');
+INSERT INTO scale_types VALUES ('nrs_11', '11점 NRS', 0, 10, '통증/만족 강도');
+
+-- 하위척도
+INSERT INTO subscales (subscale_id, survey_id, subscale_name, scoring_method)
+VALUES
+    (1, 1, '치료 품질', 'mean'),
+    (2, 1, '시설 환경', 'mean'),
+    (3, 1, '직원 친절도', 'mean');
+
+-- 문항
+INSERT INTO questions (question_id, survey_id, subscale_id, question_order, question_text, scale_type)
+VALUES
+    (1, 1, 1, 1, '치료사의 설명이 이해하기 쉬웠다', 'likert_5'),
+    (2, 1, 1, 2, '치료가 효과적이었다', 'likert_5'),
+    (3, 1, 2, 3, '치료실이 청결했다', 'likert_5'),
+    (4, 1, 2, 4, '대기 시간이 적절했다', 'likert_5'),
+    (5, 1, 3, 5, '직원들이 친절했다', 'likert_5'),
+    (6, 1, NULL, 6, '전반적인 만족도 (0-10)', 'nrs_11'),
+    (7, 1, NULL, 7, '개선이 필요한 점이 있다면 작성해주세요', 'text');</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 하위척도별 점수 계산</h3>
+                <pre><code>-- 하위척도별 평균 점수 계산
+SELECT
+    ss.session_id,
+    p.participant_code,
+    sub.subscale_name,
+    ROUND(AVG(CAST(r.response_value AS REAL)), 2) AS subscale_mean,
+    COUNT(r.response_id) AS item_count
+FROM survey_sessions ss
+JOIN participants p ON ss.participant_id = p.participant_id
+JOIN responses r ON ss.session_id = r.session_id
+JOIN questions q ON r.question_id = q.question_id
+JOIN subscales sub ON q.subscale_id = sub.subscale_id
+WHERE r.response_status = 'answered'
+  AND q.scale_type = 'likert_5'
+GROUP BY ss.session_id, p.participant_code, sub.subscale_name;
+
+-- 결과 예시:
+-- session_id | participant_code | subscale_name | subscale_mean | item_count
+-- 1          | PT001           | 치료 품질      | 4.50          | 2
+-- 1          | PT001           | 시설 환경      | 4.00          | 2
+-- 1          | PT001           | 직원 친절도    | 5.00          | 1</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 설문 완료율 분석</h3>
+                <pre><code>-- 문항별 응답률
+SELECT
+    q.question_id,
+    q.question_text,
+    COUNT(r.response_id) AS response_count,
+    SUM(CASE WHEN r.response_status = 'answered' THEN 1 ELSE 0 END) AS answered_count,
+    ROUND(100.0 * SUM(CASE WHEN r.response_status = 'answered' THEN 1 ELSE 0 END)
+        / COUNT(r.response_id), 1) AS response_rate_pct
+FROM questions q
+LEFT JOIN responses r ON q.question_id = r.question_id
+WHERE q.survey_id = 1
+GROUP BY q.question_id, q.question_text
+ORDER BY q.question_order;</code></pre>
+            </div>
+
+            <div class="summary-box">
+                <h3>📝 이 장의 핵심 정리</h3>
+                <ol>
+                    <li><strong>정규화</strong>: 문항을 열이 아닌 행으로 분리하면 유연성 높은 설계 가능</li>
+                    <li><strong>리커트 저장</strong>: 반드시 숫자로 저장, 레이블은 별도 테이블로 관리</li>
+                    <li><strong>Skip Logic</strong>: 분기 조건을 테이블로 관리, "해당 없음"과 "결측" 구분</li>
+                    <li><strong>매트릭스</strong>: 각 셀을 개별 문항으로 취급, matrix_group으로 묶음</li>
+                    <li><strong>개방형</strong>: TEXT 타입 저장, 필요시 코딩(범주화) 테이블 추가</li>
+                    <li><strong>구조</strong>: surveys → questions → responses 3계층이 기본</li>
+                </ol>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-12.html" class="nav-btn">← 이전</a>
+                <span class="page-num">13 / 20</span>
+                <a href="chapter-14.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>20장: 셀 편집 감지 - 물리치료사를 위한 DB 4권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "4"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📕 물리치료사를 위한</h1>
+                <p>웹 앱 만들기 (4권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">셀 편집 감지</h1>
+
+            <h2>Luckysheet 훅(Hook)</h2>
+
+            <p>Luckysheet는 다양한 이벤트 훅을 제공합니다.</p>
+
+            <table>
+                <tr>
+                    <th>훅 이름</th>
+                    <th>발생 시점</th>
+                </tr>
+                <tr>
+                    <td>cellUpdated</td>
+                    <td>셀 값 변경 후</td>
+                </tr>
+                <tr>
+                    <td>cellEditBefore</td>
+                    <td>셀 편집 시작 전</td>
+                </tr>
+                <tr>
+                    <td>cellEditAfter</td>
+                    <td>셀 편집 완료 후</td>
+                </tr>
+                <tr>
+                    <td>cellMousedown</td>
+                    <td>셀 클릭</td>
+                </tr>
+                <tr>
+                    <td>cellDragStop</td>
+                    <td>드래그 완료</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>훅 등록 방법</h2>
+
+            <pre><code>luckysheet.create({
+    container: 'luckysheet',
+    data: [{ ... }],
+
+    // 훅 설정
+    hook: {
+        // 셀 업데이트 후
+        cellUpdated: function(row, column, oldValue, newValue, isRefresh) {
+            console.log('셀 업데이트:', row, column, oldValue, '->', newValue);
+        },
+
+        // 셀 편집 시작 전
+        cellEditBefore: function(row, column) {
+            console.log('편집 시작:', row, column);
+            // false 반환하면 편집 취소
+            return true;
+        },
+
+        // 셀 클릭
+        cellMousedown: function(cell, position, sheet, ctx) {
+            console.log('셀 클릭:', position.row, position.column);
+        }
+    }
+});</code></pre>
+
+            <hr>
+
+            <h2>예약 셀 편집 감지</h2>
+
+            <pre><code>// 셀 편집 완료 시 처리
+function onCellUpdated(row, column, oldValue, newValue) {
+    // 헤더 행/열은 무시
+    if (row === 0 || column === 0) return;
+
+    // 환자 ID와 날짜 가져오기
+    const { patients, dates } = window.sheetData;
+    const patient = patients[row - 1];  // 1행부터 환자
+    const date = dates[column - 1];      // 1열부터 날짜
+
+    if (!patient || !date) return;
+
+    console.log(`예약 변경: ${patient.name}, ${date.date}, ${newValue}`);
+
+    // API 호출 (다음 장에서 구현)
+    saveReservation(patient.patient_id, date.date, newValue);
+}
+
+luckysheet.create({
+    // ...
+    hook: {
+        cellUpdated: onCellUpdated
+    }
+});</code></pre>
+
+            <hr>
+
+            <h2>편집 제한하기</h2>
+
+            <pre><code>// 특정 셀만 편집 가능하게
+function onCellEditBefore(row, column) {
+    // 헤더 행 (0행) - 편집 불가
+    if (row === 0) {
+        return false;
+    }
+
+    // 환자명 열 (0열) - 편집 불가
+    if (column === 0) {
+        return false;
+    }
+
+    // 나머지 셀은 편집 가능
+    return true;
+}
+
+luckysheet.create({
+    hook: {
+        cellEditBefore: onCellEditBefore,
+        cellUpdated: onCellUpdated
+    }
+});</code></pre>
+
+            <hr>
+
+            <h2>셀 클릭으로 팝업 열기</h2>
+
+            <p>셀을 클릭하면 예약 등록/수정 팝업을 엽니다.</p>
+
+            <pre><code>function onCellClick(cell, position) {
+    const row = position.row;
+    const column = position.column;
+
+    // 헤더는 무시
+    if (row === 0 || column === 0) return;
+
+    const { patients, dates } = window.sheetData;
+    const patient = patients[row - 1];
+    const date = dates[column - 1];
+
+    if (!patient || !date) return;
+
+    // 현재 셀 값
+    const cellData = luckysheet.getCellValue(row, column);
+
+    // 팝업 열기
+    openReservationModal({
+        patient: patient,
+        date: date,
+        currentValue: cellData
+    });
+}
+
+luckysheet.create({
+    hook: {
+        cellMousedown: onCellClick
+    }
+});</code></pre>
+
+            <hr>
+
+            <h2>예약 모달 창</h2>
+
+            <pre><code>&lt;!-- 모달 HTML --&gt;
+&lt;div id="reservationModal" class="modal" style="display:none;"&gt;
+    &lt;div class="modal-content"&gt;
+        &lt;h2&gt;예약 등록/수정&lt;/h2&gt;
+        &lt;p id="modalInfo"&gt;&lt;/p&gt;
+
+        &lt;div class="form-group"&gt;
+            &lt;label&gt;시간&lt;/label&gt;
+            &lt;select id="modalTime"&gt;
+                &lt;option value=""&gt;선택&lt;/option&gt;
+                &lt;option value="09:00"&gt;09:00&lt;/option&gt;
+                &lt;option value="10:00"&gt;10:00&lt;/option&gt;
+                &lt;option value="11:00"&gt;11:00&lt;/option&gt;
+                &lt;option value="14:00"&gt;14:00&lt;/option&gt;
+                &lt;option value="15:00"&gt;15:00&lt;/option&gt;
+                &lt;option value="16:00"&gt;16:00&lt;/option&gt;
+            &lt;/select&gt;
+        &lt;/div&gt;
+
+        &lt;div class="form-group"&gt;
+            &lt;label&gt;치료사&lt;/label&gt;
+            &lt;select id="modalTherapist"&gt;&lt;/select&gt;
+        &lt;/div&gt;
+
+        &lt;div class="modal-buttons"&gt;
+            &lt;button onclick="saveModal()"&gt;저장&lt;/button&gt;
+            &lt;button onclick="deleteReservation()"&gt;삭제&lt;/button&gt;
+            &lt;button onclick="closeModal()"&gt;취소&lt;/button&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+
+            <pre><code>// JavaScript
+let currentModalData = null;
+
+function openReservationModal(data) {
+    currentModalData = data;
+
+    document.getElementById('modalInfo').textContent =
+        `${data.patient.name} / ${data.date.display}`;
+
+    // 현재 값이 있으면 채우기
+    if (data.currentValue) {
+        const [time, therapist] = data.currentValue.split('|');
+        document.getElementById('modalTime').value = time || '';
+        document.getElementById('modalTherapist').value = therapist || '';
+    } else {
+        document.getElementById('modalTime').value = '';
+        document.getElementById('modalTherapist').value = '';
+    }
+
+    document.getElementById('reservationModal').style.display = 'flex';
+}
+
+function closeModal() {
+    document.getElementById('reservationModal').style.display = 'none';
+    currentModalData = null;
+}
+
+async function saveModal() {
+    const time = document.getElementById('modalTime').value;
+    const therapist = document.getElementById('modalTherapist').value;
+
+    if (!time || !therapist) {
+        alert('시간과 치료사를 선택하세요');
+        return;
+    }
+
+    // API 호출 (다음 장에서 구현)
+    await saveReservation(
+        currentModalData.patient.patient_id,
+        currentModalData.date.date,
+        time,
+        therapist
+    );
+
+    closeModal();
+    initSheet();  // 시트 새로고침
+}</code></pre>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li><code>hook</code> 옵션으로 셀 이벤트를 감지합니다</li>
+                <li><code>cellUpdated</code>: 셀 값 변경 감지</li>
+                <li><code>cellEditBefore</code>: 편집 가능 여부 제어</li>
+                <li><code>cellMousedown</code>: 셀 클릭 감지</li>
+                <li>모달 창으로 상세 입력을 받을 수 있습니다</li>
+            </ul>
+
+            <blockquote>다음 장에서는 편집된 내용을 DB에 저장합니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

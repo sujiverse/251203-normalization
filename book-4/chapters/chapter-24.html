@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>24장: 환자 관리 시트 - 물리치료사를 위한 DB 4권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "4"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📕 물리치료사를 위한</h1>
+                <p>웹 앱 만들기 (4권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">환자 관리 시트</h1>
+
+            <h2>환자 관리 시트 구조</h2>
+
+            <pre class="file-tree">┌────────────────────────────────────────────────────────────────┐
+│  👤 환자 관리                           [검색: ________] [추가] │
+├────────┬────────┬────────┬────────┬──────────┬────────────────┤
+│ 이름   │ 생년월일│ 연락처 │ 진단명 │ 등록일   │ 담당 치료사    │
+├────────┼────────┼────────┼────────┼──────────┼────────────────┤
+│ 김철수 │1980-05-│010-1234│어깨 통증│2024-01-15│ 김치료        │
+│ 이영희 │1975-03-│010-5678│허리 통증│2024-02-20│ 이치료        │
+│ 박민수 │1990-11-│010-9012│무릎 재활│2024-03-10│ 박치료        │
+└────────┴────────┴────────┴────────┴──────────┴────────────────┘</pre>
+
+            <hr>
+
+            <h2>환자 목록 API</h2>
+
+            <pre><code># app.py
+
+@app.route('/api/patients/sheet')
+def get_patients_for_sheet():
+    search = request.args.get('search', '')
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        if search:
+            cursor.execute("""
+                SELECT
+                    p.patient_id,
+                    p.name,
+                    p.birth_date,
+                    p.phone,
+                    p.diagnosis,
+                    p.registration_date,
+                    t.name as therapist_name
+                FROM patients p
+                LEFT JOIN therapists t ON p.primary_therapist_id = t.therapist_id
+                WHERE p.name LIKE %s OR p.phone LIKE %s
+                ORDER BY p.name
+            """, (f'%{search}%', f'%{search}%'))
+        else:
+            cursor.execute("""
+                SELECT
+                    p.patient_id,
+                    p.name,
+                    p.birth_date,
+                    p.phone,
+                    p.diagnosis,
+                    p.registration_date,
+                    t.name as therapist_name
+                FROM patients p
+                LEFT JOIN therapists t ON p.primary_therapist_id = t.therapist_id
+                ORDER BY p.name
+            """)
+
+        patients = cursor.fetchall()
+
+        return jsonify({
+            'success': True,
+            'patients': patients
+        })
+    finally:
+        conn.close()</code></pre>
+
+            <hr>
+
+            <h2>시트 데이터 변환</h2>
+
+            <pre><code>// static/js/patients-sheet.js
+
+const PATIENT_COLUMNS = [
+    { key: 'name', title: '이름', width: 80 },
+    { key: 'birth_date', title: '생년월일', width: 100 },
+    { key: 'phone', title: '연락처', width: 120 },
+    { key: 'diagnosis', title: '진단명', width: 150 },
+    { key: 'registration_date', title: '등록일', width: 100 },
+    { key: 'therapist_name', title: '담당 치료사', width: 100 }
+];
+
+function createPatientSheetData(patients) {
+    const celldata = [];
+
+    // 헤더 행
+    PATIENT_COLUMNS.forEach((col, i) => {
+        celldata.push({
+            r: 0, c: i,
+            v: {
+                v: col.key,
+                m: col.title,
+                bg: '#1e293b',
+                fc: '#ffffff',
+                bl: 1,
+                ht: 1
+            }
+        });
+    });
+
+    // 데이터 행
+    patients.forEach((patient, rowIdx) => {
+        PATIENT_COLUMNS.forEach((col, colIdx) => {
+            let value = patient[col.key] || '';
+
+            // 날짜 포맷
+            if (col.key.includes('date') && value) {
+                value = formatDate(value);
+            }
+
+            celldata.push({
+                r: rowIdx + 1,
+                c: colIdx,
+                v: {
+                    v: col.key === 'name' ? patient.patient_id : value,
+                    m: value,
+                    ht: colIdx === 0 ? 0 : 1  // 이름은 왼쪽 정렬
+                }
+            });
+        });
+    });
+
+    return celldata;
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+}</code></pre>
+
+            <hr>
+
+            <h2>환자 시트 초기화</h2>
+
+            <pre><code>async function initPatientSheet() {
+    const search = document.getElementById('searchInput')?.value || '';
+
+    const response = await fetch(`/api/patients/sheet?search=${encodeURIComponent(search)}`);
+    const { patients } = await response.json();
+
+    const celldata = createPatientSheetData(patients);
+
+    // 열 너비 설정
+    const columnlen = {};
+    PATIENT_COLUMNS.forEach((col, i) => {
+        columnlen[i] = col.width;
+    });
+
+    if (window.luckysheet && luckysheet.destroy) {
+        luckysheet.destroy();
+    }
+
+    luckysheet.create({
+        container: 'luckysheet',
+        title: '환자 관리',
+        lang: 'ko',
+        showtoolbar: false,
+        showsheetbar: false,
+        showstatisticBar: false,
+        allowEdit: true,
+        data: [{
+            name: '환자',
+            celldata: celldata,
+            row: patients.length + 1,
+            column: PATIENT_COLUMNS.length,
+            frozen: {
+                type: 'rangeRow',
+                range: { row_focus: 0 }
+            },
+            config: { columnlen }
+        }],
+        hook: {
+            cellUpdated: onPatientCellUpdated,
+            cellMousedown: onPatientCellClick
+        }
+    });
+
+    window.patientData = { patients };
+}</code></pre>
+
+            <hr>
+
+            <h2>환자 정보 수정</h2>
+
+            <pre><code>// 셀 수정 시
+async function onPatientCellUpdated(row, column, oldValue, newValue) {
+    if (row === 0) return;  // 헤더는 무시
+
+    const patient = window.patientData.patients[row - 1];
+    if (!patient) return;
+
+    const field = PATIENT_COLUMNS[column].key;
+
+    // 읽기 전용 필드
+    if (field === 'registration_date' || field === 'therapist_name') {
+        showToast('이 필드는 수정할 수 없습니다', 'error');
+        // 원래 값으로 복원
+        luckysheet.setCellValue(row, column, oldValue);
+        return;
+    }
+
+    // API 호출
+    try {
+        const response = await fetch(`/api/patients/${patient.patient_id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ [field]: newValue })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast('저장되었습니다');
+            // 로컬 데이터 업데이트
+            patient[field] = newValue;
+        } else {
+            showToast('저장 실패', 'error');
+            luckysheet.setCellValue(row, column, oldValue);
+        }
+    } catch (error) {
+        showToast('오류 발생', 'error');
+        luckysheet.setCellValue(row, column, oldValue);
+    }
+}
+
+// 백엔드 API
+@app.route('/api/patients/&lt;int:patient_id&gt;', methods=['PUT'])
+def update_patient(patient_id):
+    data = request.get_json()
+
+    # 허용된 필드만
+    allowed_fields = ['name', 'birth_date', 'phone', 'diagnosis']
+    updates = {k: v for k, v in data.items() if k in allowed_fields}
+
+    if not updates:
+        return jsonify({'success': False, 'error': '수정할 항목 없음'})
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        set_clause = ', '.join([f'{k} = %s' for k in updates.keys()])
+        values = list(updates.values()) + [patient_id]
+
+        cursor.execute(f"""
+            UPDATE patients
+            SET {set_clause}
+            WHERE patient_id = %s
+        """, values)
+
+        conn.commit()
+        return jsonify({'success': True})
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'error': str(e)})
+    finally:
+        conn.close()</code></pre>
+
+            <hr>
+
+            <h2>환자 추가 모달</h2>
+
+            <pre><code>&lt;!-- 환자 추가 모달 --&gt;
+&lt;div id="addPatientModal" class="modal"&gt;
+    &lt;div class="modal-content"&gt;
+        &lt;h2&gt;새 환자 등록&lt;/h2&gt;
+
+        &lt;div class="form-group"&gt;
+            &lt;label&gt;이름 *&lt;/label&gt;
+            &lt;input type="text" id="newPatientName" required&gt;
+        &lt;/div&gt;
+
+        &lt;div class="form-group"&gt;
+            &lt;label&gt;생년월일&lt;/label&gt;
+            &lt;input type="date" id="newPatientBirth"&gt;
+        &lt;/div&gt;
+
+        &lt;div class="form-group"&gt;
+            &lt;label&gt;연락처&lt;/label&gt;
+            &lt;input type="tel" id="newPatientPhone" placeholder="010-0000-0000"&gt;
+        &lt;/div&gt;
+
+        &lt;div class="form-group"&gt;
+            &lt;label&gt;진단명&lt;/label&gt;
+            &lt;input type="text" id="newPatientDiagnosis"&gt;
+        &lt;/div&gt;
+
+        &lt;div class="form-group"&gt;
+            &lt;label&gt;담당 치료사&lt;/label&gt;
+            &lt;select id="newPatientTherapist"&gt;&lt;/select&gt;
+        &lt;/div&gt;
+
+        &lt;div class="modal-buttons"&gt;
+            &lt;button onclick="saveNewPatient()"&gt;등록&lt;/button&gt;
+            &lt;button onclick="closeAddModal()"&gt;취소&lt;/button&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;script&gt;
+async function saveNewPatient() {
+    const name = document.getElementById('newPatientName').value;
+    if (!name) {
+        alert('이름을 입력하세요');
+        return;
+    }
+
+    const data = {
+        name: name,
+        birth_date: document.getElementById('newPatientBirth').value || null,
+        phone: document.getElementById('newPatientPhone').value || null,
+        diagnosis: document.getElementById('newPatientDiagnosis').value || null,
+        primary_therapist_id: document.getElementById('newPatientTherapist').value || null
+    };
+
+    try {
+        const response = await fetch('/api/patients', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast('환자가 등록되었습니다');
+            closeAddModal();
+            initPatientSheet();  // 시트 새로고침
+        } else {
+            alert('등록 실패: ' + result.error);
+        }
+    } catch (error) {
+        alert('오류 발생');
+    }
+}
+&lt;/script&gt;</code></pre>
+
+            <hr>
+
+            <h2>검색 기능</h2>
+
+            <pre><code>&lt;!-- 검색창 --&gt;
+&lt;div class="search-box"&gt;
+    &lt;input type="text" id="searchInput" placeholder="이름 또는 연락처로 검색..."&gt;
+    &lt;button onclick="searchPatients()"&gt;검색&lt;/button&gt;
+    &lt;button onclick="clearSearch()"&gt;초기화&lt;/button&gt;
+&lt;/div&gt;
+
+&lt;script&gt;
+// 검색
+function searchPatients() {
+    initPatientSheet();
+}
+
+// 초기화
+function clearSearch() {
+    document.getElementById('searchInput').value = '';
+    initPatientSheet();
+}
+
+// 엔터키로 검색
+document.getElementById('searchInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        searchPatients();
+    }
+});
+&lt;/script&gt;</code></pre>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li>환자 목록을 시트 형태로 표시했습니다</li>
+                <li>셀 편집으로 환자 정보를 수정합니다</li>
+                <li>모달로 새 환자를 등록합니다</li>
+                <li>검색 기능으로 환자를 찾습니다</li>
+            </ul>
+
+            <blockquote>다음 장에서는 매출 현황 시트를 만듭니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

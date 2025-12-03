@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>물리치료사를 위한 데이터베이스 1권: 정규화 편</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "..", "activeBook": "1"})
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📗 1권: 정규화 편</h1>
+                <p>데이터베이스 기초 개념</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">물리치료사를 위한 데이터베이스 입문</h1>
+
+            <h2>이 시리즈를 쓴 이유</h2>
+            <p>"환자 기록은 엑셀로 충분하지 않나요?"</p>
+            <p>많은 물리치료사들이 이렇게 생각합니다. 환자 10명, 20명일 때는 맞는 말이에요. 하지만 환자가 100명을 넘어가고, 여러 치료사가 함께 일하고, 보험 청구까지 관리해야 한다면 어떨까요?</p>
+            <p>이 시리즈는 <strong>프로그래머가 되라는 게 아닙니다.</strong> 다만, 데이터가 어떻게 구조화되어야 하는지 이해하면:</p>
+            <ul>
+                <li>✅ EMR 시스템이 왜 그렇게 설계됐는지 이해할 수 있어요</li>
+                <li>✅ 개발자에게 원하는 기능을 정확히 요청할 수 있어요</li>
+                <li>✅ 더 좋은 시스템을 선택하는 눈이 생겨요</li>
+            </ul>
+            <hr>
+
+            <h2>누구를 위한 책인가요?</h2>
+            <ul>
+                <li>📌 엑셀로 환자 관리하다가 한계를 느낀 분</li>
+                <li>📌 EMR/차트 프로그램이 왜 그런 구조인지 궁금한 분</li>
+                <li>📌 직접 데이터베이스를 만들어보고 싶은 분</li>
+                <li>📌 개발자와 소통해야 하는 관리자/원장님</li>
+            </ul>
+            <hr>
+
+            <h2>시리즈 구성</h2>
+            <table>
+                <tr><th>권</th><th>제목</th><th>핵심 내용</th></tr>
+                <tr><td>1권</td><td>데이터베이스 기초 개념</td><td>테이블, 키, 관계</td></tr>
+                <tr><td>2권</td><td>정규화가 필요한 이유</td><td>나쁜 설계의 문제점</td></tr>
+                <tr><td>3권</td><td>제1정규형 (1NF)</td><td>원자값, 반복 제거</td></tr>
+                <tr><td>4권</td><td>제2정규형 (2NF)</td><td>부분 종속 제거</td></tr>
+                <tr><td>5권</td><td>제3정규형 (3NF)</td><td>이행 종속 제거</td></tr>
+                <tr><td>6권</td><td>SQL 기초</td><td>CRUD, JOIN</td></tr>
+                <tr><td>7권</td><td>실전 클리닉 DB 설계</td><td>전체 스키마</td></tr>
+            </table>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" disabled>← 이전</button>
+                <span class="page-num">0 / 12</span>
+                <a href="chapters/chapter-1.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/nav.js"></script>
+</body>
+</html>

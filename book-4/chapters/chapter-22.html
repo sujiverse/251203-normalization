@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>22장: 실시간 동기화 - 물리치료사를 위한 DB 4권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "4"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📕 물리치료사를 위한</h1>
+                <p>웹 앱 만들기 (4권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">실시간 동기화</h1>
+
+            <h2>동기화가 필요한 이유</h2>
+
+            <p>여러 사용자가 같은 예약 시스템을 볼 때:</p>
+
+            <ul>
+                <li>A가 예약을 등록 → B의 화면에도 반영되어야 함</li>
+                <li>동시에 같은 셀을 수정하면 충돌 발생</li>
+                <li>최신 데이터를 유지해야 함</li>
+            </ul>
+
+            <hr>
+
+            <h2>동기화 방법 비교</h2>
+
+            <table>
+                <tr>
+                    <th>방법</th>
+                    <th>장점</th>
+                    <th>단점</th>
+                </tr>
+                <tr>
+                    <td>폴링 (Polling)</td>
+                    <td>구현 간단</td>
+                    <td>서버 부하, 지연</td>
+                </tr>
+                <tr>
+                    <td>Long Polling</td>
+                    <td>실시간에 가까움</td>
+                    <td>연결 유지 비용</td>
+                </tr>
+                <tr>
+                    <td>WebSocket</td>
+                    <td>진정한 실시간</td>
+                    <td>구현 복잡</td>
+                </tr>
+            </table>
+
+            <p><strong>우리는 폴링 방식</strong>을 사용합니다. 소규모 클리닉에서는 충분합니다.</p>
+
+            <hr>
+
+            <h2>폴링 구현</h2>
+
+            <h3>1. 마지막 업데이트 시간 추적</h3>
+
+            <pre><code>// 마지막으로 데이터를 가져온 시간
+let lastFetchTime = new Date().toISOString();
+
+// 주기적으로 변경사항 확인
+setInterval(checkForUpdates, 10000);  // 10초마다</code></pre>
+
+            <h3>2. 변경사항 확인 API</h3>
+
+            <pre><code># app.py
+
+@app.route('/api/reservations/changes')
+def get_reservation_changes():
+    since = request.args.get('since')  # ISO 형식 시간
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 지정 시간 이후 변경된 예약
+        cursor.execute("""
+            SELECT
+                ts.patient_id,
+                ts.session_date,
+                TIME_FORMAT(ts.start_time, '%H:%i') as start_time,
+                t.name as therapist_name,
+                ts.updated_at
+            FROM treatment_sessions ts
+            JOIN therapists t ON ts.therapist_id = t.therapist_id
+            WHERE ts.updated_at > %s
+        """, (since,))
+
+        changes = cursor.fetchall()
+
+        return jsonify({
+            'success': True,
+            'changes': changes,
+            'server_time': datetime.now().isoformat()
+        })
+    finally:
+        conn.close()</code></pre>
+
+            <div class="tip"><strong>💡 updated_at 컬럼</strong><br>
+            테이블에 updated_at 컬럼이 필요합니다. MySQL에서 자동 업데이트되도록 설정합니다:<br>
+            <code>updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP</code></div>
+
+            <hr>
+
+            <h2>프론트엔드 폴링</h2>
+
+            <pre><code>// 변경사항 확인
+async function checkForUpdates() {
+    try {
+        const response = await fetch(
+            `/api/reservations/changes?since=${encodeURIComponent(lastFetchTime)}`
+        );
+        const { changes, server_time } = await response.json();
+
+        if (changes && changes.length > 0) {
+            console.log(`${changes.length}개 변경사항 발견`);
+
+            // 각 변경사항을 시트에 반영
+            changes.forEach(change => {
+                updateCellFromChange(change);
+            });
+
+            showToast(`${changes.length}개 예약이 업데이트됨`);
+        }
+
+        // 시간 업데이트
+        lastFetchTime = server_time;
+
+    } catch (error) {
+        console.error('동기화 오류:', error);
+    }
+}
+
+// 변경사항을 셀에 반영
+function updateCellFromChange(change) {
+    const { patients, dates } = window.sheetData;
+
+    // 환자 행 찾기
+    const rowIdx = patients.findIndex(p => p.patient_id === change.patient_id);
+    if (rowIdx === -1) return;
+
+    // 날짜 열 찾기
+    const colIdx = dates.findIndex(d => d.date === change.session_date);
+    if (colIdx === -1) return;
+
+    // 셀 업데이트
+    const colors = THERAPIST_COLORS[change.therapist_name] || { bg: '#f5f5f5' };
+
+    luckysheet.setCellValue(rowIdx + 1, colIdx + 1, {
+        v: `${change.start_time}|${change.therapist_name}`,
+        m: change.start_time,
+        bg: colors.bg,
+        fc: colors.fc
+    });
+}</code></pre>
+
+            <hr>
+
+            <h2>폴링 시작/중지</h2>
+
+            <pre><code>let pollingInterval = null;
+
+// 폴링 시작
+function startPolling(intervalMs = 10000) {
+    if (pollingInterval) return;  // 이미 실행 중
+
+    console.log('동기화 시작');
+    pollingInterval = setInterval(checkForUpdates, intervalMs);
+}
+
+// 폴링 중지
+function stopPolling() {
+    if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+        console.log('동기화 중지');
+    }
+}
+
+// 페이지 가시성에 따라 제어
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        stopPolling();  // 탭이 보이지 않으면 중지
+    } else {
+        startPolling();  // 탭이 보이면 시작
+        checkForUpdates();  // 즉시 한 번 확인
+    }
+});
+
+// 초기 시작
+document.addEventListener('DOMContentLoaded', () => {
+    initSheet();
+    startPolling();
+});</code></pre>
+
+            <hr>
+
+            <h2>충돌 방지</h2>
+
+            <pre><code># 백엔드: 낙관적 잠금
+
+@app.route('/api/reservations', methods=['POST'])
+def save_reservation():
+    data = request.get_json()
+
+    # 클라이언트가 알고 있는 버전
+    client_version = data.get('version')
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 현재 버전 확인
+        cursor.execute("""
+            SELECT updated_at FROM treatment_sessions
+            WHERE patient_id = %s AND session_date = %s
+        """, (data['patient_id'], data['session_date']))
+
+        existing = cursor.fetchone()
+
+        if existing and client_version:
+            # 다른 사람이 먼저 수정했는지 확인
+            if str(existing['updated_at']) != client_version:
+                return jsonify({
+                    'success': False,
+                    'error': '다른 사용자가 수정했습니다. 새로고침 하세요.',
+                    'conflict': True
+                }), 409
+
+        # 저장 진행...
+        # ...
+
+    finally:
+        conn.close()</code></pre>
+
+            <pre><code>// 프론트엔드: 충돌 처리
+
+async function saveReservation(patientId, date, time, therapistId, version) {
+    const response = await fetch('/api/reservations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            patient_id: patientId,
+            session_date: date,
+            start_time: time,
+            therapist_id: therapistId,
+            version: version  // 버전 정보 포함
+        })
+    });
+
+    const result = await response.json();
+
+    if (result.conflict) {
+        // 충돌 발생
+        const reload = confirm(result.error + '\n\n새로고침 하시겠습니까?');
+        if (reload) {
+            initSheet();  // 시트 다시 로드
+        }
+        return false;
+    }
+
+    return result.success;
+}</code></pre>
+
+            <hr>
+
+            <h2>동기화 상태 표시</h2>
+
+            <pre><code>&lt;!-- 상태 표시 --&gt;
+&lt;div class="sync-status" id="syncStatus"&gt;
+    &lt;span class="sync-dot"&gt;&lt;/span&gt;
+    &lt;span class="sync-text"&gt;동기화 중...&lt;/span&gt;
+&lt;/div&gt;
+
+/* CSS */
+.sync-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.sync-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #22c55e;  /* 녹색: 연결됨 */
+}
+
+.sync-dot.syncing {
+    background: #f59e0b;  /* 주황: 동기화 중 */
+    animation: pulse 1s infinite;
+}
+
+.sync-dot.error {
+    background: #ef4444;  /* 빨강: 오류 */
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+// JavaScript
+function updateSyncStatus(status) {
+    const dot = document.querySelector('.sync-dot');
+    const text = document.querySelector('.sync-text');
+
+    dot.className = 'sync-dot';
+
+    switch(status) {
+        case 'syncing':
+            dot.classList.add('syncing');
+            text.textContent = '동기화 중...';
+            break;
+        case 'synced':
+            text.textContent = '동기화됨';
+            break;
+        case 'error':
+            dot.classList.add('error');
+            text.textContent = '연결 끊김';
+            break;
+    }
+}</code></pre>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li><strong>폴링</strong>: 주기적으로 서버에서 변경사항 확인</li>
+                <li><code>setInterval</code>로 10초마다 체크</li>
+                <li><code>visibilitychange</code>로 탭 가시성에 따라 제어</li>
+                <li><strong>충돌 방지</strong>: 버전 정보로 동시 수정 감지</li>
+                <li>상태 표시로 사용자에게 동기화 상태 알림</li>
+            </ul>
+
+            <blockquote>다음 장에서는 예약 현황 시트를 완성합니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

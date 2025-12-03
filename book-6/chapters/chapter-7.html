@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[7장] 연속형 변수 완전정복 - 연구 데이터 설계</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>📊</span> 연구 데이터 설계</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+            <a href="../../book-6/index.html" class="top-nav-link book-6 active">6권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📘 6권: 연구 데이터 설계</h1><p>변수부터 회귀분석까지</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <div class="part-header">2부: 변수 유형과 저장 원칙</div>
+            <h1 class="title">[7장] 연속형 변수 완전정복</h1>
+
+            <div class="intro-box">
+                <p>이 장에서는 <strong>연속형 변수의 저장과 변환</strong>을 배웁니다. 정수와 실수의 구분, 정밀도 관리, 정규성 검토, 데이터 변환, 표준화까지 연속형 변수를 다루는 모든 기법을 다룹니다.</p>
+            </div>
+
+            <hr>
+
+            <h2>1. 정수 vs 실수</h2>
+
+            <p>연속형 변수는 수치로 측정되지만, 그 성격에 따라 <strong>이산형(discrete)</strong>과 <strong>연속형(continuous)</strong>으로 나뉩니다.</p>
+
+            <div class="concept-box">
+                <h3>📖 이산형 연속 변수</h3>
+                <p>값이 자연수나 정수로만 존재하는 변수입니다. 중간 값(소수)이 의미가 없습니다.</p>
+                <ul>
+                    <li><strong>나이</strong>: 만 32세 (32.5세는 보통 사용하지 않음)</li>
+                    <li><strong>횟수</strong>: 낙상 3회 (3.5회는 불가능)</li>
+                    <li><strong>자녀 수</strong>: 2명 (2.3명은 불가능)</li>
+                    <li><strong>방문 횟수</strong>: 5회</li>
+                    <li><strong>세트 수</strong>: 운동 3세트</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>📖 연속형 연속 변수</h3>
+                <p>이론적으로 무한히 세밀한 값이 가능한 변수입니다. 측정 도구의 정밀도에 따라 소수점까지 기록됩니다.</p>
+                <ul>
+                    <li><strong>키</strong>: 172.5cm</li>
+                    <li><strong>체중</strong>: 68.3kg</li>
+                    <li><strong>시간</strong>: 2.34초</li>
+                    <li><strong>관절가동범위</strong>: 45.5도</li>
+                    <li><strong>근력</strong>: 23.7kg</li>
+                    <li><strong>6분 보행 거리</strong>: 423.5m</li>
+                </ul>
+            </div>
+
+            <h3>1.1 데이터베이스 저장 타입</h3>
+
+            <p>변수의 성격에 따라 적절한 데이터 타입을 선택해야 합니다:</p>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>변수 유형</th>
+                            <th>SQL 타입</th>
+                            <th>설명</th>
+                            <th>예시</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>이산형 (정수)</td>
+                            <td>INTEGER / INT</td>
+                            <td>정수만 저장, 4바이트</td>
+                            <td>나이, 횟수</td>
+                        </tr>
+                        <tr>
+                            <td>이산형 (작은 정수)</td>
+                            <td>SMALLINT / TINYINT</td>
+                            <td>작은 범위의 정수</td>
+                            <td>점수(0-100)</td>
+                        </tr>
+                        <tr>
+                            <td>연속형 (고정 소수)</td>
+                            <td>DECIMAL(p,s) / NUMERIC</td>
+                            <td>정확한 소수점, 반올림 없음</td>
+                            <td>금액, 정밀 측정값</td>
+                        </tr>
+                        <tr>
+                            <td>연속형 (부동 소수)</td>
+                            <td>REAL / FLOAT / DOUBLE</td>
+                            <td>근사값, 과학적 계산용</td>
+                            <td>통계값, 비율</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="sql-box">
+                <h3>💻 연속형 변수 테이블 설계</h3>
+                <pre><code>CREATE TABLE physical_measurements (
+    measurement_id INTEGER PRIMARY KEY,
+    patient_id INTEGER NOT NULL,
+    measurement_date DATE NOT NULL,
+
+    -- 이산형: 정수 타입
+    age INTEGER CHECK (age >= 0 AND age <= 120),
+    fall_count INTEGER DEFAULT 0,
+
+    -- 연속형: 정밀도가 필요한 측정값
+    height_cm DECIMAL(5,1),      -- 최대 999.9cm
+    weight_kg DECIMAL(5,2),      -- 최대 999.99kg
+    rom_degrees DECIMAL(4,1),    -- 최대 999.9도
+
+    -- 연속형: 시간 측정 (초 단위)
+    tug_time_sec DECIMAL(5,2),   -- TUG 시간: 최대 999.99초
+
+    -- 연속형: 거리 측정
+    walk_6min_m DECIMAL(5,1),    -- 6분 보행: 최대 9999.9m
+
+    FOREIGN KEY (patient_id) REFERENCES patients(patient_id)
+);</code></pre>
+            </div>
+
+            <div class="warning-box">
+                <h3>⚠️ FLOAT vs DECIMAL 주의</h3>
+                <p><strong>FLOAT/REAL</strong>은 부동소수점 방식으로 근사값을 저장합니다. 정확한 값이 필요하면 <strong>DECIMAL</strong>을 사용하세요.</p>
+                <ul>
+                    <li>FLOAT: 0.1 + 0.2 = 0.30000000000000004 (부정확)</li>
+                    <li>DECIMAL: 0.1 + 0.2 = 0.3 (정확)</li>
+                </ul>
+                <p>임상 측정값, 금액 등 정확성이 중요한 데이터는 반드시 DECIMAL을 사용합니다.</p>
+            </div>
+
+            <hr>
+
+            <h2>2. 정밀도와 반올림</h2>
+
+            <p>연속형 변수를 저장할 때 <strong>소수점 자릿수</strong>를 결정해야 합니다. 이는 측정 도구의 정밀도와 일치해야 합니다.</p>
+
+            <h3>2.1 측정 도구별 정밀도</h3>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>측정 항목</th>
+                            <th>일반적 도구</th>
+                            <th>정밀도</th>
+                            <th>저장 형식</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>키</td>
+                            <td>신장계</td>
+                            <td>0.1cm 또는 0.5cm</td>
+                            <td>DECIMAL(5,1)</td>
+                        </tr>
+                        <tr>
+                            <td>체중</td>
+                            <td>체중계</td>
+                            <td>0.1kg 또는 0.01kg</td>
+                            <td>DECIMAL(5,2)</td>
+                        </tr>
+                        <tr>
+                            <td>관절가동범위</td>
+                            <td>각도계 (Goniometer)</td>
+                            <td>1도 또는 5도 단위</td>
+                            <td>INTEGER 또는 DECIMAL(4,1)</td>
+                        </tr>
+                        <tr>
+                            <td>근력</td>
+                            <td>악력계, Hand-held dynamometer</td>
+                            <td>0.1kg</td>
+                            <td>DECIMAL(4,1)</td>
+                        </tr>
+                        <tr>
+                            <td>시간</td>
+                            <td>스톱워치</td>
+                            <td>0.01초</td>
+                            <td>DECIMAL(5,2)</td>
+                        </tr>
+                        <tr>
+                            <td>거리</td>
+                            <td>줄자, 거리계</td>
+                            <td>0.1m 또는 1cm</td>
+                            <td>DECIMAL(5,1)</td>
+                        </tr>
+                        <tr>
+                            <td>VAS 통증</td>
+                            <td>100mm 선</td>
+                            <td>1mm</td>
+                            <td>INTEGER (0-100)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="concept-box">
+                <h3>📖 정밀도 결정 원칙</h3>
+                <ol>
+                    <li><strong>측정 도구의 한계를 넘지 않는다</strong>: 각도계가 5도 단위면, 47도를 기록할 수 없습니다.</li>
+                    <li><strong>과도한 정밀도는 거짓 정확성</strong>: 줄자로 0.001cm를 측정했다고 기록하면 안 됩니다.</li>
+                    <li><strong>연구 전체에서 일관성 유지</strong>: 사전-사후 측정에서 정밀도가 다르면 비교가 어렵습니다.</li>
+                </ol>
+            </div>
+
+            <h3>2.2 반올림 규칙</h3>
+
+            <p>데이터 저장 시 반올림 규칙을 명확히 정해야 합니다:</p>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>방법</th>
+                            <th>설명</th>
+                            <th>예시 (소수점 1자리)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>반올림 (Round half up)</td>
+                            <td>5 이상이면 올림</td>
+                            <td>2.45 → 2.5, 2.44 → 2.4</td>
+                        </tr>
+                        <tr>
+                            <td>은행가 반올림 (Round half even)</td>
+                            <td>5일 때 가장 가까운 짝수로</td>
+                            <td>2.45 → 2.4, 2.55 → 2.6</td>
+                        </tr>
+                        <tr>
+                            <td>버림 (Truncate)</td>
+                            <td>소수점 이하 제거</td>
+                            <td>2.49 → 2.4, 2.99 → 2.9</td>
+                        </tr>
+                        <tr>
+                            <td>올림 (Ceiling)</td>
+                            <td>무조건 올림</td>
+                            <td>2.41 → 2.5, 2.49 → 2.5</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="sql-box">
+                <h3>💻 SQL에서 반올림 함수</h3>
+                <pre><code>-- 반올림 (가장 일반적)
+SELECT ROUND(weight_kg, 1) AS weight_rounded FROM measurements;
+-- 68.45 → 68.5
+
+-- 버림
+SELECT FLOOR(weight_kg * 10) / 10 AS weight_truncated FROM measurements;
+-- 68.49 → 68.4
+
+-- 올림
+SELECT CEILING(weight_kg * 10) / 10 AS weight_ceiling FROM measurements;
+-- 68.41 → 68.5
+
+-- 저장 시 정밀도 지정
+INSERT INTO measurements (weight_kg) VALUES (ROUND(68.456, 2));
+-- 68.46 저장</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>3. 단위 관리</h2>
+
+            <p>연속형 변수에서 <strong>단위(unit)</strong>는 데이터의 의미를 결정합니다. 단위가 혼재되면 분석이 불가능해집니다.</p>
+
+            <h3>3.1 단위 불일치 문제</h3>
+
+            <div class="example-box">
+                <h3>📝 실제 오류 사례</h3>
+                <p><strong>상황</strong>: 다기관 연구에서 환자 키 데이터 수집</p>
+                <table>
+                    <thead>
+                        <tr><th>병원</th><th>환자</th><th>키</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>A병원</td><td>P001</td><td>172</td></tr>
+                        <tr><td>B병원</td><td>P002</td><td>5.8</td></tr>
+                        <tr><td>C병원</td><td>P003</td><td>1720</td></tr>
+                    </tbody>
+                </table>
+                <p><strong>문제</strong>: A병원은 cm, B병원은 feet, C병원은 mm를 사용했습니다.</p>
+                <p><strong>결과</strong>: 평균 키가 632.6으로 계산되어 분석 불가능</p>
+            </div>
+
+            <h3>3.2 단위 통일 원칙</h3>
+
+            <div class="concept-box">
+                <h3>📖 단위 관리 규칙</h3>
+                <ol>
+                    <li><strong>SI 단위 사용</strong>: 국제 표준 단위를 기본으로 합니다.
+                        <ul>
+                            <li>길이: m, cm, mm</li>
+                            <li>무게: kg, g</li>
+                            <li>시간: s, min</li>
+                            <li>각도: degree (°)</li>
+                        </ul>
+                    </li>
+                    <li><strong>컬럼명에 단위 포함</strong>: height_cm, weight_kg, time_sec</li>
+                    <li><strong>데이터 사전에 단위 명시</strong>: 메타데이터로 단위 정보 관리</li>
+                    <li><strong>입력 시 단위 확인</strong>: 데이터 입력 폼에서 단위를 명확히 표시</li>
+                </ol>
+            </div>
+
+            <div class="sql-box">
+                <h3>💻 단위를 포함한 테이블 설계</h3>
+                <pre><code>-- 방법 1: 컬럼명에 단위 포함 (권장)
+CREATE TABLE measurements (
+    height_cm DECIMAL(5,1),
+    weight_kg DECIMAL(5,2),
+    walk_distance_m DECIMAL(6,1),
+    tug_time_sec DECIMAL(5,2),
+    grip_strength_kg DECIMAL(4,1)
+);
+
+-- 방법 2: 메타데이터 테이블 별도 관리
+CREATE TABLE variable_metadata (
+    variable_name TEXT PRIMARY KEY,
+    unit TEXT NOT NULL,
+    min_value DECIMAL,
+    max_value DECIMAL,
+    description TEXT
+);
+
+INSERT INTO variable_metadata VALUES
+('height', 'cm', 50, 250, '신장'),
+('weight', 'kg', 2, 300, '체중'),
+('walk_distance', 'm', 0, 1000, '6분 보행 거리'),
+('tug_time', 'sec', 3, 180, 'Timed Up and Go 시간'),
+('grip_strength', 'kg', 0, 100, '악력');</code></pre>
+            </div>
+
+            <h3>3.3 단위 변환</h3>
+
+            <p>외부 데이터를 통합할 때 단위 변환이 필요합니다:</p>
+
+            <div class="sql-box">
+                <h3>💻 단위 변환 SQL</h3>
+                <pre><code>-- feet → cm 변환 (1 feet = 30.48 cm)
+UPDATE imported_data
+SET height_cm = height_ft * 30.48
+WHERE unit = 'feet';
+
+-- inch → cm 변환 (1 inch = 2.54 cm)
+UPDATE imported_data
+SET height_cm = height_inch * 2.54
+WHERE unit = 'inch';
+
+-- pound → kg 변환 (1 lb = 0.453592 kg)
+UPDATE imported_data
+SET weight_kg = weight_lb * 0.453592
+WHERE unit = 'pound';
+
+-- 화씨 → 섭씨 변환
+UPDATE imported_data
+SET temp_celsius = (temp_fahrenheit - 32) * 5.0 / 9.0
+WHERE temp_unit = 'F';</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>4. 정규분포와 비정규분포</h2>
+
+            <p>연속형 변수의 <strong>분포 형태</strong>는 분석 방법 선택에 직접적인 영향을 미칩니다.</p>
+
+            <h3>4.1 정규성이 중요한 이유</h3>
+
+            <div class="concept-box">
+                <h3>📖 정규분포 가정이 필요한 분석</h3>
+                <p>다음 통계 기법들은 데이터가 정규분포를 따른다고 가정합니다:</p>
+                <ul>
+                    <li><strong>독립표본 t-test</strong>: 두 집단의 평균 비교</li>
+                    <li><strong>대응표본 t-test</strong>: 사전-사후 평균 비교</li>
+                    <li><strong>일원배치 분산분석 (ANOVA)</strong>: 세 집단 이상 평균 비교</li>
+                    <li><strong>피어슨 상관분석</strong>: 두 변수 간 선형 관계</li>
+                    <li><strong>선형 회귀분석</strong>: 잔차의 정규성 가정</li>
+                </ul>
+                <p>정규성 가정이 위배되면 검정 결과의 신뢰도가 떨어집니다.</p>
+            </div>
+
+            <h3>4.2 정규성 검정 방법</h3>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>검정 방법</th>
+                            <th>적합한 표본 크기</th>
+                            <th>귀무가설</th>
+                            <th>해석</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Shapiro-Wilk 검정</td>
+                            <td>n < 50 (소표본)</td>
+                            <td>데이터가 정규분포를 따른다</td>
+                            <td>p > 0.05면 정규성 인정</td>
+                        </tr>
+                        <tr>
+                            <td>Kolmogorov-Smirnov 검정</td>
+                            <td>n ≥ 50 (대표본)</td>
+                            <td>데이터가 정규분포를 따른다</td>
+                            <td>p > 0.05면 정규성 인정</td>
+                        </tr>
+                        <tr>
+                            <td>왜도-첨도 검토</td>
+                            <td>모든 크기</td>
+                            <td>-</td>
+                            <td>|왜도| < 2, |첨도| < 7</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="concept-box">
+                <h3>📖 왜도(Skewness)와 첨도(Kurtosis)</h3>
+                <p><strong>왜도</strong>: 분포의 비대칭 정도</p>
+                <ul>
+                    <li>왜도 = 0: 좌우 대칭 (정규분포)</li>
+                    <li>왜도 > 0: 양의 왜도 (오른쪽 꼬리가 긴 분포)</li>
+                    <li>왜도 < 0: 음의 왜도 (왼쪽 꼬리가 긴 분포)</li>
+                </ul>
+                <p><strong>첨도</strong>: 분포의 뾰족한 정도</p>
+                <ul>
+                    <li>첨도 = 3 (또는 초과첨도 = 0): 정규분포</li>
+                    <li>첨도 > 3: 뾰족한 분포 (급첨)</li>
+                    <li>첨도 < 3: 납작한 분포 (완첨)</li>
+                </ul>
+            </div>
+
+            <h3>4.3 시각적 검토</h3>
+
+            <p>통계적 검정과 함께 시각적 검토를 병행해야 합니다:</p>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>그래프</th>
+                            <th>정규분포일 때</th>
+                            <th>비정규분포일 때</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>히스토그램</td>
+                            <td>종 모양 (bell curve)</td>
+                            <td>한쪽으로 치우침, 여러 봉우리</td>
+                        </tr>
+                        <tr>
+                            <td>Q-Q Plot</td>
+                            <td>점들이 대각선 위에 위치</td>
+                            <td>점들이 대각선에서 이탈</td>
+                        </tr>
+                        <tr>
+                            <td>박스플롯</td>
+                            <td>중앙값이 가운데, 수염 대칭</td>
+                            <td>중앙값이 치우침, 이상치 많음</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="warning-box">
+                <h3>⚠️ 정규성 검정의 한계</h3>
+                <ul>
+                    <li><strong>대표본에서의 문제</strong>: n > 100이면 작은 편차도 유의하게 나옴</li>
+                    <li><strong>시각적 검토 병행</strong>: 통계적 검정만으로 판단하지 말 것</li>
+                    <li><strong>중심극한정리</strong>: n ≥ 30이면 평균의 분포는 정규분포에 근접</li>
+                </ul>
+            </div>
+
+            <hr>
+
+            <h2>5. 변환 (Transformation)</h2>
+
+            <p>데이터가 정규분포를 따르지 않을 때, <strong>수학적 변환</strong>을 통해 정규성을 개선할 수 있습니다.</p>
+
+            <h3>5.1 로그 변환 (Log Transformation)</h3>
+
+            <div class="concept-box">
+                <h3>📖 로그 변환</h3>
+                <p><strong>공식</strong>: X' = log(X) 또는 X' = ln(X)</p>
+                <p><strong>적용 대상</strong>: 양의 왜도가 있는 데이터 (오른쪽 꼬리가 긴 분포)</p>
+                <p><strong>예시</strong>: 소득, 반응시간, 세균 수, CRP 수치</p>
+                <p><strong>주의</strong>: X > 0이어야 함. 0이 있으면 log(X + 1) 사용</p>
+            </div>
+
+            <div class="sql-box">
+                <h3>💻 로그 변환 SQL</h3>
+                <pre><code>-- 자연로그 변환
+ALTER TABLE lab_results ADD COLUMN crp_log DECIMAL(6,4);
+UPDATE lab_results SET crp_log = LN(crp_value);
+
+-- 0 값이 있는 경우
+UPDATE lab_results SET crp_log = LN(crp_value + 1);
+
+-- 상용로그 (밑이 10)
+UPDATE lab_results SET crp_log10 = LOG10(crp_value + 1);</code></pre>
+            </div>
+
+            <h3>5.2 제곱근 변환 (Square Root Transformation)</h3>
+
+            <div class="concept-box">
+                <h3>📖 제곱근 변환</h3>
+                <p><strong>공식</strong>: X' = √X</p>
+                <p><strong>적용 대상</strong>: 약한 양의 왜도, 빈도 데이터</p>
+                <p><strong>예시</strong>: 횟수 데이터, 포아송 분포를 따르는 데이터</p>
+                <p><strong>특징</strong>: 로그 변환보다 변환 강도가 약함</p>
+            </div>
+
+            <div class="sql-box">
+                <h3>💻 제곱근 변환 SQL</h3>
+                <pre><code>-- 제곱근 변환
+ALTER TABLE measurements ADD COLUMN fall_count_sqrt DECIMAL(6,4);
+UPDATE measurements SET fall_count_sqrt = SQRT(fall_count);
+
+-- 0 값 처리
+UPDATE measurements SET fall_count_sqrt = SQRT(fall_count + 0.5);</code></pre>
+            </div>
+
+            <h3>5.3 역수 변환 (Reciprocal Transformation)</h3>
+
+            <div class="concept-box">
+                <h3>📖 역수 변환</h3>
+                <p><strong>공식</strong>: X' = 1/X</p>
+                <p><strong>적용 대상</strong>: 강한 양의 왜도</p>
+                <p><strong>주의</strong>: X = 0이면 불가능, 부호가 바뀜 (큰 값 → 작은 값)</p>
+                <p><strong>예시</strong>: 반응시간 (빠를수록 좋음 → 변환 후 클수록 좋음)</p>
+            </div>
+
+            <h3>5.4 변환 방법 선택 가이드</h3>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>왜도 정도</th>
+                            <th>권장 변환</th>
+                            <th>공식</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>약한 양의 왜도 (0.5~1)</td>
+                            <td>제곱근 변환</td>
+                            <td>√X</td>
+                        </tr>
+                        <tr>
+                            <td>중간 양의 왜도 (1~2)</td>
+                            <td>로그 변환</td>
+                            <td>log(X)</td>
+                        </tr>
+                        <tr>
+                            <td>강한 양의 왜도 (>2)</td>
+                            <td>역수 변환</td>
+                            <td>1/X</td>
+                        </tr>
+                        <tr>
+                            <td>음의 왜도</td>
+                            <td>제곱 또는 세제곱</td>
+                            <td>X², X³</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="warning-box">
+                <h3>⚠️ 변환 시 주의사항</h3>
+                <ul>
+                    <li><strong>해석의 어려움</strong>: 변환된 값은 원래 단위와 다름</li>
+                    <li><strong>역변환 필요</strong>: 결과 보고 시 원래 척도로 변환</li>
+                    <li><strong>모든 데이터에 적용</strong>: 일부만 변환하면 비교 불가</li>
+                    <li><strong>변환 사실 기록</strong>: 논문에 어떤 변환을 사용했는지 명시</li>
+                </ul>
+            </div>
+
+            <hr>
+
+            <h2>6. 표준화 (Standardization)</h2>
+
+            <p>서로 다른 단위나 척도를 가진 변수들을 비교하려면 <strong>표준화</strong>가 필요합니다.</p>
+
+            <h3>6.1 Z-점수 표준화</h3>
+
+            <div class="concept-box">
+                <h3>📖 Z-점수 (Standard Score)</h3>
+                <p><strong>공식</strong>: Z = (X - μ) / σ</p>
+                <ul>
+                    <li>X: 원래 값</li>
+                    <li>μ: 평균</li>
+                    <li>σ: 표준편차</li>
+                </ul>
+                <p><strong>결과</strong>: 평균 = 0, 표준편차 = 1인 분포로 변환</p>
+                <p><strong>해석</strong>: Z = 1.5는 "평균보다 1.5 표준편차 위"를 의미</p>
+            </div>
+
+            <div class="sql-box">
+                <h3>💻 Z-점수 계산 SQL</h3>
+                <pre><code>-- 평균과 표준편차 계산
+WITH stats AS (
+    SELECT
+        AVG(grip_strength_kg) AS mean_grip,
+        -- 표본 표준편차 사용
+        SQRT(SUM((grip_strength_kg - (SELECT AVG(grip_strength_kg) FROM measurements))
+             * (grip_strength_kg - (SELECT AVG(grip_strength_kg) FROM measurements)))
+             / (COUNT(*) - 1)) AS sd_grip
+    FROM measurements
+)
+-- Z-점수 계산
+SELECT
+    patient_id,
+    grip_strength_kg,
+    (grip_strength_kg - stats.mean_grip) / stats.sd_grip AS grip_z_score
+FROM measurements, stats;
+
+-- 결과를 새 컬럼에 저장
+ALTER TABLE measurements ADD COLUMN grip_z DECIMAL(6,4);
+
+UPDATE measurements
+SET grip_z = (grip_strength_kg -
+    (SELECT AVG(grip_strength_kg) FROM measurements)) /
+    (SELECT SQRT(SUM((grip_strength_kg -
+        (SELECT AVG(grip_strength_kg) FROM measurements)) *
+        (grip_strength_kg -
+        (SELECT AVG(grip_strength_kg) FROM measurements))) /
+        (COUNT(*) - 1)) FROM measurements);</code></pre>
+            </div>
+
+            <h3>6.2 Min-Max 정규화</h3>
+
+            <div class="concept-box">
+                <h3>📖 Min-Max 정규화</h3>
+                <p><strong>공식</strong>: X' = (X - Xmin) / (Xmax - Xmin)</p>
+                <p><strong>결과</strong>: 모든 값이 0~1 범위로 변환</p>
+                <p><strong>특징</strong>: 이상치에 민감함</p>
+                <p><strong>용도</strong>: 기계학습, 여러 변수 비교 시</p>
+            </div>
+
+            <div class="sql-box">
+                <h3>💻 Min-Max 정규화 SQL</h3>
+                <pre><code>-- Min-Max 정규화
+WITH min_max AS (
+    SELECT
+        MIN(tug_time_sec) AS min_val,
+        MAX(tug_time_sec) AS max_val
+    FROM measurements
+)
+SELECT
+    patient_id,
+    tug_time_sec,
+    (tug_time_sec - min_max.min_val) / (min_max.max_val - min_max.min_val)
+        AS tug_normalized
+FROM measurements, min_max;
+
+-- 0~100 범위로 변환
+SELECT
+    patient_id,
+    (tug_time_sec - min_val) / (max_val - min_val) * 100 AS tug_score_100
+FROM measurements,
+    (SELECT MIN(tug_time_sec) AS min_val,
+            MAX(tug_time_sec) AS max_val FROM measurements) AS minmax;</code></pre>
+            </div>
+
+            <h3>6.3 표준화 적용 시점</h3>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>상황</th>
+                            <th>표준화 필요</th>
+                            <th>이유</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>다중회귀분석</td>
+                            <td>권장</td>
+                            <td>회귀계수 크기 비교 가능</td>
+                        </tr>
+                        <tr>
+                            <td>주성분분석 (PCA)</td>
+                            <td>필수</td>
+                            <td>분산이 큰 변수가 지배하는 것 방지</td>
+                        </tr>
+                        <tr>
+                            <td>군집분석</td>
+                            <td>필수</td>
+                            <td>거리 계산에 영향</td>
+                        </tr>
+                        <tr>
+                            <td>기계학습 알고리즘</td>
+                            <td>대부분 필수</td>
+                            <td>수렴 속도, 성능 향상</td>
+                        </tr>
+                        <tr>
+                            <td>단순 t-test, ANOVA</td>
+                            <td>불필요</td>
+                            <td>원래 단위로 해석이 더 쉬움</td>
+                        </tr>
+                        <tr>
+                            <td>상관분석</td>
+                            <td>불필요</td>
+                            <td>상관계수는 척도 불변</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="example-box">
+                <h3>📝 표준화 활용 예시</h3>
+                <p><strong>상황</strong>: 악력(kg)과 보행속도(m/s)의 상대적 영향력 비교</p>
+                <pre><code>-- 원본 데이터로 회귀분석
+-- 악력 회귀계수: 0.5
+-- 보행속도 회귀계수: 15.2
+-- → 보행속도가 더 중요해 보임 (숫자가 크므로)
+
+-- Z-점수 표준화 후 회귀분석
+-- 악력 표준화 계수: 0.42
+-- 보행속도 표준화 계수: 0.38
+-- → 실제로는 악력의 영향이 더 큼</code></pre>
+                <p>표준화된 회귀계수(β)는 단위에 관계없이 상대적 영향력을 비교할 수 있게 해줍니다.</p>
+            </div>
+
+            <div class="summary-box">
+                <h3>📝 이 장의 핵심 정리</h3>
+                <ol>
+                    <li><strong>정수 vs 실수</strong>: 이산형은 INTEGER, 연속형은 DECIMAL 사용</li>
+                    <li><strong>정밀도</strong>: 측정 도구의 정밀도에 맞게 소수점 자릿수 결정</li>
+                    <li><strong>단위 관리</strong>: 컬럼명에 단위 포함, 메타데이터로 관리</li>
+                    <li><strong>정규성 검토</strong>: Shapiro-Wilk 검정 + 시각적 검토 병행</li>
+                    <li><strong>변환</strong>: 양의 왜도는 로그/제곱근, 음의 왜도는 제곱 변환</li>
+                    <li><strong>표준화</strong>: 다중회귀, PCA, 군집분석에서는 Z-점수 표준화 필수</li>
+                </ol>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-6.html" class="nav-btn">← 이전</a>
+                <span class="page-num">7 / 20</span>
+                <a href="chapter-8.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

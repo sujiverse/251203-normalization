@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4장: 관계 설정 & 제약조건 - 물리치료사를 위한 데이터베이스 3권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "3"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📙 물리치료사를 위한</h1>
+                <p>실전 구축 & 대시보드 (3권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">관계 설정 & 제약조건</h1>
+
+            <h2>테이블은 만들었는데...</h2>
+
+            <p>3권에서 9개의 테이블을 만들었습니다. 테이블을 만들 때 <code>FOREIGN KEY</code>로 기본적인 관계는 설정했어요. 하지만 아직 부족합니다.</p>
+
+            <p>데이터베이스를 "튼튼하게" 만들려면 추가적인 장치가 필요합니다. 잘못된 데이터가 들어오는 걸 막고, 실수로 중요한 데이터를 지우는 걸 방지하는 장치요.</p>
+
+            <p>이번 장에서는 그런 "안전장치"들을 설정합니다.</p>
+
+            <h3>이번 장에서 할 일</h3>
+            <ul>
+                <li>외래키(FK) 관계 다시 확인하기</li>
+                <li>제약조건 추가하기 (CHECK, UNIQUE, NOT NULL)</li>
+                <li>인덱스 추가하기</li>
+                <li>ER 다이어그램으로 전체 구조 확인하기</li>
+            </ul>
+
+            <hr>
+
+            <h2>외래키(Foreign Key)란?</h2>
+
+            <p>1권에서 배운 내용이지만, 다시 한번 정리해볼게요.</p>
+
+            <p>외래키는 "이 컬럼의 값은 반드시 저 테이블에 있어야 해!"라고 강제하는 장치입니다.</p>
+
+            <p>예를 들어 <code>patients</code> 테이블의 <code>insurance_code</code>는 <code>insurances</code> 테이블을 참조합니다. 이 말은:</p>
+
+            <ul>
+                <li>환자의 보험사 코드는 반드시 <code>insurances</code> 테이블에 존재하는 값이어야 함</li>
+                <li>존재하지 않는 보험사 코드를 넣으면 에러 발생</li>
+                <li><code>insurances</code>에서 사용 중인 보험사를 함부로 삭제할 수 없음</li>
+            </ul>
+
+            <p>이렇게 하면 "있지도 않은 보험사가 등록된 환자" 같은 이상한 데이터가 생기는 걸 막을 수 있어요.</p>
+
+            <h3>우리 데이터베이스의 참조 관계</h3>
+
+            <table>
+                <tr><th>테이블</th><th>참조하는 컬럼</th><th>참조되는 테이블</th></tr>
+                <tr><td>patients</td><td>insurance_code</td><td>insurances</td></tr>
+                <tr><td>patient_diagnoses</td><td>patient_id</td><td>patients</td></tr>
+                <tr><td>patient_diagnoses</td><td>diagnosis_code</td><td>diagnosis_codes</td></tr>
+                <tr><td>treatment_sessions</td><td>patient_id</td><td>patients</td></tr>
+                <tr><td>treatment_sessions</td><td>therapist_id</td><td>therapists</td></tr>
+                <tr><td>billings</td><td>session_id</td><td>treatment_sessions</td></tr>
+                <tr><td>billings</td><td>fee_code</td><td>fee_items</td></tr>
+                <tr><td>soap_notes</td><td>session_id</td><td>treatment_sessions</td></tr>
+            </table>
+
+            <p>3권에서 테이블을 만들 때 이미 이 관계들을 설정했습니다. 잘 설정되었는지 확인해볼까요?</p>
+
+            <hr>
+
+            <h2>외래키 확인하기</h2>
+
+            <p>설정된 외래키를 확인하는 방법입니다.</p>
+
+            <pre><code>-- 특정 테이블의 외래키 확인
+SELECT
+CONSTRAINT_NAME,
+COLUMN_NAME,
+REFERENCED_TABLE_NAME,
+REFERENCED_COLUMN_NAME
+FROM information_schema.KEY_COLUMN_USAGE
+WHERE TABLE_SCHEMA = 'healing_hands'
+AND TABLE_NAME = 'patients'
+AND REFERENCED_TABLE_NAME IS NOT NULL;</code></pre>
+
+            <p>결과:</p>
+            <pre><code>+---------------------------+----------------+-----------------------+------------------------+
+| CONSTRAINT_NAME           | COLUMN_NAME    | REFERENCED_TABLE_NAME | REFERENCED_COLUMN_NAME |
++---------------------------+----------------+-----------------------+------------------------+
+| patients_ibfk_1           | insurance_code | insurances            | insurance_code         |
++---------------------------+----------------+-----------------------+------------------------+</code></pre>
+
+            <p><code>patients</code> 테이블의 <code>insurance_code</code>가 <code>insurances</code> 테이블을 참조하고 있네요. 잘 설정되어 있습니다!</p>
+
+            <div class="tip"><strong>💡 DBeaver에서 더 쉽게 보기</strong><br>
+            DBeaver 왼쪽에서 테이블을 클릭하고, 하단 탭 중 "Foreign Keys"를 클릭하면 해당 테이블의 외래키를 GUI로 볼 수 있습니다.</div>
+
+            <hr>
+
+            <h2>제약조건(Constraints) 추가하기</h2>
+
+            <p>외래키 말고도 데이터를 보호하는 여러 제약조건이 있습니다. 테이블을 만들 때 일부는 이미 설정했지만, 몇 가지를 더 추가해볼게요.</p>
+
+            <h3>제약조건의 종류</h3>
+
+            <table>
+                <tr><th>제약조건</th><th>설명</th><th>예시</th></tr>
+                <tr><td>PRIMARY KEY</td><td>기본키. 중복 불가, NULL 불가</td><td>patient_id</td></tr>
+                <tr><td>FOREIGN KEY</td><td>다른 테이블 참조</td><td>insurance_code → insurances</td></tr>
+                <tr><td>NOT NULL</td><td>NULL 값 불가</td><td>이름, 연락처</td></tr>
+                <tr><td>UNIQUE</td><td>중복 불가 (NULL은 허용)</td><td>면허번호, 이메일</td></tr>
+                <tr><td>CHECK</td><td>특정 조건 만족해야 함</td><td>성별은 'M' 또는 'F'만</td></tr>
+                <tr><td>DEFAULT</td><td>값 안 넣으면 기본값 사용</td><td>is_active = 'Y'</td></tr>
+            </table>
+
+            <h3>CHECK 제약조건 추가</h3>
+
+            <p>MySQL 8.0부터 CHECK 제약조건을 지원합니다. 특정 값만 허용하도록 제한할 수 있어요.</p>
+
+            <pre><code>-- 환자 성별은 'M' 또는 'F'만 허용
+ALTER TABLE patients
+ADD CONSTRAINT chk_gender CHECK (gender IN ('M', 'F'));
+
+-- 환자 활성 상태는 'Y' 또는 'N'만 허용
+ALTER TABLE patients
+ADD CONSTRAINT chk_patient_active CHECK (is_active IN ('Y', 'N'));
+
+-- 치료사 활성 상태는 'Y' 또는 'N'만 허용
+ALTER TABLE therapists
+ADD CONSTRAINT chk_therapist_active CHECK (is_active IN ('Y', 'N'));
+
+-- 청구 금액은 0 이상이어야 함
+ALTER TABLE billings
+ADD CONSTRAINT chk_positive_amount CHECK (total_amount >= 0);
+
+-- 수량은 1 이상이어야 함
+ALTER TABLE billings
+ADD CONSTRAINT chk_positive_quantity CHECK (quantity >= 1);</code></pre>
+
+            <p>이제 성별에 'X' 같은 값을 넣으려고 하면 에러가 납니다. 실수로 잘못된 값이 들어가는 걸 막아주죠.</p>
+
+            <h3>CHECK 제약조건 테스트</h3>
+
+            <p>정말 작동하는지 테스트해볼까요? (데이터가 아직 없으니 나중에 해도 됩니다)</p>
+
+            <pre><code>-- 이건 에러 발생! (성별에 'X'는 안 됨)
+INSERT INTO patients (patient_id, name, gender, birth_date, phone)
+VALUES ('TEST', '테스트', 'X', '1990-01-01', '010-0000-0000');
+
+-- 에러 메시지: Check constraint 'chk_gender' is violated.</code></pre>
+
+            <h3>유용한 UNIQUE 제약조건</h3>
+
+            <p>이미 <code>therapists</code> 테이블의 <code>license_number</code>에 UNIQUE를 설정했습니다. 면허번호는 중복될 수 없으니까요.</p>
+
+            <p>환자 테이블에도 추가할 게 있을까요? 보통 "같은 이름 + 같은 생년월일 + 같은 연락처"면 동일인으로 봅니다. 이걸 막으려면:</p>
+
+            <pre><code>-- 동일인 중복 등록 방지 (이름 + 생년월일 + 전화번호 조합은 유일해야 함)
+ALTER TABLE patients
+ADD CONSTRAINT uk_patient_identity UNIQUE (name, birth_date, phone);</code></pre>
+
+            <p>이렇게 하면 실수로 같은 환자를 두 번 등록하는 걸 막을 수 있습니다.</p>
+
+            <div class="warning"><strong>⚠️ 동명이인 주의!</strong><br>
+            실제로는 이름 + 생년월일 + 연락처가 같은 다른 사람이 있을 수도 있습니다. 하지만 그런 경우는 극히 드물고, 중복 등록으로 인한 문제가 더 많이 발생하기 때문에 이 제약조건은 유용합니다. 정말 동명이인이면 연락처를 다르게 등록하면 돼요.</div>
+
+            <hr>
+
+            <h2>인덱스(Index) 추가하기</h2>
+
+            <p>인덱스는 검색 속도를 빠르게 해주는 장치입니다. 책의 색인(index)과 같아요. 색인이 있으면 원하는 페이지를 빨리 찾을 수 있듯이, 데이터베이스 인덱스가 있으면 원하는 데이터를 빨리 찾을 수 있습니다.</p>
+
+            <p>기본키(PRIMARY KEY)와 유니크(UNIQUE) 컬럼은 자동으로 인덱스가 만들어집니다. 하지만 자주 검색하는 다른 컬럼에도 인덱스를 추가하면 좋아요.</p>
+
+            <h3>어떤 컬럼에 인덱스를 추가할까?</h3>
+
+            <p>인덱스를 추가하면 좋은 컬럼:</p>
+            <ul>
+                <li>자주 검색 조건(WHERE)에 사용되는 컬럼</li>
+                <li>자주 정렬(ORDER BY)에 사용되는 컬럼</li>
+                <li>자주 조인(JOIN)에 사용되는 컬럼</li>
+            </ul>
+
+            <p>우리 클리닉에서 자주 하는 검색을 생각해보면:</p>
+            <ul>
+                <li>환자 이름으로 검색</li>
+                <li>치료 날짜로 검색</li>
+                <li>수납 상태로 검색</li>
+            </ul>
+
+            <pre><code>-- 환자 이름 검색용 인덱스
+CREATE INDEX idx_patient_name ON patients(name);
+
+-- 환자 연락처 검색용 인덱스
+CREATE INDEX idx_patient_phone ON patients(phone);
+
+-- 치료 날짜 검색용 인덱스
+CREATE INDEX idx_session_date ON treatment_sessions(session_date);
+
+-- 수납 상태 검색용 인덱스
+CREATE INDEX idx_payment_status ON billings(payment_status);
+
+-- 치료 세션의 환자별 조회용 인덱스
+CREATE INDEX idx_session_patient ON treatment_sessions(patient_id);
+
+-- 치료 세션의 치료사별 조회용 인덱스
+CREATE INDEX idx_session_therapist ON treatment_sessions(therapist_id);</code></pre>
+
+            <div class="tip"><strong>💡 인덱스는 양날의 검!</strong><br>
+            인덱스가 많으면 검색은 빨라지지만, 데이터를 추가/수정/삭제할 때는 느려집니다. 인덱스도 업데이트해야 하니까요. 그래서 "자주 검색하는 컬럼"에만 인덱스를 추가하는 게 좋습니다. 무작정 다 추가하면 오히려 느려져요.</div>
+
+            <h3>인덱스 확인하기</h3>
+
+            <pre><code>-- patients 테이블의 인덱스 확인
+SHOW INDEX FROM patients;</code></pre>
+
+            <hr>
+
+            <h2>ER 다이어그램으로 전체 구조 보기</h2>
+
+            <p>지금까지 만든 테이블들의 관계를 한눈에 보고 싶다면 ER 다이어그램(Entity-Relationship Diagram)을 그려볼 수 있습니다.</p>
+
+            <h3>DBeaver에서 ER 다이어그램 보기</h3>
+
+            <ol>
+                <li>왼쪽 Database Navigator에서 <code>healing_hands</code> 데이터베이스 클릭</li>
+                <li>마우스 우클릭 → "View Diagram" 또는 "ER Diagram" 선택</li>
+                <li>또는 healing_hands 더블클릭 → 탭 중 "ER Diagram" 선택</li>
+            </ol>
+
+            <p>테이블들이 박스로 표시되고, 외래키 관계가 선으로 연결되어 보입니다. 드래그해서 위치를 조정할 수도 있어요.</p>
+
+            <h3>우리 데이터베이스의 구조 (텍스트 버전)</h3>
+
+            <pre><code>┌─────────────────┐       ┌─────────────────┐
+│   insurances    │       │    fee_items    │
+│─────────────────│       │─────────────────│
+│ insurance_code◆ │       │ fee_code◆       │
+│ insurance_name  │       │ fee_name        │
+│ insurance_type  │       │ unit_price      │
+└────────┬────────┘       └────────┬────────┘
+     │                         │
+     │ 1:N                     │ 1:N
+     ▼                         ▼
+┌─────────────────┐       ┌─────────────────┐
+│    patients     │       │    billings     │
+│─────────────────│       │─────────────────│
+│ patient_id◆     │       │ billing_id◆     │
+│ name            │◄──┐   │ session_id      │──┐
+│ insurance_code  │   │   │ fee_code        │  │
+└────────┬────────┘   │   │ total_amount    │  │
+     │            │   │ payment_status  │  │
+     │ 1:N        │   └─────────────────┘  │
+     ▼            │                        │
+┌─────────────────┐   │                        │
+│treatment_sessions│   │                        │
+│─────────────────│   │                        │
+│ session_id◆     │───┴────────────────────────┘
+│ patient_id      │
+│ therapist_id    │──────┐
+│ session_date    │      │
+└────────┬────────┘      │
+     │               │
+     │ 1:1           │ N:1
+     ▼               ▼
+┌─────────────────┐   ┌─────────────────┐
+│   soap_notes    │   │   therapists    │
+│─────────────────│   │─────────────────│
+│ note_id◆        │   │ therapist_id◆   │
+│ session_id      │   │ name            │
+│ subjective      │   │ specialization  │
+│ objective       │   └─────────────────┘
+│ assessment      │
+│ plan            │
+└─────────────────┘
+
+┌─────────────────┐       ┌─────────────────┐
+│ diagnosis_codes │       │patient_diagnoses│
+│─────────────────│       │─────────────────│
+│ diagnosis_code◆ │◄──────│ patient_id      │
+│ diagnosis_name  │       │ diagnosis_code  │
+└─────────────────┘       │ is_primary      │
+                      └─────────────────┘
+
+◆ = Primary Key (기본키)
+→ = Foreign Key 참조 방향</code></pre>
+
+            <hr>
+
+            <h2>데이터 무결성 테스트</h2>
+
+            <p>외래키와 제약조건이 잘 작동하는지 테스트해봅시다. 일부러 잘못된 데이터를 넣어보고 에러가 나는지 확인합니다.</p>
+
+            <h3>테스트 1: 존재하지 않는 보험사 코드</h3>
+
+            <pre><code>-- insurances 테이블에 'INS999'는 없는데, 환자에게 넣으면?
+INSERT INTO patients (patient_id, name, gender, birth_date, phone, insurance_code)
+VALUES ('TEST1', '테스트', 'M', '1990-01-01', '010-0000-0000', 'INS999');
+
+-- 에러! Cannot add or update a child row: a foreign key constraint fails</code></pre>
+
+            <p>존재하지 않는 보험사 코드를 넣으려고 하니 에러가 납니다. 외래키가 잘 작동하고 있어요!</p>
+
+            <h3>테스트 2: 잘못된 성별 값</h3>
+
+            <pre><code>-- 성별에 'M', 'F'가 아닌 값을 넣으면?
+INSERT INTO patients (patient_id, name, gender, birth_date, phone)
+VALUES ('TEST2', '테스트', 'X', '1990-01-01', '010-0000-0000');
+
+-- 에러! Check constraint 'chk_gender' is violated</code></pre>
+
+            <p>CHECK 제약조건도 잘 작동합니다!</p>
+
+            <h3>테스트 3: 음수 금액</h3>
+
+            <pre><code>-- 청구 금액에 음수를 넣으면? (먼저 참조할 데이터가 있어야 테스트 가능)
+-- 나중에 데이터 입력 후 테스트해보세요</code></pre>
+
+            <hr>
+
+            <h2>삭제 시 동작 설정 (ON DELETE)</h2>
+
+            <p>외래키로 연결된 데이터를 삭제하면 어떻게 될까요?</p>
+
+            <p>예를 들어, 환자 'P001'이 여러 번 치료를 받았습니다. <code>treatment_sessions</code> 테이블에 'P001' 관련 기록이 10개 있어요. 이 상태에서 <code>patients</code> 테이블에서 'P001'을 삭제하면?</p>
+
+            <p>기본 설정은 <strong>RESTRICT</strong>입니다. "참조하는 데이터가 있으면 삭제 못 함". 그래서 에러가 나요.</p>
+
+            <p>다른 옵션도 있습니다:</p>
+
+            <table>
+                <tr><th>옵션</th><th>동작</th><th>설명</th></tr>
+                <tr><td>RESTRICT</td><td>삭제 막음</td><td>기본값. 참조 데이터 있으면 에러</td></tr>
+                <tr><td>CASCADE</td><td>같이 삭제</td><td>부모 삭제하면 자식도 삭제</td></tr>
+                <tr><td>SET NULL</td><td>NULL로 변경</td><td>부모 삭제하면 자식의 FK를 NULL로</td></tr>
+                <tr><td>NO ACTION</td><td>RESTRICT와 동일</td><td>MySQL에서는 RESTRICT와 같음</td></tr>
+            </table>
+
+            <div class="danger"><strong>🚨 CASCADE 주의!</strong><br>
+            CASCADE는 편리하지만 위험합니다. 환자 한 명 지웠더니 그 환자의 모든 치료 기록, 청구 기록, SOAP 노트가 다 사라질 수 있어요. 의료 데이터에서는 보통 CASCADE를 쓰지 않습니다. 실수로 데이터가 날아가면 안 되니까요.</div>
+
+            <p>우리는 기본값(RESTRICT)을 유지합니다. 환자를 삭제하려면 먼저 관련 치료 기록을 모두 삭제해야 하죠. 번거롭지만 안전합니다.</p>
+
+            <hr>
+
+            <h2>이번 장 요약</h2>
+
+            <p>이번 장에서 한 일:</p>
+
+            <ol>
+                <li>외래키(FK) 관계 확인</li>
+                <li>CHECK 제약조건 추가 (성별, 활성상태, 금액 등)</li>
+                <li>UNIQUE 제약조건 추가 (동일인 중복 방지)</li>
+                <li>인덱스 추가 (검색 성능 향상)</li>
+                <li>ER 다이어그램으로 전체 구조 파악</li>
+                <li>데이터 무결성 테스트</li>
+            </ol>
+
+            <p>이제 데이터베이스 구조가 튼튼하게 완성되었습니다! 테이블은 만들었고, 관계와 제약조건도 설정했어요. 하지만 아직 텅 비어있죠.</p>
+
+            <p>다음 장에서는 드디어 데이터를 입력합니다. 보험사, 수가 항목, 진단 코드, 치료사 정보 등 기준이 되는 데이터를 먼저 넣을 거예요!</p>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/nav.js"></script>
+</body>
+</html>

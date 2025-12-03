@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>13장: 로깅과 모니터링 - 물리치료사를 위한 DB 5권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "5"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>🛡️ 5권: 보안 편</h1>
+                <p>DB & 서버 보안</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">로깅과 모니터링</h1>
+
+            <h2>로깅이 필요한 이유</h2>
+
+            <blockquote>
+                "로그가 없으면 무슨 일이 일어났는지 알 수 없습니다."
+            </blockquote>
+
+            <pre class="file-tree">로그의 용도
+│
+├── 보안
+│   ├── 침입 탐지
+│   ├── 공격 분석
+│   └── 사고 대응
+│
+├── 디버깅
+│   ├── 에러 원인 파악
+│   └── 성능 문제 분석
+│
+└── 감사
+    ├── 누가 언제 뭘 했는지
+    └── 법적 요구사항 충족</pre>
+
+            <hr>
+
+            <h2>Flask 로깅 설정</h2>
+
+            <pre><code>import logging
+from logging.handlers import RotatingFileHandler
+from flask import Flask, request
+
+app = Flask(__name__)
+
+# 로그 포맷 설정
+formatter = logging.Formatter(
+    '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
+)
+
+# 파일 핸들러 (10MB마다 로테이션, 최대 10개 파일)
+file_handler = RotatingFileHandler(
+    '/var/log/healing-hands/app.log',
+    maxBytes=10*1024*1024,
+    backupCount=10
+)
+file_handler.setFormatter(formatter)
+file_handler.setLevel(logging.INFO)
+
+# 앱에 핸들러 추가
+app.logger.addHandler(file_handler)
+app.logger.setLevel(logging.INFO)
+
+# 요청 로깅
+@app.before_request
+def log_request():
+    app.logger.info(f'{request.method} {request.path} - {request.remote_addr}')</code></pre>
+
+            <hr>
+
+            <h2>보안 이벤트 로깅</h2>
+
+            <pre><code>import json
+from datetime import datetime
+
+def log_security_event(event_type, details, user_id=None):
+    """보안 이벤트 로깅"""
+    event = {
+        'timestamp': datetime.utcnow().isoformat(),
+        'event_type': event_type,
+        'user_id': user_id,
+        'ip_address': request.remote_addr,
+        'user_agent': request.headers.get('User-Agent'),
+        'details': details
+    }
+
+    # 보안 로그 파일에 기록
+    with open('/var/log/healing-hands/security.log', 'a') as f:
+        f.write(json.dumps(event) + '\n')
+
+# 사용 예시
+
+# 로그인 성공
+@app.route('/login', methods=['POST'])
+def login():
+    if authenticate(username, password):
+        log_security_event('LOGIN_SUCCESS', {'username': username}, user_id=user.id)
+        return {'success': True}
+    else:
+        log_security_event('LOGIN_FAILURE', {'username': username, 'reason': 'invalid_password'})
+        return {'error': '인증 실패'}, 401
+
+# 권한 없는 접근 시도
+@app.route('/admin/users')
+@login_required
+def admin_users():
+    if session.get('role') != 'admin':
+        log_security_event('UNAUTHORIZED_ACCESS', {
+            'path': request.path,
+            'required_role': 'admin'
+        }, user_id=session.get('user_id'))
+        return {'error': '권한 없음'}, 403
+    ...</code></pre>
+
+            <hr>
+
+            <h2>로그 레벨</h2>
+
+            <table>
+                <tr>
+                    <th>레벨</th>
+                    <th>용도</th>
+                    <th>예시</th>
+                </tr>
+                <tr>
+                    <td>DEBUG</td>
+                    <td>개발 시 상세 정보</td>
+                    <td>변수 값, 함수 호출</td>
+                </tr>
+                <tr>
+                    <td>INFO</td>
+                    <td>일반적인 정보</td>
+                    <td>요청 처리, 작업 완료</td>
+                </tr>
+                <tr>
+                    <td>WARNING</td>
+                    <td>잠재적 문제</td>
+                    <td>deprecated 사용</td>
+                </tr>
+                <tr>
+                    <td>ERROR</td>
+                    <td>에러 발생</td>
+                    <td>예외 처리, DB 연결 실패</td>
+                </tr>
+                <tr>
+                    <td>CRITICAL</td>
+                    <td>심각한 문제</td>
+                    <td>서비스 중단</td>
+                </tr>
+            </table>
+
+            <pre><code># 운영 환경: INFO 이상만 기록
+app.logger.setLevel(logging.INFO)
+
+# 개발 환경: DEBUG 포함 전체 기록
+app.logger.setLevel(logging.DEBUG)</code></pre>
+
+            <hr>
+
+            <h2>MySQL 로깅</h2>
+
+            <pre><code># my.cnf
+
+[mysqld]
+# 에러 로그
+log_error = /var/log/mysql/error.log
+
+# 일반 쿼리 로그 (성능 영향 있음)
+general_log = 1
+general_log_file = /var/log/mysql/general.log
+
+# 슬로우 쿼리 로그
+slow_query_log = 1
+slow_query_log_file = /var/log/mysql/slow.log
+long_query_time = 2  # 2초 이상 걸리는 쿼리</code></pre>
+
+            <pre><code>-- 감사 테이블 생성
+CREATE TABLE audit_log (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    table_name VARCHAR(50),
+    action VARCHAR(10),
+    record_id VARCHAR(50),
+    old_data JSON,
+    new_data JSON,
+    user_id INT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 트리거로 변경 기록
+DELIMITER //
+CREATE TRIGGER patients_audit_update
+AFTER UPDATE ON patients
+FOR EACH ROW
+BEGIN
+    INSERT INTO audit_log (table_name, action, record_id, old_data, new_data, user_id)
+    VALUES (
+        'patients',
+        'UPDATE',
+        OLD.patient_id,
+        JSON_OBJECT('name', OLD.name, 'phone', OLD.phone),
+        JSON_OBJECT('name', NEW.name, 'phone', NEW.phone),
+        @current_user_id
+    );
+END //
+DELIMITER ;</code></pre>
+
+            <hr>
+
+            <h2>의심스러운 활동 탐지</h2>
+
+            <pre><code>from collections import defaultdict
+from datetime import datetime, timedelta
+
+# IP별 요청 카운트
+request_counts = defaultdict(list)
+
+@app.before_request
+def detect_suspicious_activity():
+    ip = request.remote_addr
+    now = datetime.now()
+
+    # 1분 이내 요청만 유지
+    request_counts[ip] = [
+        t for t in request_counts[ip]
+        if now - t < timedelta(minutes=1)
+    ]
+    request_counts[ip].append(now)
+
+    # 1분에 100회 이상이면 의심
+    if len(request_counts[ip]) > 100:
+        log_security_event('RATE_LIMIT_EXCEEDED', {
+            'requests_per_minute': len(request_counts[ip])
+        })
+
+    # SQL 인젝션 패턴 감지
+    suspicious_patterns = ["'", '"', '--', ';', 'UNION', 'SELECT', 'DROP']
+    for value in request.values.values():
+        if any(pattern in str(value).upper() for pattern in suspicious_patterns):
+            log_security_event('SUSPICIOUS_INPUT', {
+                'path': request.path,
+                'value': value[:100]  # 처음 100자만
+            })</code></pre>
+
+            <hr>
+
+            <h2>로그 분석</h2>
+
+            <pre><code># 로그인 실패 횟수 확인
+grep "LOGIN_FAILURE" /var/log/healing-hands/security.log | wc -l
+
+# 특정 IP의 활동 확인
+grep "192.168.1.100" /var/log/healing-hands/security.log
+
+# 시간대별 요청 수
+cat /var/log/healing-hands/app.log | cut -d' ' -f2 | cut -d':' -f1 | sort | uniq -c</code></pre>
+
+            <h3>Python으로 로그 분석</h3>
+            <pre><code>import json
+from collections import Counter
+
+def analyze_security_logs(log_file):
+    events = []
+    with open(log_file) as f:
+        for line in f:
+            events.append(json.loads(line))
+
+    # 이벤트 유형별 카운트
+    event_types = Counter(e['event_type'] for e in events)
+    print("이벤트 유형별 횟수:")
+    for event_type, count in event_types.most_common():
+        print(f"  {event_type}: {count}")
+
+    # 로그인 실패가 많은 IP
+    login_failures = [e for e in events if e['event_type'] == 'LOGIN_FAILURE']
+    ip_counts = Counter(e['ip_address'] for e in login_failures)
+    print("\n로그인 실패 IP Top 5:")
+    for ip, count in ip_counts.most_common(5):
+        print(f"  {ip}: {count}회")
+
+analyze_security_logs('/var/log/healing-hands/security.log')</code></pre>
+
+            <hr>
+
+            <h2>알림 설정</h2>
+
+            <pre><code>import smtplib
+from email.mime.text import MIMEText
+
+def send_alert(subject, message):
+    """보안 알림 이메일 발송"""
+    msg = MIMEText(message)
+    msg['Subject'] = f'[보안 알림] {subject}'
+    msg['From'] = 'security@healing-hands.com'
+    msg['To'] = 'admin@healing-hands.com'
+
+    with smtplib.SMTP('localhost') as smtp:
+        smtp.send_message(msg)
+
+# 심각한 이벤트 발생 시 알림
+def log_security_event(event_type, details, user_id=None):
+    # ... 로그 기록 ...
+
+    # 심각한 이벤트는 즉시 알림
+    critical_events = ['UNAUTHORIZED_ACCESS', 'RATE_LIMIT_EXCEEDED', 'SQL_INJECTION_ATTEMPT']
+    if event_type in critical_events:
+        send_alert(event_type, json.dumps(details, indent=2))</code></pre>
+
+            <hr>
+
+            <h2>로깅 체크리스트</h2>
+
+            <table>
+                <tr>
+                    <th>항목</th>
+                    <th>확인</th>
+                </tr>
+                <tr>
+                    <td>앱 로깅 설정</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>보안 이벤트 별도 로깅</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>로그 로테이션 설정</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>DB 감사 로그 활성화</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>의심 활동 탐지</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>심각한 이벤트 알림</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>로그 백업/보관</td>
+                    <td>☐</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li><strong>로그</strong>는 보안 사고 분석의 핵심</li>
+                <li><strong>보안 이벤트</strong>는 별도로 상세 기록</li>
+                <li><strong>로그 로테이션</strong>으로 디스크 관리</li>
+                <li><strong>의심 활동 탐지</strong>로 선제 대응</li>
+                <li>심각한 이벤트는 <strong>즉시 알림</strong></li>
+            </ul>
+
+            <blockquote>다음 장에서는 백업과 복구를 배웁니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

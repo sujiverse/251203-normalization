@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>23장: 예약 현황 시트 완성 - 물리치료사를 위한 DB 4권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "4"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📕 물리치료사를 위한</h1>
+                <p>웹 앱 만들기 (4권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">예약 현황 시트 완성</h1>
+
+            <h2>완성된 화면 구성</h2>
+
+            <pre class="file-tree">┌─────────────────────────────────────────────────────────────────┐
+│  🏥 예약 현황                                    [동기화됨 ●]   │
+├─────────────────────────────────────────────────────────────────┤
+│  시작일: [2024-12-01] 기간: [2주 ▼] [적용] [오늘] [새로고침]   │
+├─────────────────────────────────────────────────────────────────┤
+│  치료사: ■ 김치료  ■ 이치료  ■ 박치료  ■ 최치료                 │
+├──────────┬────────┬────────┬────────┬────────┬────────┬────────┤
+│ 환자명   │ 12/1   │ 12/2   │ 12/3   │ 12/4   │ 12/5   │ ...    │
+│          │ (월)   │ (화)   │ (수)   │ (목)   │ (금)   │        │
+├──────────┼────────┼────────┼────────┼────────┼────────┼────────┤
+│ 김철수   │ 10:00  │        │ 14:00  │        │ 11:00  │        │
+│ 이영희   │        │ 11:00  │        │ 10:00  │        │        │
+│ 박민수   │ 15:00  │ 15:00  │        │ 16:00  │        │        │
+│ ...      │        │        │        │        │        │        │
+└──────────┴────────┴────────┴────────┴────────┴────────┴────────┘</pre>
+
+            <hr>
+
+            <h2>전체 HTML 구조</h2>
+
+            <pre><code>&lt;!-- templates/reservations.html --&gt;
+{% extends "base.html" %}
+
+{% block title %}예약 현황{% endblock %}
+
+{% block head %}
+&lt;!-- Luckysheet --&gt;
+&lt;link rel="stylesheet" href="/static/luckysheet/plugins/css/pluginsCss.css"&gt;
+&lt;link rel="stylesheet" href="/static/luckysheet/plugins/plugins.css"&gt;
+&lt;link rel="stylesheet" href="/static/luckysheet/css/luckysheet.css"&gt;
+&lt;link rel="stylesheet" href="/static/luckysheet/assets/iconfont/iconfont.css"&gt;
+&lt;style&gt;
+    .sheet-page { padding: 20px; }
+    .sheet-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    .sheet-header h1 { margin: 0; font-size: 24px; }
+    .controls { display: flex; gap: 10px; align-items: center; }
+    .controls input, .controls select {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+    }
+    .controls button {
+        padding: 8px 16px;
+        background: #ef4444;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    .controls button:hover { background: #dc2626; }
+    .legend {
+        display: flex;
+        gap: 20px;
+        padding: 10px 15px;
+        background: white;
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .color-box {
+        width: 16px;
+        height: 16px;
+        border-radius: 3px;
+        border: 1px solid #ddd;
+    }
+    #luckysheet { width: 100%; height: calc(100vh - 250px); }
+&lt;/style&gt;
+{% endblock %}
+
+{% block content %}
+&lt;div class="sheet-page"&gt;
+    &lt;!-- 헤더 --&gt;
+    &lt;div class="sheet-header"&gt;
+        &lt;h1&gt;🏥 예약 현황&lt;/h1&gt;
+        &lt;div class="sync-status" id="syncStatus"&gt;
+            &lt;span class="sync-dot"&gt;&lt;/span&gt;
+            &lt;span class="sync-text"&gt;동기화됨&lt;/span&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;!-- 컨트롤 --&gt;
+    &lt;div class="controls"&gt;
+        &lt;label&gt;시작일&lt;/label&gt;
+        &lt;input type="date" id="startDate"&gt;
+
+        &lt;label&gt;기간&lt;/label&gt;
+        &lt;select id="days"&gt;
+            &lt;option value="7"&gt;1주&lt;/option&gt;
+            &lt;option value="14" selected&gt;2주&lt;/option&gt;
+            &lt;option value="30"&gt;1개월&lt;/option&gt;
+        &lt;/select&gt;
+
+        &lt;button onclick="reloadSheet()"&gt;적용&lt;/button&gt;
+        &lt;button onclick="goToToday()"&gt;오늘&lt;/button&gt;
+        &lt;button onclick="refreshSheet()"&gt;새로고침&lt;/button&gt;
+    &lt;/div&gt;
+
+    &lt;!-- 범례 --&gt;
+    &lt;div class="legend" id="legend"&gt;&lt;/div&gt;
+
+    &lt;!-- 시트 --&gt;
+    &lt;div id="luckysheet"&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- 예약 모달 --&gt;
+&lt;div id="reservationModal" class="modal"&gt;
+    &lt;div class="modal-content"&gt;
+        &lt;h2&gt;예약 등록/수정&lt;/h2&gt;
+        &lt;p id="modalInfo"&gt;&lt;/p&gt;
+
+        &lt;div class="form-group"&gt;
+            &lt;label&gt;시간&lt;/label&gt;
+            &lt;select id="modalTime"&gt;
+                &lt;option value=""&gt;선택&lt;/option&gt;
+                &lt;option value="09:00"&gt;09:00&lt;/option&gt;
+                &lt;option value="10:00"&gt;10:00&lt;/option&gt;
+                &lt;option value="11:00"&gt;11:00&lt;/option&gt;
+                &lt;option value="14:00"&gt;14:00&lt;/option&gt;
+                &lt;option value="15:00"&gt;15:00&lt;/option&gt;
+                &lt;option value="16:00"&gt;16:00&lt;/option&gt;
+                &lt;option value="17:00"&gt;17:00&lt;/option&gt;
+            &lt;/select&gt;
+        &lt;/div&gt;
+
+        &lt;div class="form-group"&gt;
+            &lt;label&gt;치료사&lt;/label&gt;
+            &lt;select id="modalTherapist"&gt;&lt;/select&gt;
+        &lt;/div&gt;
+
+        &lt;div class="modal-buttons"&gt;
+            &lt;button class="btn-primary" onclick="saveModal()"&gt;저장&lt;/button&gt;
+            &lt;button class="btn-danger" onclick="deleteFromModal()"&gt;삭제&lt;/button&gt;
+            &lt;button class="btn-secondary" onclick="closeModal()"&gt;취소&lt;/button&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- 토스트 --&gt;
+&lt;div id="toast" class="toast"&gt;&lt;/div&gt;
+
+&lt;!-- Luckysheet JS --&gt;
+&lt;script src="/static/luckysheet/plugins/js/plugin.js"&gt;&lt;/script&gt;
+&lt;script src="/static/luckysheet/luckysheet.umd.js"&gt;&lt;/script&gt;
+&lt;script src="/static/js/sheet.js"&gt;&lt;/script&gt;
+{% endblock %}</code></pre>
+
+            <hr>
+
+            <h2>전체 JavaScript (sheet.js)</h2>
+
+            <pre><code>// static/js/sheet.js
+
+// 치료사별 색상
+const THERAPIST_COLORS = {
+    '김치료': { bg: '#dbeafe', fc: '#1e40af' },
+    '이치료': { bg: '#fef3c7', fc: '#92400e' },
+    '박치료': { bg: '#dcfce7', fc: '#166534' },
+    '최치료': { bg: '#f3e8ff', fc: '#6b21a8' }
+};
+
+// 전역 상태
+let lastFetchTime = new Date().toISOString();
+let pollingInterval = null;
+let currentModalData = null;
+
+// ========== 초기화 ==========
+
+document.addEventListener('DOMContentLoaded', async () => {
+    // 오늘 날짜 설정
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('startDate').value = today;
+
+    // 치료사 목록 로드
+    await loadTherapists();
+
+    // 시트 초기화
+    await initSheet();
+
+    // 폴링 시작
+    startPolling();
+});
+
+// ========== 데이터 로드 ==========
+
+async function loadTherapists() {
+    const res = await fetch('/api/therapists');
+    const { data: therapists } = await res.json();
+
+    // 범례 표시
+    const legend = document.getElementById('legend');
+    legend.innerHTML = therapists.map(t => {
+        const color = THERAPIST_COLORS[t.name]?.bg || '#f1f5f5';
+        return `
+            &lt;div class="legend-item"&gt;
+                &lt;span class="color-box" style="background:${color}"&gt;&lt;/span&gt;
+                &lt;span&gt;${t.name}&lt;/span&gt;
+            &lt;/div&gt;
+        `;
+    }).join('');
+
+    // 모달 셀렉트 채우기
+    const select = document.getElementById('modalTherapist');
+    select.innerHTML = '&lt;option value=""&gt;선택&lt;/option&gt;' +
+        therapists.map(t =>
+            `&lt;option value="${t.therapist_id}"&gt;${t.name}&lt;/option&gt;`
+        ).join('');
+
+    window.therapistList = therapists;
+}
+
+// ========== 시트 생성 ==========
+
+async function initSheet(startDateStr, days) {
+    const startDate = startDateStr ||
+        document.getElementById('startDate').value ||
+        new Date().toISOString().split('T')[0];
+
+    days = days || parseInt(document.getElementById('days').value) || 14;
+
+    const dates = getDateRange(startDate, days);
+    const endDate = dates[dates.length - 1].date;
+
+    // API 호출
+    const response = await fetch(
+        `/api/reservations/sheet?start_date=${startDate}&end_date=${endDate}`
+    );
+    const { patients, reservations } = await response.json();
+
+    // celldata 생성
+    const celldata = [
+        ...createHeaderCells(dates),
+        ...createPatientCells(patients),
+        ...createReservationCells(patients, dates, reservations)
+    ];
+
+    // 기존 시트 제거
+    if (window.luckysheet && luckysheet.destroy) {
+        luckysheet.destroy();
+    }
+
+    // Luckysheet 생성
+    luckysheet.create({
+        container: 'luckysheet',
+        title: '예약 현황',
+        lang: 'ko',
+        showtoolbar: false,
+        showsheetbar: false,
+        showstatisticBar: false,
+        allowEdit: true,
+        enableAddRow: false,
+        data: [{
+            name: '예약',
+            celldata: celldata,
+            row: patients.length + 1,
+            column: dates.length + 1,
+            frozen: {
+                type: 'rangeBoth',
+                range: { row_focus: 0, column_focus: 0 }
+            },
+            config: {
+                columnlen: { 0: 100 }
+            }
+        }],
+        hook: {
+            cellMousedown: onCellClick,
+            cellEditBefore: onCellEditBefore
+        }
+    });
+
+    // 전역 저장
+    window.sheetData = { patients, dates, reservations };
+    lastFetchTime = new Date().toISOString();
+}
+
+// ... (헬퍼 함수들은 이전 장과 동일)</code></pre>
+
+            <hr>
+
+            <h2>컨트롤 함수들</h2>
+
+            <pre><code>// 시트 다시 로드
+function reloadSheet() {
+    const startDate = document.getElementById('startDate').value;
+    const days = parseInt(document.getElementById('days').value);
+    initSheet(startDate, days);
+}
+
+// 오늘로 이동
+function goToToday() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('startDate').value = today;
+    reloadSheet();
+}
+
+// 새로고침 (현재 설정 유지)
+async function refreshSheet() {
+    updateSyncStatus('syncing');
+    await initSheet();
+    updateSyncStatus('synced');
+    showToast('새로고침 완료');
+}</code></pre>
+
+            <hr>
+
+            <h2>모달 처리</h2>
+
+            <pre><code>// 셀 클릭 시 모달 열기
+function onCellClick(cell, position) {
+    const { row, column } = position;
+    if (row === 0 || column === 0) return;
+
+    const { patients, dates } = window.sheetData;
+    const patient = patients[row - 1];
+    const date = dates[column - 1];
+
+    if (!patient || !date) return;
+
+    // 현재 값
+    const cellValue = luckysheet.getCellValue(row, column);
+
+    openModal({
+        patient,
+        date,
+        row,
+        column,
+        currentValue: cellValue
+    });
+}
+
+function openModal(data) {
+    currentModalData = data;
+
+    document.getElementById('modalInfo').textContent =
+        `${data.patient.name} / ${data.date.display}`;
+
+    // 현재 값 채우기
+    if (data.currentValue) {
+        const [time, therapistId] = String(data.currentValue).split('|');
+        document.getElementById('modalTime').value = time || '';
+        document.getElementById('modalTherapist').value = therapistId || '';
+    } else {
+        document.getElementById('modalTime').value = '';
+        document.getElementById('modalTherapist').value = '';
+    }
+
+    document.getElementById('reservationModal').style.display = 'flex';
+}
+
+function closeModal() {
+    document.getElementById('reservationModal').style.display = 'none';
+    currentModalData = null;
+}
+
+async function saveModal() {
+    const time = document.getElementById('modalTime').value;
+    const therapistId = document.getElementById('modalTherapist').value;
+
+    if (!time || !therapistId) {
+        alert('시간과 치료사를 선택하세요');
+        return;
+    }
+
+    const { patient, date, row, column } = currentModalData;
+
+    const success = await saveReservation(
+        patient.patient_id,
+        date.date,
+        time,
+        therapistId
+    );
+
+    if (success) {
+        // 치료사 이름 찾기
+        const therapist = window.therapistList.find(
+            t => t.therapist_id == therapistId
+        );
+        const therapistName = therapist?.name || '';
+        const colors = THERAPIST_COLORS[therapistName] || { bg: '#f5f5f5' };
+
+        // 셀 업데이트
+        luckysheet.setCellValue(row, column, {
+            v: `${time}|${therapistId}`,
+            m: time,
+            bg: colors.bg,
+            fc: colors.fc
+        });
+
+        closeModal();
+    }
+}
+
+async function deleteFromModal() {
+    if (!confirm('예약을 삭제하시겠습니까?')) return;
+
+    const { patient, date, row, column } = currentModalData;
+
+    const success = await deleteReservation(patient.patient_id, date.date);
+
+    if (success) {
+        luckysheet.setCellValue(row, column, null);
+        closeModal();
+    }
+}</code></pre>
+
+            <hr>
+
+            <h2>테스트 체크리스트</h2>
+
+            <ul>
+                <li>✅ 시트가 로드되고 환자/날짜가 표시되는가?</li>
+                <li>✅ 첫 행/열이 스크롤해도 고정되는가?</li>
+                <li>✅ 셀 클릭 시 모달이 열리는가?</li>
+                <li>✅ 예약 저장이 DB에 반영되는가?</li>
+                <li>✅ 예약 삭제가 작동하는가?</li>
+                <li>✅ 날짜 범위 변경이 작동하는가?</li>
+                <li>✅ 치료사별 색상이 적용되는가?</li>
+            </ul>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li>예약 현황 시트의 전체 HTML 구조를 완성했습니다</li>
+                <li>헤더, 컨트롤, 범례, 시트, 모달을 배치했습니다</li>
+                <li>JavaScript로 모든 기능을 연결했습니다</li>
+            </ul>
+
+            <blockquote>다음 장에서는 환자 관리 시트를 만듭니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

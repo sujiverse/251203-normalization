@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>10장: 예약 CRUD API - 물리치료사를 위한 DB 4권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "4"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📕 물리치료사를 위한</h1>
+                <p>웹 앱 만들기 (4권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">예약 CRUD API</h1>
+
+            <h2>CRUD란?</h2>
+
+            <table>
+                <tr>
+                    <th>약자</th>
+                    <th>의미</th>
+                    <th>HTTP</th>
+                    <th>SQL</th>
+                </tr>
+                <tr>
+                    <td><strong>C</strong>reate</td>
+                    <td>생성</td>
+                    <td>POST</td>
+                    <td>INSERT</td>
+                </tr>
+                <tr>
+                    <td><strong>R</strong>ead</td>
+                    <td>조회</td>
+                    <td>GET</td>
+                    <td>SELECT</td>
+                </tr>
+                <tr>
+                    <td><strong>U</strong>pdate</td>
+                    <td>수정</td>
+                    <td>PUT</td>
+                    <td>UPDATE</td>
+                </tr>
+                <tr>
+                    <td><strong>D</strong>elete</td>
+                    <td>삭제</td>
+                    <td>DELETE</td>
+                    <td>DELETE</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>예약 생성 (Create)</h2>
+
+            <pre><code>@app.route('/api/reservations', methods=['POST'])
+def create_reservation():
+    data = request.get_json()
+
+    # 필수 필드 검증
+    required = ['patient_id', 'therapist_id', 'session_date', 'start_time']
+    for field in required:
+        if field not in data:
+            return jsonify({
+                'success': False,
+                'error': f'{field}은(는) 필수입니다'
+            }), 400
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 중복 예약 체크
+        cursor.execute("""
+            SELECT session_id FROM treatment_sessions
+            WHERE therapist_id = %s
+              AND session_date = %s
+              AND start_time = %s
+              AND status != '취소'
+        """, (data['therapist_id'], data['session_date'], data['start_time']))
+
+        if cursor.fetchone():
+            return jsonify({
+                'success': False,
+                'error': '해당 시간에 이미 예약이 있습니다'
+            }), 409  # Conflict
+
+        # 예약 생성
+        cursor.execute("""
+            INSERT INTO treatment_sessions
+            (patient_id, therapist_id, session_date, start_time, status)
+            VALUES (%s, %s, %s, %s, '예약')
+        """, (
+            data['patient_id'],
+            data['therapist_id'],
+            data['session_date'],
+            data['start_time']
+        ))
+
+        conn.commit()
+        new_id = cursor.lastrowid
+
+        return jsonify({
+            'success': True,
+            'message': '예약이 등록되었습니다',
+            'data': {'session_id': new_id}
+        }), 201
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+    finally:
+        conn.close()</code></pre>
+
+            <h3>요청 예시</h3>
+            <pre><code>POST /api/reservations
+Content-Type: application/json
+
+{
+    "patient_id": 1,
+    "therapist_id": 2,
+    "session_date": "2024-12-05",
+    "start_time": "10:00"
+}</code></pre>
+
+            <hr>
+
+            <h2>예약 수정 (Update)</h2>
+
+            <pre><code>@app.route('/api/reservations/&lt;int:session_id&gt;', methods=['PUT'])
+def update_reservation(session_id):
+    data = request.get_json()
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 기존 예약 확인
+        cursor.execute(
+            "SELECT * FROM treatment_sessions WHERE session_id = %s",
+            (session_id,)
+        )
+        if not cursor.fetchone():
+            return jsonify({
+                'success': False,
+                'error': '예약을 찾을 수 없습니다'
+            }), 404
+
+        # 수정할 필드 동적 구성
+        updates = []
+        params = []
+
+        if 'therapist_id' in data:
+            updates.append("therapist_id = %s")
+            params.append(data['therapist_id'])
+
+        if 'session_date' in data:
+            updates.append("session_date = %s")
+            params.append(data['session_date'])
+
+        if 'start_time' in data:
+            updates.append("start_time = %s")
+            params.append(data['start_time'])
+
+        if 'status' in data:
+            updates.append("status = %s")
+            params.append(data['status'])
+
+        if not updates:
+            return jsonify({
+                'success': False,
+                'error': '수정할 내용이 없습니다'
+            }), 400
+
+        params.append(session_id)
+        sql = f"UPDATE treatment_sessions SET {', '.join(updates)} WHERE session_id = %s"
+
+        cursor.execute(sql, params)
+        conn.commit()
+
+        return jsonify({
+            'success': True,
+            'message': '예약이 수정되었습니다'
+        })
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+    finally:
+        conn.close()</code></pre>
+
+            <h3>요청 예시</h3>
+            <pre><code>PUT /api/reservations/1
+Content-Type: application/json
+
+{
+    "start_time": "11:00",
+    "therapist_id": 3
+}</code></pre>
+
+            <hr>
+
+            <h2>예약 삭제 (Delete)</h2>
+
+            <pre><code>@app.route('/api/reservations/&lt;int:session_id&gt;', methods=['DELETE'])
+def delete_reservation(session_id):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 존재 확인
+        cursor.execute(
+            "SELECT * FROM treatment_sessions WHERE session_id = %s",
+            (session_id,)
+        )
+        if not cursor.fetchone():
+            return jsonify({
+                'success': False,
+                'error': '예약을 찾을 수 없습니다'
+            }), 404
+
+        # 삭제 대신 상태 변경 (소프트 삭제)
+        cursor.execute("""
+            UPDATE treatment_sessions
+            SET status = '취소'
+            WHERE session_id = %s
+        """, (session_id,))
+
+        conn.commit()
+
+        return jsonify({
+            'success': True,
+            'message': '예약이 취소되었습니다'
+        })
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+    finally:
+        conn.close()</code></pre>
+
+            <div class="tip"><strong>💡 소프트 삭제 vs 하드 삭제</strong><br>
+            <strong>하드 삭제</strong>: DELETE로 실제 삭제 (복구 불가)<br>
+            <strong>소프트 삭제</strong>: 상태만 변경 (기록 유지, 복구 가능)<br>
+            의료 데이터는 소프트 삭제를 권장합니다.</div>
+
+            <hr>
+
+            <h2>빠른 예약 API (Luckysheet용)</h2>
+
+            <p>셀에서 바로 예약하는 용도입니다.</p>
+
+            <pre><code>@app.route('/api/reservations/quick', methods=['POST'])
+def quick_reservation():
+    """
+    셀 클릭 시 빠른 예약
+    {patient_id, date, time, therapist_id}
+    """
+    data = request.get_json()
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 기존 예약 확인
+        cursor.execute("""
+            SELECT session_id FROM treatment_sessions
+            WHERE patient_id = %s
+              AND session_date = %s
+              AND status != '취소'
+        """, (data['patient_id'], data['date']))
+
+        existing = cursor.fetchone()
+
+        if existing:
+            # 기존 예약 수정
+            cursor.execute("""
+                UPDATE treatment_sessions
+                SET start_time = %s, therapist_id = %s
+                WHERE session_id = %s
+            """, (data['time'], data['therapist_id'], existing['session_id']))
+            message = '예약이 수정되었습니다'
+        else:
+            # 새 예약 생성
+            cursor.execute("""
+                INSERT INTO treatment_sessions
+                (patient_id, therapist_id, session_date, start_time, status)
+                VALUES (%s, %s, %s, %s, '예약')
+            """, (
+                data['patient_id'],
+                data['therapist_id'],
+                data['date'],
+                data['time']
+            ))
+            message = '예약이 등록되었습니다'
+
+        conn.commit()
+
+        return jsonify({
+            'success': True,
+            'message': message
+        })
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+    finally:
+        conn.close()</code></pre>
+
+            <hr>
+
+            <h2>API 요약</h2>
+
+            <table>
+                <tr>
+                    <th>메서드</th>
+                    <th>URL</th>
+                    <th>기능</th>
+                </tr>
+                <tr>
+                    <td>GET</td>
+                    <td>/api/reservations</td>
+                    <td>목록 조회</td>
+                </tr>
+                <tr>
+                    <td>GET</td>
+                    <td>/api/reservations/sheet</td>
+                    <td>시트용 데이터</td>
+                </tr>
+                <tr>
+                    <td>POST</td>
+                    <td>/api/reservations</td>
+                    <td>예약 생성</td>
+                </tr>
+                <tr>
+                    <td>PUT</td>
+                    <td>/api/reservations/:id</td>
+                    <td>예약 수정</td>
+                </tr>
+                <tr>
+                    <td>DELETE</td>
+                    <td>/api/reservations/:id</td>
+                    <td>예약 취소</td>
+                </tr>
+                <tr>
+                    <td>POST</td>
+                    <td>/api/reservations/quick</td>
+                    <td>빠른 예약</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li>예약 CRUD API를 완성했습니다</li>
+                <li>중복 예약 체크 로직을 추가했습니다</li>
+                <li>소프트 삭제로 데이터를 보존합니다</li>
+                <li>Luckysheet용 빠른 예약 API를 만들었습니다</li>
+            </ul>
+
+            <blockquote>Part 2 완료! 다음 Part에서는 프론트엔드 기초를 배웁니다. HTML, CSS, JavaScript!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

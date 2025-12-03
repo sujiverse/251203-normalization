@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>13장: 운영 대시보드 - 물리치료사를 위한 데이터베이스 3권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "3"})
+
+    @@include('components/mobile-menu.html')
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📙 물리치료사를 위한</h1>
+                <p>실전 구축 & 대시보드 (3권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+<h1 class="title">운영 대시보드</h1>
+
+<h2>오늘 하루를 한눈에</h2>
+
+<p>매출 대시보드가 "돈"에 관한 것이었다면, 운영 대시보드는 "일"에 관한 것입니다. 오늘 예약된 환자는 누구인지, 연락해야 할 환자는 누구인지, 이탈 위험이 있는 환자는 누구인지... 클리닉의 일상 운영에 필요한 정보를 모아놓은 대시보드입니다.</p>
+
+<p>이번 장에서 만들 운영 대시보드에는 다음 내용이 포함됩니다:</p>
+
+<ul>
+<li>오늘 예약 현황</li>
+<li>치료사별 오늘 스케줄</li>
+<li>해피콜 대상자 (7일/14일/30일 미방문)</li>
+<li>이탈 위험 환자</li>
+<li>신규 환자 현황</li>
+<li>노쇼/취소 현황</li>
+</ul>
+
+<hr>
+
+<h2>1. 대시보드 생성</h2>
+
+<ol>
+<li>Metabase 상단 <strong>➕ 새로 만들기</strong> → <strong>대시보드</strong></li>
+<li>이름: "📋 운영 대시보드"</li>
+<li>컬렉션: "힐링손 물리치료센터"</li>
+<li><strong>만들기</strong> 클릭</li>
+</ol>
+
+<hr>
+
+<h2>2. 오늘 현황 카드</h2>
+
+<h3>카드 1: 오늘 예약 환자 수</h3>
+
+<pre><code>SELECT COUNT(*) as 오늘예약
+FROM treatment_sessions
+WHERE session_date = CURDATE()
+AND session_status IN ('예약', '완료');</code></pre>
+
+<p>시각화: 숫자, 저장: "오늘 예약 수"</p>
+
+<h3>카드 2: 오늘 완료 건수</h3>
+
+<pre><code>SELECT COUNT(*) as 완료건수
+FROM treatment_sessions
+WHERE session_date = CURDATE()
+AND session_status = '완료';</code></pre>
+
+<p>시각화: 숫자 (초록색), 저장: "오늘 완료"</p>
+
+<h3>카드 3: 오늘 남은 예약</h3>
+
+<pre><code>SELECT COUNT(*) as 남은예약
+FROM treatment_sessions
+WHERE session_date = CURDATE()
+AND session_status = '예약'
+AND start_time > CURTIME();</code></pre>
+
+<p>시각화: 숫자, 저장: "남은 예약"</p>
+
+<h3>카드 4: 오늘 신규 환자</h3>
+
+<pre><code>SELECT COUNT(DISTINCT ts.patient_id) as 신규환자
+FROM treatment_sessions ts
+WHERE ts.session_date = CURDATE()
+AND NOT EXISTS (
+  SELECT 1 FROM treatment_sessions ts2
+  WHERE ts2.patient_id = ts.patient_id
+    AND ts2.session_date < CURDATE()
+);</code></pre>
+
+<p>시각화: 숫자 (파란색), 저장: "오늘 신규 환자"</p>
+
+<hr>
+
+<h2>3. 오늘 예약 목록</h2>
+
+<h3>카드 5: 오늘 예약 상세</h3>
+
+<pre><code>SELECT
+TIME_FORMAT(ts.start_time, '%H:%i') as 시간,
+p.name as 환자명,
+p.phone as 연락처,
+t.name as 치료사,
+COALESCE(d.diagnosis_name, '-') as 진단,
+ts.session_status as 상태,
+ts.notes as 메모
+FROM treatment_sessions ts
+JOIN patients p ON ts.patient_id = p.patient_id
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+LEFT JOIN patient_diagnoses pd ON p.patient_id = pd.patient_id AND pd.is_primary = 'Y'
+LEFT JOIN diagnosis_codes d ON pd.diagnosis_code = d.diagnosis_code
+WHERE ts.session_date = CURDATE()
+ORDER BY ts.start_time;</code></pre>
+
+<p>시각화: 테이블, 저장: "오늘 예약 목록"</p>
+
+<div class="tip"><strong>💡 조건부 서식</strong><br>
+Metabase 테이블 설정에서 "상태" 컬럼에 조건부 서식을 적용할 수 있어요. 완료는 초록색, 예약은 파란색, 취소는 빨간색으로 표시하면 한눈에 파악됩니다.</div>
+
+<hr>
+
+<h2>4. 치료사별 스케줄</h2>
+
+<h3>카드 6: 치료사별 오늘 현황</h3>
+
+<pre><code>SELECT
+t.name as 치료사,
+COUNT(*) as 총예약,
+SUM(CASE WHEN ts.session_status = '완료' THEN 1 ELSE 0 END) as 완료,
+SUM(CASE WHEN ts.session_status = '예약' THEN 1 ELSE 0 END) as 대기,
+SUM(CASE WHEN ts.session_status IN ('취소', '노쇼') THEN 1 ELSE 0 END) as '취소/노쇼'
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+WHERE ts.session_date = CURDATE()
+GROUP BY t.therapist_id, t.name
+ORDER BY t.therapist_id;</code></pre>
+
+<p>시각화: 테이블, 저장: "치료사별 오늘 현황"</p>
+
+<h3>카드 7: 치료사별 시간대 분포</h3>
+
+<pre><code>SELECT
+t.name as 치료사,
+CASE
+    WHEN HOUR(ts.start_time) < 12 THEN '오전'
+    WHEN HOUR(ts.start_time) < 15 THEN '오후1'
+    WHEN HOUR(ts.start_time) < 18 THEN '오후2'
+    ELSE '저녁'
+END as 시간대,
+COUNT(*) as 건수
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+WHERE ts.session_date = CURDATE()
+GROUP BY t.name, 시간대
+ORDER BY t.name,
+CASE 시간대
+    WHEN '오전' THEN 1
+    WHEN '오후1' THEN 2
+    WHEN '오후2' THEN 3
+    ELSE 4
+END;</code></pre>
+
+<p>시각화: 누적 막대형, X축: 치료사, 색상: 시간대, 저장: "치료사별 시간대"</p>
+
+<hr>
+
+<h2>5. 해피콜 대상자</h2>
+
+<p>일정 기간 방문하지 않은 환자에게 연락해야 합니다.</p>
+
+<h3>카드 8: 해피콜 요약</h3>
+
+<pre><code>SELECT
+CASE
+    WHEN 경과일 BETWEEN 7 AND 13 THEN '7일 경과'
+    WHEN 경과일 BETWEEN 14 AND 29 THEN '14일 경과'
+    WHEN 경과일 >= 30 THEN '30일+ 경과'
+END as 구분,
+COUNT(*) as 환자수
+FROM (
+SELECT
+    p.patient_id,
+    DATEDIFF(CURDATE(), MAX(ts.session_date)) as 경과일
+FROM patients p
+JOIN treatment_sessions ts ON p.patient_id = ts.patient_id
+WHERE p.is_active = 'Y'
+  AND ts.session_status = '완료'
+GROUP BY p.patient_id
+HAVING 경과일 >= 7
+) sub
+GROUP BY
+CASE
+    WHEN 경과일 BETWEEN 7 AND 13 THEN '7일 경과'
+    WHEN 경과일 BETWEEN 14 AND 29 THEN '14일 경과'
+    WHEN 경과일 >= 30 THEN '30일+ 경과'
+END
+ORDER BY
+CASE 구분
+    WHEN '7일 경과' THEN 1
+    WHEN '14일 경과' THEN 2
+    ELSE 3
+END;</code></pre>
+
+<p>시각화: 막대형 (색상: 노랑→주황→빨강), 저장: "해피콜 요약"</p>
+
+<h3>카드 9: 7일 미방문 환자 (연락 필요)</h3>
+
+<pre><code>SELECT
+p.name as 환자명,
+p.phone as 연락처,
+MAX(ts.session_date) as 마지막방문,
+DATEDIFF(CURDATE(), MAX(ts.session_date)) as 경과일,
+COALESCE(d.diagnosis_name, '-') as 주진단,
+COUNT(ts.session_id) as 총방문횟수
+FROM patients p
+JOIN treatment_sessions ts ON p.patient_id = ts.patient_id
+LEFT JOIN patient_diagnoses pd ON p.patient_id = pd.patient_id AND pd.is_primary = 'Y'
+LEFT JOIN diagnosis_codes d ON pd.diagnosis_code = d.diagnosis_code
+WHERE p.is_active = 'Y'
+AND ts.session_status = '완료'
+GROUP BY p.patient_id, p.name, p.phone, d.diagnosis_name
+HAVING DATEDIFF(CURDATE(), MAX(ts.session_date)) BETWEEN 7 AND 14
+ORDER BY 경과일 DESC;</code></pre>
+
+<p>시각화: 테이블, 저장: "7일 미방문 (해피콜)"</p>
+
+<h3>카드 10: 14일+ 미방문 환자 (재연락)</h3>
+
+<pre><code>SELECT
+p.name as 환자명,
+p.phone as 연락처,
+MAX(ts.session_date) as 마지막방문,
+DATEDIFF(CURDATE(), MAX(ts.session_date)) as 경과일,
+COALESCE(d.diagnosis_name, '-') as 주진단
+FROM patients p
+JOIN treatment_sessions ts ON p.patient_id = ts.patient_id
+LEFT JOIN patient_diagnoses pd ON p.patient_id = pd.patient_id AND pd.is_primary = 'Y'
+LEFT JOIN diagnosis_codes d ON pd.diagnosis_code = d.diagnosis_code
+WHERE p.is_active = 'Y'
+AND ts.session_status = '완료'
+GROUP BY p.patient_id, p.name, p.phone, d.diagnosis_name
+HAVING DATEDIFF(CURDATE(), MAX(ts.session_date)) BETWEEN 14 AND 30
+ORDER BY 경과일 DESC;</code></pre>
+
+<p>시각화: 테이블, 저장: "14일 미방문 (재연락)"</p>
+
+<hr>
+
+<h2>6. 이탈 위험 환자</h2>
+
+<h3>카드 11: 이탈 위험 (30일+ 미방문)</h3>
+
+<pre><code>SELECT
+p.name as 환자명,
+p.phone as 연락처,
+MAX(ts.session_date) as 마지막방문,
+DATEDIFF(CURDATE(), MAX(ts.session_date)) as 경과일,
+COUNT(ts.session_id) as 총방문횟수,
+COALESCE(d.diagnosis_name, '-') as 주진단
+FROM patients p
+JOIN treatment_sessions ts ON p.patient_id = ts.patient_id
+LEFT JOIN patient_diagnoses pd ON p.patient_id = pd.patient_id AND pd.is_primary = 'Y'
+LEFT JOIN diagnosis_codes d ON pd.diagnosis_code = d.diagnosis_code
+WHERE p.is_active = 'Y'
+AND ts.session_status = '완료'
+GROUP BY p.patient_id, p.name, p.phone, d.diagnosis_name
+HAVING DATEDIFF(CURDATE(), MAX(ts.session_date)) > 30
+ORDER BY 경과일 DESC;</code></pre>
+
+<p>시각화: 테이블 (빨간색 강조), 저장: "이탈 위험 환자"</p>
+
+<h3>카드 12: 이탈 위험 환자 수 추이</h3>
+
+<pre><code>SELECT
+CASE
+    WHEN 경과일 BETWEEN 31 AND 60 THEN '1~2개월'
+    WHEN 경과일 BETWEEN 61 AND 90 THEN '2~3개월'
+    ELSE '3개월+'
+END as 미방문기간,
+COUNT(*) as 환자수
+FROM (
+SELECT
+    p.patient_id,
+    DATEDIFF(CURDATE(), MAX(ts.session_date)) as 경과일
+FROM patients p
+JOIN treatment_sessions ts ON p.patient_id = ts.patient_id
+WHERE p.is_active = 'Y'
+  AND ts.session_status = '완료'
+GROUP BY p.patient_id
+HAVING 경과일 > 30
+) sub
+GROUP BY 미방문기간
+ORDER BY
+CASE 미방문기간
+    WHEN '1~2개월' THEN 1
+    WHEN '2~3개월' THEN 2
+    ELSE 3
+END;</code></pre>
+
+<p>시각화: 원형 (빨간 계열), 저장: "이탈 위험 분포"</p>
+
+<hr>
+
+<h2>7. 신규 환자 분석</h2>
+
+<h3>카드 13: 이번 달 신규 환자 수</h3>
+
+<pre><code>SELECT COUNT(DISTINCT ts.patient_id) as 신규환자수
+FROM treatment_sessions ts
+WHERE DATE_FORMAT(ts.session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+AND NOT EXISTS (
+  SELECT 1 FROM treatment_sessions ts2
+  WHERE ts2.patient_id = ts.patient_id
+    AND ts2.session_date < DATE_FORMAT(CURDATE(), '%Y-%m-01')
+);</code></pre>
+
+<p>시각화: 숫자, 저장: "이번 달 신규 환자"</p>
+
+<h3>카드 14: 월별 신규 환자 추이</h3>
+
+<pre><code>SELECT
+DATE_FORMAT(첫방문일, '%Y-%m') as 월,
+COUNT(*) as 신규환자수
+FROM (
+SELECT
+    patient_id,
+    MIN(session_date) as 첫방문일
+FROM treatment_sessions
+WHERE session_status = '완료'
+GROUP BY patient_id
+) sub
+WHERE 첫방문일 >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+GROUP BY DATE_FORMAT(첫방문일, '%Y-%m')
+ORDER BY 월;</code></pre>
+
+<p>시각화: 막대형, 저장: "월별 신규 환자"</p>
+
+<h3>카드 15: 최근 신규 환자 목록</h3>
+
+<pre><code>SELECT
+p.name as 환자명,
+p.phone as 연락처,
+MIN(ts.session_date) as 첫방문일,
+COALESCE(d.diagnosis_name, '-') as 주진단,
+t.name as 담당치료사
+FROM patients p
+JOIN treatment_sessions ts ON p.patient_id = ts.patient_id
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+LEFT JOIN patient_diagnoses pd ON p.patient_id = pd.patient_id AND pd.is_primary = 'Y'
+LEFT JOIN diagnosis_codes d ON pd.diagnosis_code = d.diagnosis_code
+WHERE ts.session_status = '완료'
+GROUP BY p.patient_id, p.name, p.phone, d.diagnosis_name, t.name
+HAVING MIN(ts.session_date) >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+ORDER BY 첫방문일 DESC;</code></pre>
+
+<p>시각화: 테이블, 저장: "최근 신규 환자"</p>
+
+<hr>
+
+<h2>8. 노쇼/취소 현황</h2>
+
+<h3>카드 16: 이번 달 노쇼/취소</h3>
+
+<pre><code>SELECT
+session_status as 상태,
+COUNT(*) as 건수
+FROM treatment_sessions
+WHERE DATE_FORMAT(session_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+AND session_status IN ('취소', '노쇼')
+GROUP BY session_status;</code></pre>
+
+<p>시각화: 막대형, 저장: "노쇼/취소 현황"</p>
+
+<h3>카드 17: 노쇼 상습자</h3>
+
+<pre><code>SELECT
+p.name as 환자명,
+p.phone as 연락처,
+COUNT(*) as 노쇼횟수,
+MAX(ts.session_date) as 최근노쇼
+FROM treatment_sessions ts
+JOIN patients p ON ts.patient_id = p.patient_id
+WHERE ts.session_status = '노쇼'
+GROUP BY p.patient_id, p.name, p.phone
+HAVING COUNT(*) >= 2
+ORDER BY 노쇼횟수 DESC;</code></pre>
+
+<p>시각화: 테이블, 저장: "노쇼 상습자"</p>
+
+<hr>
+
+<h2>9. 진단별 환자 현황</h2>
+
+<h3>카드 18: 진단별 활성 환자 수</h3>
+
+<pre><code>SELECT
+d.diagnosis_name as 진단명,
+d.diagnosis_category as 분류,
+COUNT(DISTINCT pd.patient_id) as 환자수
+FROM patient_diagnoses pd
+JOIN diagnosis_codes d ON pd.diagnosis_code = d.diagnosis_code
+JOIN patients p ON pd.patient_id = p.patient_id
+WHERE p.is_active = 'Y'
+AND pd.is_primary = 'Y'
+GROUP BY d.diagnosis_code, d.diagnosis_name, d.diagnosis_category
+ORDER BY 환자수 DESC
+LIMIT 10;</code></pre>
+
+<p>시각화: 가로 막대형, 저장: "진단별 환자 수 TOP 10"</p>
+
+<hr>
+
+<h2>10. 대시보드 레이아웃</h2>
+
+<h3>권장 레이아웃</h3>
+
+<pre><code>┌─────────────────────────────────────────────────────────┐
+│ 📋 운영 대시보드                                         │
+├──────────┬──────────┬──────────┬──────────────────────────┤
+│ 오늘예약  │ 완료     │ 남은예약  │ 오늘 신규               │
+│    12    │    8     │    4     │    2                    │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│   오늘 예약 목록 (테이블)                                 │
+│                                                         │
+├──────────────────────────────┬──────────────────────────┤
+│ 치료사별 오늘 현황            │ 치료사별 시간대           │
+├──────────────────────────────┼──────────────────────────┤
+│ 해피콜 요약                   │ 이탈 위험 분포           │
+├──────────────────────────────┴──────────────────────────┤
+│   7일 미방문 환자 (해피콜)                                │
+├─────────────────────────────────────────────────────────┤
+│   이탈 위험 환자 (30일+)                                  │
+├──────────────────────────────┬──────────────────────────┤
+│ 월별 신규 환자               │ 노쇼/취소 현황            │
+└──────────────────────────────┴──────────────────────────┘</code></pre>
+
+<hr>
+
+<h2>11. 활용 시나리오</h2>
+
+<h3>아침 출근 시</h3>
+
+<ol>
+<li>운영 대시보드 열기</li>
+<li>오늘 예약 현황 확인 (몇 명? 누구?)</li>
+<li>치료사별 배분 확인</li>
+<li>신규 환자 있는지 확인 (첫 방문 준비)</li>
+</ol>
+
+<h3>점심시간</h3>
+
+<ol>
+<li>해피콜 대상자 목록 확인</li>
+<li>7일 미방문부터 순서대로 연락</li>
+<li>통화 결과 메모 (예약 잡힘 / 나중에 / 연락 안 됨)</li>
+</ol>
+
+<h3>저녁 마감 시</h3>
+
+<ol>
+<li>오늘 완료 건수 확인</li>
+<li>노쇼 있었는지 확인</li>
+<li>내일 예약 미리 확인 (날짜 필터 변경)</li>
+</ol>
+
+<div class="tip"><strong>💡 매일 확인해야 할 항목</strong><br>
+<ul>
+<li>오늘 예약 목록 - 누가 오는지</li>
+<li>7일 미방문 - 연락해야 할 환자</li>
+<li>이탈 위험 - 특별 관리 필요</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>12. 필터 추가</h2>
+
+<h3>날짜 필터</h3>
+
+<p>기본적으로 "오늘" 데이터를 보여주지만, 다른 날짜도 볼 수 있게 필터를 추가합니다.</p>
+
+<ol>
+<li>편집 모드 → 필터 추가</li>
+<li>시간 필터 선택</li>
+<li>기본값: 오늘</li>
+<li>오늘 예약 목록, 치료사별 현황 등에 연결</li>
+</ol>
+
+<h3>치료사 필터</h3>
+
+<p>특정 치료사의 스케줄만 보고 싶을 때:</p>
+
+<ol>
+<li>필터 추가 → 텍스트/카테고리</li>
+<li>연결할 컬럼: 치료사명</li>
+<li>여러 값 선택 가능하도록 설정</li>
+</ol>
+
+<hr>
+
+<h2>완성된 운영 대시보드</h2>
+
+<p>운영 대시보드가 완성되었습니다!</p>
+
+<p>이제 김지훈 원장과 직원들은:</p>
+
+<ul>
+<li>✅ 아침에 오늘 스케줄을 한눈에 파악</li>
+<li>✅ 해피콜 대상자를 체계적으로 관리</li>
+<li>✅ 이탈 위험 환자를 조기에 발견</li>
+<li>✅ 신규 환자 유입 현황 추적</li>
+<li>✅ 노쇼 문제를 데이터로 관리</li>
+</ul>
+
+<hr>
+
+<h2>이번 장 요약</h2>
+
+<p>이번 장에서 만든 카드:</p>
+
+<table>
+<tr><th>영역</th><th>카드</th></tr>
+<tr><td>오늘 현황</td><td>예약 수, 완료, 남은 예약, 신규 환자</td></tr>
+<tr><td>예약 상세</td><td>오늘 예약 목록</td></tr>
+<tr><td>치료사</td><td>치료사별 현황, 시간대 분포</td></tr>
+<tr><td>해피콜</td><td>요약, 7일 미방문, 14일 미방문</td></tr>
+<tr><td>이탈 위험</td><td>30일+ 미방문, 분포</td></tr>
+<tr><td>신규 환자</td><td>이번 달, 월별 추이, 최근 목록</td></tr>
+<tr><td>노쇼/취소</td><td>현황, 상습자</td></tr>
+<tr><td>진단별</td><td>진단별 환자 수</td></tr>
+</table>
+
+<p>다음 장에서는 마지막 대시보드인 "치료사 실적 대시보드"를 만듭니다. 각 치료사의 실적과 인센티브 계산까지!</p>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>6장: JSON 응답 만들기 - 물리치료사를 위한 DB 4권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "4"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📕 물리치료사를 위한</h1>
+                <p>웹 앱 만들기 (4권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">JSON 응답 만들기</h1>
+
+            <h2>JSON이란?</h2>
+
+            <p>JSON(JavaScript Object Notation)은 데이터를 주고받는 표준 형식입니다.</p>
+
+            <pre><code>{
+    "name": "김철수",
+    "age": 35,
+    "phone": "010-1234-5678"
+}</code></pre>
+
+            <h3>특징</h3>
+            <ul>
+                <li>사람이 읽기 쉬움</li>
+                <li>기계가 파싱하기 쉬움</li>
+                <li>거의 모든 프로그래밍 언어에서 지원</li>
+                <li>API 통신의 표준</li>
+            </ul>
+
+            <hr>
+
+            <h2>Flask에서 JSON 응답</h2>
+
+            <h3>방법 1: jsonify() 사용</h3>
+            <pre><code>from flask import Flask, jsonify
+
+app = Flask(__name__)
+
+@app.route('/api/patient')
+def get_patient():
+    patient = {
+        'id': 1,
+        'name': '김철수',
+        'phone': '010-1234-5678'
+    }
+    return jsonify(patient)</code></pre>
+
+            <h3>방법 2: 딕셔너리 직접 반환 (Flask 2.0+)</h3>
+            <pre><code>@app.route('/api/patient')
+def get_patient():
+    return {
+        'id': 1,
+        'name': '김철수',
+        'phone': '010-1234-5678'
+    }</code></pre>
+
+            <div class="tip"><strong>💡 jsonify()를 권장</strong><br>
+            명시적이고, 추가 설정(한글 처리 등)이 쉽습니다.</div>
+
+            <hr>
+
+            <h2>실습: 환자 API 만들기</h2>
+
+            <pre><code>from flask import Flask, jsonify
+
+app = Flask(__name__)
+
+# 한글 깨짐 방지
+app.config['JSON_AS_ASCII'] = False
+
+# 임시 데이터
+patients = [
+    {'id': 1, 'name': '김철수', 'phone': '010-1234-5678', 'birth': '1985-03-15'},
+    {'id': 2, 'name': '이영희', 'phone': '010-2345-6789', 'birth': '1990-07-22'},
+    {'id': 3, 'name': '박민수', 'phone': '010-3456-7890', 'birth': '1978-11-08'},
+]
+
+# 전체 목록
+@app.route('/api/patients')
+def get_patients():
+    return jsonify({
+        'success': True,
+        'data': patients,
+        'count': len(patients)
+    })
+
+# 개별 조회
+@app.route('/api/patients/&lt;int:patient_id&gt;')
+def get_patient(patient_id):
+    for p in patients:
+        if p['id'] == patient_id:
+            return jsonify({
+                'success': True,
+                'data': p
+            })
+    return jsonify({
+        'success': False,
+        'error': '환자를 찾을 수 없습니다'
+    }), 404
+
+if __name__ == '__main__':
+    app.run(debug=True)</code></pre>
+
+            <h3>테스트</h3>
+            <p>브라우저에서 확인:</p>
+            <ul>
+                <li><code>http://127.0.0.1:5000/api/patients</code></li>
+                <li><code>http://127.0.0.1:5000/api/patients/1</code></li>
+                <li><code>http://127.0.0.1:5000/api/patients/999</code></li>
+            </ul>
+
+            <hr>
+
+            <h2>응답 구조 설계</h2>
+
+            <p>일관된 응답 형식을 사용하면 프론트엔드에서 처리하기 쉽습니다.</p>
+
+            <h3>성공 응답</h3>
+            <pre><code>{
+    "success": true,
+    "data": { ... },
+    "message": "조회 성공"
+}</code></pre>
+
+            <h3>실패 응답</h3>
+            <pre><code>{
+    "success": false,
+    "error": "환자를 찾을 수 없습니다",
+    "code": "NOT_FOUND"
+}</code></pre>
+
+            <h3>목록 응답</h3>
+            <pre><code>{
+    "success": true,
+    "data": [ ... ],
+    "count": 10,
+    "page": 1,
+    "total_pages": 5
+}</code></pre>
+
+            <hr>
+
+            <h2>HTTP 상태 코드</h2>
+
+            <p>응답과 함께 상태 코드를 반환합니다.</p>
+
+            <table>
+                <tr>
+                    <th>코드</th>
+                    <th>의미</th>
+                    <th>사용 상황</th>
+                </tr>
+                <tr>
+                    <td>200</td>
+                    <td>OK</td>
+                    <td>성공</td>
+                </tr>
+                <tr>
+                    <td>201</td>
+                    <td>Created</td>
+                    <td>생성 성공</td>
+                </tr>
+                <tr>
+                    <td>400</td>
+                    <td>Bad Request</td>
+                    <td>잘못된 요청</td>
+                </tr>
+                <tr>
+                    <td>404</td>
+                    <td>Not Found</td>
+                    <td>데이터 없음</td>
+                </tr>
+                <tr>
+                    <td>500</td>
+                    <td>Server Error</td>
+                    <td>서버 오류</td>
+                </tr>
+            </table>
+
+            <h3>상태 코드 반환하기</h3>
+            <pre><code># 성공 (200은 기본값)
+return jsonify({'success': True, 'data': patient})
+
+# 생성 성공 (201)
+return jsonify({'success': True, 'data': new_patient}), 201
+
+# 찾을 수 없음 (404)
+return jsonify({'success': False, 'error': 'Not found'}), 404
+
+# 잘못된 요청 (400)
+return jsonify({'success': False, 'error': 'Invalid data'}), 400</code></pre>
+
+            <hr>
+
+            <h2>POST 요청 처리하기</h2>
+
+            <p>클라이언트가 보낸 JSON 데이터를 받아서 처리합니다.</p>
+
+            <pre><code>from flask import Flask, jsonify, request
+
+@app.route('/api/patients', methods=['POST'])
+def create_patient():
+    # 요청 데이터 받기
+    data = request.get_json()
+
+    # 데이터 검증
+    if not data.get('name'):
+        return jsonify({
+            'success': False,
+            'error': '이름은 필수입니다'
+        }), 400
+
+    # 새 환자 생성 (임시로 ID 부여)
+    new_patient = {
+        'id': len(patients) + 1,
+        'name': data['name'],
+        'phone': data.get('phone', ''),
+        'birth': data.get('birth', '')
+    }
+    patients.append(new_patient)
+
+    return jsonify({
+        'success': True,
+        'data': new_patient,
+        'message': '환자가 등록되었습니다'
+    }), 201</code></pre>
+
+            <div class="tip"><strong>💡 테스트 방법</strong><br>
+            POST 요청은 브라우저에서 직접 테스트하기 어렵습니다. Postman, curl, 또는 나중에 만들 프론트엔드에서 테스트합니다.</div>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li>JSON은 API 통신의 표준 형식입니다</li>
+                <li><code>jsonify()</code>로 JSON 응답을 만듭니다</li>
+                <li><code>JSON_AS_ASCII = False</code>로 한글 깨짐을 방지합니다</li>
+                <li>일관된 응답 구조를 설계합니다</li>
+                <li>HTTP 상태 코드로 결과를 알려줍니다</li>
+            </ul>
+
+            <blockquote>다음 장에서는 드디어 MySQL과 연결합니다. 진짜 데이터를 가져와봅시다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

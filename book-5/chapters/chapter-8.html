@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8장: DB 사용자 권한 관리 - 물리치료사를 위한 DB 5권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "5"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>🛡️ 5권: 보안 편</h1>
+                <p>DB & 서버 보안</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">DB 사용자 권한 관리</h1>
+
+            <h2>최소 권한 원칙</h2>
+
+            <blockquote>
+                사용자에게는 <strong>업무에 필요한 최소한의 권한</strong>만 부여합니다.
+            </blockquote>
+
+            <pre class="file-tree">권한 분리 예시
+│
+├── root (슈퍼유저)
+│   └── 시스템 관리만 - 앱에서 사용 금지!
+│
+├── healing_admin
+│   └── 스키마 변경, 백업
+│
+├── healing_app
+│   └── SELECT, INSERT, UPDATE (웹 앱용)
+│
+└── healing_readonly
+    └── SELECT만 (리포트용)</pre>
+
+            <hr>
+
+            <h2>MySQL 사용자 생성</h2>
+
+            <pre><code>-- 사용자 생성
+CREATE USER 'healing_app'@'localhost' IDENTIFIED BY 'secure_password_123!';
+
+-- 원격 접속용 (특정 IP만)
+CREATE USER 'healing_app'@'192.168.1.100' IDENTIFIED BY 'secure_password_123!';
+
+-- 모든 IP에서 접속 (비추천)
+CREATE USER 'healing_app'@'%' IDENTIFIED BY 'secure_password_123!';</code></pre>
+
+            <h3>호스트 지정의 의미</h3>
+            <table>
+                <tr>
+                    <th>호스트</th>
+                    <th>의미</th>
+                    <th>용도</th>
+                </tr>
+                <tr>
+                    <td>localhost</td>
+                    <td>같은 서버에서만</td>
+                    <td>웹 앱과 DB 같은 서버</td>
+                </tr>
+                <tr>
+                    <td>192.168.1.100</td>
+                    <td>특정 IP만</td>
+                    <td>앱 서버 지정</td>
+                </tr>
+                <tr>
+                    <td>192.168.1.%</td>
+                    <td>특정 대역</td>
+                    <td>내부 네트워크</td>
+                </tr>
+                <tr>
+                    <td>%</td>
+                    <td>모든 IP</td>
+                    <td>비추천!</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>권한 부여 (GRANT)</h2>
+
+            <pre><code>-- 모든 권한 (위험!)
+GRANT ALL PRIVILEGES ON healing_hands.* TO 'healing_app'@'localhost';
+
+-- 필요한 권한만 (권장)
+GRANT SELECT, INSERT, UPDATE ON healing_hands.* TO 'healing_app'@'localhost';
+
+-- 특정 테이블만
+GRANT SELECT ON healing_hands.patients TO 'healing_readonly'@'localhost';
+GRANT SELECT ON healing_hands.treatment_sessions TO 'healing_readonly'@'localhost';
+
+-- 특정 칼럼만 (민감정보 제외)
+GRANT SELECT (patient_id, name, phone) ON healing_hands.patients
+TO 'healing_staff'@'localhost';
+
+-- 권한 적용
+FLUSH PRIVILEGES;</code></pre>
+
+            <h3>권한 종류</h3>
+            <table>
+                <tr>
+                    <th>권한</th>
+                    <th>설명</th>
+                    <th>위험도</th>
+                </tr>
+                <tr>
+                    <td>SELECT</td>
+                    <td>데이터 조회</td>
+                    <td>낮음</td>
+                </tr>
+                <tr>
+                    <td>INSERT</td>
+                    <td>데이터 추가</td>
+                    <td>중간</td>
+                </tr>
+                <tr>
+                    <td>UPDATE</td>
+                    <td>데이터 수정</td>
+                    <td>중간</td>
+                </tr>
+                <tr>
+                    <td>DELETE</td>
+                    <td>데이터 삭제</td>
+                    <td>높음</td>
+                </tr>
+                <tr>
+                    <td>DROP</td>
+                    <td>테이블/DB 삭제</td>
+                    <td>매우 높음</td>
+                </tr>
+                <tr>
+                    <td>ALTER</td>
+                    <td>스키마 변경</td>
+                    <td>높음</td>
+                </tr>
+                <tr>
+                    <td>GRANT OPTION</td>
+                    <td>권한 부여 가능</td>
+                    <td>매우 높음</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>권한 회수 (REVOKE)</h2>
+
+            <pre><code>-- 특정 권한 회수
+REVOKE DELETE ON healing_hands.* FROM 'healing_app'@'localhost';
+
+-- 모든 권한 회수
+REVOKE ALL PRIVILEGES ON healing_hands.* FROM 'healing_app'@'localhost';
+
+-- 권한 적용
+FLUSH PRIVILEGES;</code></pre>
+
+            <hr>
+
+            <h2>권한 확인</h2>
+
+            <pre><code>-- 현재 사용자 권한 확인
+SHOW GRANTS;
+
+-- 특정 사용자 권한 확인
+SHOW GRANTS FOR 'healing_app'@'localhost';
+
+-- 결과 예시:
+-- GRANT SELECT, INSERT, UPDATE ON `healing_hands`.* TO 'healing_app'@'localhost'</code></pre>
+
+            <hr>
+
+            <h2>역할 기반 권한 관리</h2>
+
+            <p>MySQL 8.0부터 역할(Role)을 사용할 수 있습니다.</p>
+
+            <pre><code>-- 역할 생성
+CREATE ROLE 'app_read', 'app_write', 'app_admin';
+
+-- 역할에 권한 부여
+GRANT SELECT ON healing_hands.* TO 'app_read';
+GRANT INSERT, UPDATE ON healing_hands.* TO 'app_write';
+GRANT ALL PRIVILEGES ON healing_hands.* TO 'app_admin';
+
+-- 사용자에게 역할 부여
+GRANT 'app_read', 'app_write' TO 'healing_app'@'localhost';
+GRANT 'app_admin' TO 'healing_admin'@'localhost';
+
+-- 역할 활성화 (기본값 설정)
+SET DEFAULT ROLE 'app_read', 'app_write' TO 'healing_app'@'localhost';</code></pre>
+
+            <hr>
+
+            <h2>힐링손 시스템 권한 설계</h2>
+
+            <pre><code>-- 1. 웹 앱용 사용자 (일반 CRUD)
+CREATE USER 'healing_web'@'localhost' IDENTIFIED BY 'web_password_123!';
+GRANT SELECT, INSERT, UPDATE ON healing_hands.patients TO 'healing_web'@'localhost';
+GRANT SELECT, INSERT, UPDATE ON healing_hands.treatment_sessions TO 'healing_web'@'localhost';
+GRANT SELECT, INSERT, UPDATE ON healing_hands.billings TO 'healing_web'@'localhost';
+-- DELETE 권한 없음!
+
+-- 2. 관리자용 (삭제 가능)
+CREATE USER 'healing_admin'@'localhost' IDENTIFIED BY 'admin_password_456!';
+GRANT SELECT, INSERT, UPDATE, DELETE ON healing_hands.* TO 'healing_admin'@'localhost';
+-- DROP, ALTER 권한 없음!
+
+-- 3. 리포트용 (읽기 전용)
+CREATE USER 'healing_report'@'localhost' IDENTIFIED BY 'report_password_789!';
+GRANT SELECT ON healing_hands.* TO 'healing_report'@'localhost';
+
+-- 4. 백업용
+CREATE USER 'healing_backup'@'localhost' IDENTIFIED BY 'backup_password_000!';
+GRANT SELECT, LOCK TABLES, SHOW VIEW ON healing_hands.* TO 'healing_backup'@'localhost';
+
+FLUSH PRIVILEGES;</code></pre>
+
+            <hr>
+
+            <h2>사용자 삭제</h2>
+
+            <pre><code>-- 사용자 삭제
+DROP USER 'old_user'@'localhost';
+
+-- 존재하면 삭제
+DROP USER IF EXISTS 'old_user'@'localhost';</code></pre>
+
+            <hr>
+
+            <h2>비밀번호 정책</h2>
+
+            <pre><code>-- 비밀번호 만료 설정
+ALTER USER 'healing_app'@'localhost' PASSWORD EXPIRE INTERVAL 90 DAY;
+
+-- 비밀번호 변경
+ALTER USER 'healing_app'@'localhost' IDENTIFIED BY 'new_secure_password!';
+
+-- 비밀번호 정책 확인
+SHOW VARIABLES LIKE 'validate_password%';
+
+-- 비밀번호 정책 설정 (my.cnf)
+[mysqld]
+validate_password.policy=MEDIUM
+validate_password.length=8
+validate_password.mixed_case_count=1
+validate_password.number_count=1
+validate_password.special_char_count=1</code></pre>
+
+            <hr>
+
+            <h2>Flask에서 사용자 분리</h2>
+
+            <pre><code>import mysql.connector
+
+# 읽기 전용 연결
+def get_readonly_db():
+    return mysql.connector.connect(
+        host='localhost',
+        user='healing_report',
+        password='report_password_789!',
+        database='healing_hands'
+    )
+
+# 읽기/쓰기 연결
+def get_readwrite_db():
+    return mysql.connector.connect(
+        host='localhost',
+        user='healing_web',
+        password='web_password_123!',
+        database='healing_hands'
+    )
+
+# 조회 기능
+@app.route('/api/patients')
+def get_patients():
+    conn = get_readonly_db()  # 읽기 전용 사용
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM patients")
+    ...
+
+# 저장 기능
+@app.route('/api/patients', methods=['POST'])
+def create_patient():
+    conn = get_readwrite_db()  # 읽기/쓰기 사용
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO patients ...")
+    ...</code></pre>
+
+            <hr>
+
+            <h2>권한 관리 체크리스트</h2>
+
+            <table>
+                <tr>
+                    <th>항목</th>
+                    <th>확인</th>
+                </tr>
+                <tr>
+                    <td>root 계정 앱에서 사용 안 함</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>용도별 DB 사용자 분리</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>최소 권한만 부여</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>호스트 제한 설정</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>비밀번호 정책 적용</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>정기적인 권한 검토</td>
+                    <td>☐</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li><strong>최소 권한 원칙</strong>: 필요한 권한만 부여</li>
+                <li><strong>용도별 사용자 분리</strong>: 웹 앱, 관리자, 리포트 등</li>
+                <li><strong>GRANT/REVOKE</strong>로 권한 관리</li>
+                <li><strong>호스트 제한</strong>으로 접속 IP 제어</li>
+                <li>root 계정은 앱에서 <strong>절대 사용 금지</strong></li>
+            </ul>
+
+            <blockquote>다음 장에서는 DB 접근 제어 (방화벽, IP 제한)를 배웁니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

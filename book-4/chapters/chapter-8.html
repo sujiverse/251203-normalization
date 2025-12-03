@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8장: 환자 목록 API - 물리치료사를 위한 DB 4권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "4"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📕 물리치료사를 위한</h1>
+                <p>웹 앱 만들기 (4권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">환자 목록 API</h1>
+
+            <h2>만들 API</h2>
+
+            <table>
+                <tr>
+                    <th>메서드</th>
+                    <th>URL</th>
+                    <th>기능</th>
+                </tr>
+                <tr>
+                    <td>GET</td>
+                    <td>/api/patients</td>
+                    <td>전체 목록</td>
+                </tr>
+                <tr>
+                    <td>GET</td>
+                    <td>/api/patients?name=김</td>
+                    <td>이름 검색</td>
+                </tr>
+                <tr>
+                    <td>GET</td>
+                    <td>/api/patients?page=2</td>
+                    <td>페이징</td>
+                </tr>
+                <tr>
+                    <td>GET</td>
+                    <td>/api/patients/1</td>
+                    <td>상세 조회</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>기본 환자 목록</h2>
+
+            <pre><code>from flask import Flask, jsonify, request
+import pymysql
+from config import DB_CONFIG
+
+app = Flask(__name__)
+app.config['JSON_AS_ASCII'] = False
+
+def get_db_connection():
+    return pymysql.connect(
+        **DB_CONFIG,
+        cursorclass=pymysql.cursors.DictCursor
+    )
+
+@app.route('/api/patients')
+def get_patients():
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT
+                patient_id,
+                name,
+                phone,
+                birth_date,
+                gender,
+                created_at
+            FROM patients
+            ORDER BY name
+        """)
+        patients = cursor.fetchall()
+
+        return jsonify({
+            'success': True,
+            'data': patients,
+            'count': len(patients)
+        })
+    finally:
+        conn.close()</code></pre>
+
+            <hr>
+
+            <h2>검색 기능 추가</h2>
+
+            <pre><code>@app.route('/api/patients')
+def get_patients():
+    # 쿼리 파라미터 받기
+    name = request.args.get('name', '')
+    phone = request.args.get('phone', '')
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 기본 쿼리
+        sql = """
+            SELECT patient_id, name, phone, birth_date, gender
+            FROM patients
+            WHERE 1=1
+        """
+        params = []
+
+        # 이름 검색
+        if name:
+            sql += " AND name LIKE %s"
+            params.append(f'%{name}%')
+
+        # 전화번호 검색
+        if phone:
+            sql += " AND phone LIKE %s"
+            params.append(f'%{phone}%')
+
+        sql += " ORDER BY name"
+
+        cursor.execute(sql, params)
+        patients = cursor.fetchall()
+
+        return jsonify({
+            'success': True,
+            'data': patients,
+            'count': len(patients),
+            'filters': {'name': name, 'phone': phone}
+        })
+    finally:
+        conn.close()</code></pre>
+
+            <h3>테스트</h3>
+            <ul>
+                <li><code>/api/patients</code> → 전체 목록</li>
+                <li><code>/api/patients?name=김</code> → 김씨 환자만</li>
+                <li><code>/api/patients?phone=1234</code> → 전화번호에 1234 포함</li>
+                <li><code>/api/patients?name=김&phone=010</code> → 조합 검색</li>
+            </ul>
+
+            <hr>
+
+            <h2>페이징 추가</h2>
+
+            <pre><code>@app.route('/api/patients')
+def get_patients():
+    name = request.args.get('name', '')
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 전체 개수 먼저 조회
+        count_sql = "SELECT COUNT(*) as total FROM patients WHERE 1=1"
+        params = []
+
+        if name:
+            count_sql += " AND name LIKE %s"
+            params.append(f'%{name}%')
+
+        cursor.execute(count_sql, params)
+        total = cursor.fetchone()['total']
+
+        # 페이징된 데이터 조회
+        sql = """
+            SELECT patient_id, name, phone, birth_date
+            FROM patients
+            WHERE 1=1
+        """
+
+        if name:
+            sql += " AND name LIKE %s"
+
+        sql += " ORDER BY name LIMIT %s OFFSET %s"
+
+        offset = (page - 1) * per_page
+        params.extend([per_page, offset])
+
+        cursor.execute(sql, params)
+        patients = cursor.fetchall()
+
+        return jsonify({
+            'success': True,
+            'data': patients,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': total,
+                'total_pages': (total + per_page - 1) // per_page
+            }
+        })
+    finally:
+        conn.close()</code></pre>
+
+            <h3>테스트</h3>
+            <ul>
+                <li><code>/api/patients?page=1&per_page=5</code> → 1페이지, 5개씩</li>
+                <li><code>/api/patients?page=2&per_page=10</code> → 2페이지</li>
+            </ul>
+
+            <hr>
+
+            <h2>환자 상세 조회</h2>
+
+            <pre><code>@app.route('/api/patients/&lt;int:patient_id&gt;')
+def get_patient(patient_id):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 환자 기본 정보
+        cursor.execute("""
+            SELECT * FROM patients WHERE patient_id = %s
+        """, (patient_id,))
+        patient = cursor.fetchone()
+
+        if not patient:
+            return jsonify({
+                'success': False,
+                'error': '환자를 찾을 수 없습니다'
+            }), 404
+
+        # 진단 정보
+        cursor.execute("""
+            SELECT d.*, dc.code_name as diagnosis_name
+            FROM diagnoses d
+            JOIN diagnosis_codes dc ON d.diagnosis_code = dc.diagnosis_code
+            WHERE d.patient_id = %s
+            ORDER BY d.diagnosis_date DESC
+        """, (patient_id,))
+        diagnoses = cursor.fetchall()
+
+        # 최근 치료 기록
+        cursor.execute("""
+            SELECT ts.*, t.name as therapist_name
+            FROM treatment_sessions ts
+            JOIN therapists t ON ts.therapist_id = t.therapist_id
+            WHERE ts.patient_id = %s
+            ORDER BY ts.session_date DESC
+            LIMIT 5
+        """, (patient_id,))
+        recent_sessions = cursor.fetchall()
+
+        return jsonify({
+            'success': True,
+            'data': {
+                'patient': patient,
+                'diagnoses': diagnoses,
+                'recent_sessions': recent_sessions
+            }
+        })
+    finally:
+        conn.close()</code></pre>
+
+            <hr>
+
+            <h2>날짜 형식 처리</h2>
+
+            <p>MySQL의 DATE, DATETIME 타입은 JSON으로 변환할 때 문제가 생길 수 있습니다.</p>
+
+            <pre><code>import json
+from datetime import date, datetime
+
+# JSON 인코더 커스터마이징
+class CustomJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, (date, datetime)):
+            return obj.isoformat()
+        return super().default(obj)
+
+app.json_encoder = CustomJSONEncoder</code></pre>
+
+            <div class="tip"><strong>💡 isoformat() 결과</strong><br>
+            <code>2024-12-01</code> (date)<br>
+            <code>2024-12-01T10:30:00</code> (datetime)</div>
+
+            <hr>
+
+            <h2>완성된 코드 구조</h2>
+
+            <pre class="file-tree">healing-hands-app/
+├── app.py
+├── config.py
+└── api/
+    └── patients.py  (나중에 분리할 수 있음)</pre>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li>환자 목록 API를 만들었습니다</li>
+                <li>이름, 전화번호 검색 기능을 추가했습니다</li>
+                <li>페이징으로 대량 데이터를 처리합니다</li>
+                <li>상세 조회에서 관련 데이터도 함께 반환합니다</li>
+            </ul>
+
+            <blockquote>다음 장에서는 예약 조회 API를 만듭니다. 날짜별 예약 현황을 가져와봅시다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

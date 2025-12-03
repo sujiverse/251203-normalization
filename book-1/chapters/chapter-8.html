@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[8권] 보너스 실무 팁 - 물리치료사를 위한 DB</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "1"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📗 1권: 정규화 편</h1>
+                <p>데이터베이스 기초 개념</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">[보너스] 테이블 설계 & 쿼리 실무 팁</h1>
+
+            <h2>SQL 데이터 타입</h2>
+            <h3>문자 타입</h3>
+            <table>
+                <tr><th>타입</th><th>의미</th><th>언제 쓰나?</th></tr>
+                <tr><td><code>CHAR(10)</code></td><td>고정 10글자</td><td>성별, 코드</td></tr>
+                <tr><td><code>VARCHAR(50)</code></td><td>최대 50글자</td><td>이름, 주소</td></tr>
+                <tr><td><code>TEXT</code></td><td>아주 긴 글</td><td>SOAP 기록</td></tr>
+            </table>
+            <h3>숫자 타입</h3>
+            <table>
+                <tr><th>타입</th><th>의미</th><th>예시</th></tr>
+                <tr><td><code>INT</code></td><td>정수</td><td>나이, 금액</td></tr>
+                <tr><td><code>DECIMAL(5,2)</code></td><td>소수점</td><td>ROM 각도</td></tr>
+            </table>
+            <h3>날짜/시간 타입</h3>
+            <table>
+                <tr><th>타입</th><th>형식</th><th>예시</th></tr>
+                <tr><td><code>DATE</code></td><td>YYYY-MM-DD</td><td>생년월일</td></tr>
+                <tr><td><code>TIME</code></td><td>HH:MM:SS</td><td>시작시간</td></tr>
+                <tr><td><code>DATETIME</code></td><td>날짜+시간</td><td>등록일시</td></tr>
+            </table>
+            <hr>
+
+            <h2>네이밍 규칙</h2>
+            <h3>테이블명</h3>
+            <pre><code>✅ patients, treatment_sessions
+❌ tbl_patients, PatientInfo</code></pre>
+            <h3>컬럼명</h3>
+            <pre><code>✅ patient_id, session_date, is_primary
+❌ id, date, flag1</code></pre>
+            <hr>
+
+            <h2>자주 하는 실수</h2>
+            <h3>❌ 나이를 직접 저장</h3>
+            <pre><code>-- 나쁜 예: age INT (해마다 바뀜)
+-- 좋은 예: birth_date DATE (계산으로 나이 구함)</code></pre>
+
+            <div class="nav-buttons">
+                <a href="chapter-7.html" class="nav-btn">← 이전</a>
+                <span class="page-num">8 / 12</span>
+                <a href="chapter-9.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/nav.js"></script>
+</body>
+</html>

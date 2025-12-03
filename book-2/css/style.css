@@ -1,0 +1,1071 @@
+/* 물리치료사를 위한 데이터베이스 2권 - 스타일 */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif;
+    background: #f8fafc;
+    color: #334155;
+    line-height: 1.7;
+}
+
+/* 상단 네비게이션 바 */
+.top-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50px;
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+.top-nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.top-nav-brand:hover {
+    opacity: 0.9;
+}
+
+.top-nav-brand span {
+    font-size: 18px;
+}
+
+.top-nav-links {
+    display: flex;
+    gap: 4px;
+}
+
+.top-nav-link {
+    padding: 8px 16px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s;
+    color: rgba(255,255,255,0.7);
+}
+
+.top-nav-link:hover {
+    background: rgba(255,255,255,0.1);
+    color: white;
+}
+
+.top-nav-link.active {
+    background: rgba(255,255,255,0.15);
+    color: white;
+}
+
+.top-nav-link.book-1 { border-bottom: 2px solid #22c55e; }
+.top-nav-link.book-2 { border-bottom: 2px solid #f97316; }
+.top-nav-link.book-3 { border-bottom: 2px solid #8b5cf6; }
+
+/* 레이아웃 */
+.container { display: flex; min-height: 100vh; }
+
+/* 사이드바 */
+.sidebar {
+    width: 280px;
+    background: #fff;
+    border-right: 1px solid #e2e8f0;
+    position: fixed;
+    top: 50px;
+    height: calc(100vh - 50px);
+    overflow-y: auto;
+    z-index: 100;
+    transition: transform 0.3s ease;
+}
+
+.sidebar-header {
+    padding: 20px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.sidebar-header h1 {
+    font-size: 16px;
+    color: #1e293b;
+}
+
+.sidebar-header p {
+    font-size: 13px;
+    color: #64748b;
+}
+
+/* 네비게이션 */
+.nav-list {
+    list-style: none;
+    padding: 10px 0;
+}
+
+.nav-item {
+    display: block;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #475569;
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+.nav-item:hover {
+    background: #f1f5f9;
+}
+
+.nav-item.active {
+    background: #fff7ed;
+    color: #ea580c;
+    border-left-color: #f97316;
+    font-weight: 600;
+}
+
+/* 메인 콘텐츠 */
+.main {
+    flex: 1;
+    margin-left: 280px;
+    padding: 90px 60px 40px;
+    max-width: 900px;
+}
+
+/* 모바일 메뉴 */
+.menu-toggle {
+    display: none;
+    position: fixed;
+    top: 65px;
+    left: 15px;
+    z-index: 200;
+    background: #f97316;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    width: 44px;
+    height: 44px;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 50;
+}
+
+.close-btn {
+    display: none;
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: white;
+    cursor: pointer;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+    .top-nav {
+        padding: 0 12px;
+    }
+
+    .top-nav-brand {
+        font-size: 12px;
+    }
+
+    .top-nav-brand span {
+        font-size: 16px;
+    }
+
+    .top-nav-link {
+        padding: 6px 10px;
+        font-size: 11px;
+    }
+
+    .sidebar {
+        transform: translateX(-100%);
+        width: 85%;
+        max-width: 320px;
+        top: 0;
+        height: 100vh;
+    }
+    .sidebar.open {
+        transform: translateX(0);
+    }
+    .main {
+        margin-left: 0;
+        padding: 120px 20px 40px;
+    }
+    .menu-toggle {
+        display: block;
+    }
+    .overlay.show {
+        display: block;
+    }
+    .close-btn {
+        display: block;
+    }
+}
+
+/* 타이포그래피 */
+h1.title {
+    font-size: 26px;
+    color: #1e293b;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 3px solid #f97316;
+}
+
+h2 {
+    font-size: 20px;
+    color: #334155;
+    margin: 28px 0 14px;
+}
+
+h3 {
+    font-size: 16px;
+    color: #475569;
+    margin: 20px 0 10px;
+}
+
+h4 {
+    font-size: 14px;
+    color: #475569;
+    margin: 16px 0 8px;
+}
+
+p {
+    margin: 12px 0;
+    color: #475569;
+}
+
+/* 코드 */
+pre {
+    background: #e0f2fe;
+    color: #1e3a5f;
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 16px 0;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    background: #f1f5f9;
+    color: #dc2626;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+pre code {
+    background: none;
+    color: #1e3a5f;
+    padding: 0;
+}
+
+/* 테이블 */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+}
+
+th, td {
+    border: 1px solid #e2e8f0;
+    padding: 10px 12px;
+    text-align: left;
+}
+
+th {
+    background: #f1f5f9;
+    font-weight: 600;
+    color: #334155;
+}
+
+tr:nth-child(even) {
+    background: #f8fafc;
+}
+
+/* 인용구 */
+blockquote {
+    border-left: 4px solid #f97316;
+    background: #fff7ed;
+    padding: 12px 16px;
+    margin: 16px 0;
+    color: #c2410c;
+    border-radius: 0 8px 8px 0;
+}
+
+/* 리스트 */
+ul, ol {
+    margin: 12px 0 12px 24px;
+}
+
+li {
+    margin: 6px 0;
+    color: #475569;
+}
+
+/* 구분선 */
+hr {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 28px 0;
+}
+
+/* 네비게이션 버튼 */
+.nav-buttons {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.nav-btn {
+    padding: 10px 20px;
+    border: none;
+    background: #f1f5f9;
+    color: #475569;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+.nav-btn:hover:not(:disabled) {
+    background: #f97316;
+    color: white;
+}
+
+.nav-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.page-num {
+    color: #94a3b8;
+    font-size: 13px;
+}
+
+/* 알림 박스 */
+.tip {
+    background: #f0fdf4;
+    border-left: 4px solid #22c55e;
+    padding: 12px 16px;
+    margin: 16px 0;
+    border-radius: 0 8px 8px 0;
+}
+
+.warning {
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    padding: 12px 16px;
+    margin: 16px 0;
+    border-radius: 0 8px 8px 0;
+}
+
+.danger {
+    background: #fef2f2;
+    border-left: 4px solid #ef4444;
+    padding: 12px 16px;
+    margin: 16px 0;
+    border-radius: 0 8px 8px 0;
+}
+
+/* ===== 전자책 스타일 추가 ===== */
+
+/* 인트로 박스 */
+.intro-box {
+    background: linear-gradient(135deg, #fff7ed 0%, #fef3c7 100%);
+    border: 1px solid #fed7aa;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 20px 0;
+}
+
+.intro-box p {
+    color: #92400e;
+    font-size: 15px;
+    margin: 0;
+}
+
+/* 컨셉 박스 (🎯 상황 설명) */
+.concept-box {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 16px 0;
+}
+
+.concept-box h3 {
+    color: #0369a1;
+    margin: 0 0 8px 0;
+    font-size: 15px;
+}
+
+.concept-box p {
+    color: #0c4a6e;
+    margin: 0;
+    font-size: 14px;
+}
+
+/* 설명 박스 (📖 쿼리 설명) */
+.explanation-box {
+    background: #fafafa;
+    border: 1px solid #e5e5e5;
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 20px 0;
+}
+
+.explanation-box h3 {
+    color: #1e293b;
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    border-bottom: 2px solid #f97316;
+    padding-bottom: 8px;
+}
+
+/* 한 줄씩 설명 */
+.line-explain {
+    margin: 16px 0;
+    padding: 12px 16px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.line-explain.highlight-line {
+    border-left: 4px solid #f97316;
+    background: #fffbeb;
+}
+
+.line-explain .code-line {
+    font-family: 'Consolas', 'Monaco', monospace;
+    background: #1e293b;
+    color: #e2e8f0;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin-bottom: 10px;
+    overflow-x: auto;
+}
+
+.line-explain .explain-text {
+    color: #475569;
+    font-size: 14px;
+    line-height: 1.8;
+}
+
+/* 비유 박스 */
+.analogy-box {
+    background: #fefce8;
+    border: 1px dashed #ca8a04;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 12px 0;
+}
+
+.analogy-box h4 {
+    color: #a16207;
+    margin: 0 0 8px 0;
+    font-size: 14px;
+}
+
+.analogy-box p, .analogy-box li {
+    color: #78350f;
+    font-size: 13px;
+}
+
+/* 왜? 박스 */
+.why-box {
+    background: #f5f3ff;
+    border: 1px solid #c4b5fd;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 12px 0;
+}
+
+.why-box h4 {
+    color: #6d28d9;
+    margin: 0 0 8px 0;
+    font-size: 14px;
+}
+
+.why-box p, .why-box li {
+    color: #4c1d95;
+    font-size: 13px;
+}
+
+/* 결과 예시 */
+.result-example {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 16px 0;
+}
+
+.result-example h4 {
+    color: #166534;
+    margin: 0 0 12px 0;
+    font-size: 14px;
+}
+
+.result-example .result-note {
+    color: #15803d;
+    font-size: 13px;
+    font-style: italic;
+    margin: 10px 0 0 0;
+}
+
+.result-table {
+    background: white;
+}
+
+.result-table th {
+    background: #dcfce7;
+    color: #166534;
+}
+
+/* 비교 박스 */
+.compare-box {
+    display: flex;
+    gap: 16px;
+    margin: 16px 0;
+    flex-wrap: wrap;
+}
+
+.compare-item {
+    flex: 1;
+    min-width: 200px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 14px 16px;
+}
+
+.compare-item h4, .compare-item h5 {
+    color: #334155;
+    margin: 0 0 8px 0;
+    font-size: 14px;
+}
+
+.compare-item p {
+    color: #64748b;
+    font-size: 13px;
+    margin: 4px 0;
+}
+
+.compare-note {
+    font-style: italic;
+    margin-top: 8px !important;
+}
+
+/* 단계 박스 */
+.step-box {
+    background: #ecfeff;
+    border: 1px solid #a5f3fc;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 16px 0;
+}
+
+.step-box h4 {
+    color: #0e7490;
+    margin: 0 0 12px 0;
+    font-size: 14px;
+}
+
+.step-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px dashed #cffafe;
+}
+
+.step-item:last-child {
+    border-bottom: none;
+}
+
+.step-num {
+    background: #0891b2;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.step-desc {
+    color: #155e75;
+    font-size: 14px;
+}
+
+/* 요약 박스 */
+.summary-box {
+    background: linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%);
+    border: 1px solid #f0abfc;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 24px 0;
+}
+
+.summary-box h3 {
+    color: #86198f;
+    margin: 0 0 12px 0;
+    font-size: 15px;
+}
+
+.summary-box ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.summary-box li {
+    color: #701a75;
+    font-size: 14px;
+}
+
+.summary-table {
+    background: white;
+}
+
+.summary-table th {
+    background: #f5d0fe;
+    color: #86198f;
+}
+
+/* 연습 문제 박스 */
+.practice-box {
+    background: #fff1f2;
+    border: 2px dashed #fda4af;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 24px 0;
+}
+
+.practice-box h3 {
+    color: #be123c;
+    margin: 0 0 12px 0;
+    font-size: 15px;
+}
+
+.practice-box details {
+    margin-top: 12px;
+}
+
+.practice-box summary {
+    color: #be123c;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.practice-box details[open] summary {
+    margin-bottom: 12px;
+}
+
+/* 패턴 박스 */
+.pattern-box {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 12px 0;
+}
+
+.pattern-box h4 {
+    color: #334155;
+    margin: 0 0 10px 0;
+    font-size: 14px;
+}
+
+.pattern-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.pattern-item:last-child {
+    border-bottom: none;
+}
+
+.pattern-item code {
+    font-size: 13px;
+}
+
+.pattern-desc {
+    color: #334155;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.pattern-example {
+    color: #64748b;
+    font-size: 12px;
+    width: 100%;
+    margin-top: 4px;
+}
+
+/* 미니 테이블 */
+.mini-table {
+    font-size: 13px;
+    margin: 10px 0;
+}
+
+.mini-table th {
+    background: #f1f5f9;
+    padding: 6px 10px;
+}
+
+.mini-table td {
+    padding: 6px 10px;
+}
+
+.mini-table .highlight-row {
+    background: #fef3c7 !important;
+}
+
+/* 인라인 팁 */
+.tip-inline {
+    background: #f0fdf4;
+    border-left: 3px solid #22c55e;
+    padding: 10px 14px;
+    margin: 10px 0;
+    font-size: 13px;
+}
+
+.tip-inline strong {
+    color: #166534;
+}
+
+/* 포맷 박스 */
+.format-box {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 12px 0;
+}
+
+.format-box h4 {
+    color: #334155;
+    margin: 0 0 10px 0;
+    font-size: 14px;
+}
+
+.format-table {
+    font-size: 13px;
+}
+
+/* 문법 박스 */
+.syntax-box {
+    background: #1e293b;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 12px 0;
+}
+
+.syntax-box h4 {
+    color: #94a3b8;
+    margin: 0 0 10px 0;
+    font-size: 13px;
+}
+
+.syntax-box pre {
+    background: transparent;
+    margin: 0;
+    padding: 0;
+}
+
+.syntax-box code {
+    background: transparent;
+    color: #e2e8f0;
+}
+
+/* 인라인 코드 블록 */
+pre.inline-code {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    font-size: 13px;
+    padding: 12px 14px;
+}
+
+/* 규칙 테이블 */
+.rule-table {
+    background: white;
+}
+
+.rule-table th {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+/* 긴급 행 강조 */
+.urgent-row {
+    background: #fef2f2 !important;
+}
+
+.success-row {
+    background: #f0fdf4 !important;
+}
+
+/* 취소선 & 강조 텍스트 */
+.strikethrough {
+    text-decoration: line-through;
+    color: #94a3b8;
+}
+
+.highlight-text {
+    color: #dc2626;
+    font-weight: 600;
+}
+
+/* 테이블 캡션 */
+.table-caption {
+    font-size: 12px;
+    color: #64748b;
+    text-align: center;
+    margin-top: 4px;
+}
+
+/* 비교 테이블 */
+.compare-table {
+    font-size: 13px;
+}
+
+.compare-table th {
+    background: #f1f5f9;
+    text-align: center;
+}
+
+/* ===== Chapter 9-11 추가 스타일 ===== */
+
+/* 황금률 인용구 */
+.golden-rule {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border: none;
+    border-left: 5px solid #f59e0b;
+    padding: 24px 28px;
+    margin: 24px 0;
+    border-radius: 8px;
+    font-size: 15px;
+    line-height: 1.8;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.15);
+}
+
+.golden-rule strong:first-child {
+    display: block;
+    font-size: 18px;
+    color: #92400e;
+    margin-bottom: 12px;
+}
+
+/* 위험 텍스트 */
+.danger-text {
+    color: #dc2626;
+    font-weight: 600;
+}
+
+/* 단계 박스 개선 */
+.step-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 16px 0;
+}
+
+.step-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px dashed #e2e8f0;
+}
+
+.step-item:last-child {
+    border-bottom: none;
+}
+
+.step-num {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.step-desc {
+    flex: 1;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+/* 비교 박스 (가로 2열) */
+.compare-box {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 16px 0;
+}
+
+.compare-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.compare-item h5 {
+    font-size: 14px;
+    color: #1e293b;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.compare-item ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.compare-item li {
+    font-size: 13px;
+    padding: 4px 0;
+    color: #475569;
+}
+
+.compare-item li::before {
+    content: "•";
+    color: #94a3b8;
+    margin-right: 8px;
+}
+
+/* 위험 경고 박스 (danger) */
+.danger {
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    border: 1px solid #fecaca;
+    border-left: 5px solid #dc2626;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 16px 0;
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+.danger strong:first-child {
+    display: block;
+    color: #dc2626;
+    margin-bottom: 12px;
+    font-size: 16px;
+}
+
+/* 긴급 행 스타일 */
+tr.urgent-row {
+    background: #fef2f2 !important;
+}
+
+tr.urgent-row td {
+    color: #dc2626;
+    font-weight: 500;
+}
+
+/* 결과 테이블 하이라이트 행 */
+tr.highlight-row {
+    background: #fffbeb !important;
+}
+
+tr.highlight-row td {
+    font-weight: 500;
+}
+
+/* 미니 테이블 개선 */
+.mini-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 12px 0;
+}
+
+.mini-table th,
+.mini-table td {
+    border: 1px solid #e2e8f0;
+    padding: 8px 12px;
+    text-align: left;
+}
+
+.mini-table th {
+    background: #f1f5f9;
+    font-weight: 600;
+    color: #475569;
+}
+
+.mini-table tr:nth-child(even) {
+    background: #f8fafc;
+}
+
+/* 팁 인라인 */
+.tip-inline {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 6px;
+    padding: 12px;
+    margin-top: 12px;
+    font-size: 13px;
+}
+
+.tip-inline strong {
+    display: block;
+    color: #166534;
+    margin-bottom: 6px;
+}
+
+/* 반응형 비교 박스 */
+@media (max-width: 768px) {
+    .compare-box {
+        grid-template-columns: 1fr;
+    }
+
+    .step-item {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .step-num {
+        align-self: flex-start;
+    }
+}

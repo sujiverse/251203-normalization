@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[9장] 고급 분석 쿼리 - 물리치료사를 위한 DB 2권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>🏥</span> DB 완전정복</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2 active">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📙 2권: SQL 기초 편</h1><p>데이터베이스 활용</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <h1 class="title">[9장] 고급 분석 쿼리</h1>
+
+            <div class="intro-box">
+                <p>이번 장에서는 <strong>서브쿼리(하위 쿼리)</strong>와 <strong>윈도우 함수</strong>를 배웁니다. 처음엔 복잡해 보이지만, 원리를 이해하면 아주 강력한 분석 도구가 됩니다. 재방문율, 진단별 분석, 매출 성장률 같은 <strong>고급 분석</strong>이 가능해져요!</p>
+            </div>
+
+            <div class="warning">
+                <strong>⚠️ 이 장은 난이도가 높습니다!</strong><br><br>
+                서브쿼리와 윈도우 함수는 SQL에서 가장 어려운 개념 중 하나예요.<br>
+                처음엔 이해가 안 돼도 괜찮아요. <strong>패턴으로 먼저 익히고</strong>, 나중에 원리를 깊이 이해해도 됩니다!
+            </div>
+
+            <hr>
+
+            <!-- ===== 쿼리 1: 환자 재방문율 분석 ===== -->
+            <h2>1. 환자 재방문율 분석</h2>
+
+            <div class="concept-box">
+                <h3>🎯 이 쿼리가 필요한 상황</h3>
+                <p>"첫 방문한 환자 중 몇 %가 다시 오는 거야?" - 신환 유치도 중요하지만, <strong>재방문율이 높아야 안정적인 운영</strong>이 가능해요. 월별로 재방문율 추이를 분석합니다.</p>
+            </div>
+
+            <pre><code>SELECT
+    DATE_FORMAT(first_visit, '%Y-%m') AS 첫방문월,
+    COUNT(*) AS 신환수,
+    COUNT(CASE WHEN total_visits >= 2 THEN 1 END) AS 재방문환자,
+    ROUND(COUNT(CASE WHEN total_visits >= 2 THEN 1 END) * 100.0 / COUNT(*), 1) AS 재방문율
+FROM (
+    SELECT
+        patient_id,
+        MIN(session_date) AS first_visit,
+        COUNT(*) AS total_visits
+    FROM treatment_sessions
+    GROUP BY patient_id
+) patient_stats
+GROUP BY DATE_FORMAT(first_visit, '%Y-%m')
+ORDER BY 첫방문월 DESC;</code></pre>
+
+            <div class="explanation-box">
+                <h3>📖 서브쿼리(하위 쿼리)란?</h3>
+
+                <p><strong>쿼리 안에 또 다른 쿼리</strong>가 들어간 형태예요. 마치 <strong>러시아 인형(마트료시카)</strong>처럼요!</p>
+
+                <div class="analogy-box">
+                    <h4>🎭 비유로 이해하기: 2단계 분석</h4>
+                    <p>재방문율을 구하려면 두 단계가 필요해요:</p>
+                    <table class="mini-table">
+                        <tr><th>단계</th><th>하는 일</th><th>결과</th></tr>
+                        <tr><td><strong>1단계</strong><br>(안쪽 쿼리)</td><td>환자별로 첫 방문일, 총 방문 횟수 계산</td><td>환자별 통계</td></tr>
+                        <tr><td><strong>2단계</strong><br>(바깥 쿼리)</td><td>월별로 신환수, 재방문 환자수 집계</td><td>월별 재방문율</td></tr>
+                    </table>
+                    <p>한 번에 할 수 없으니 <strong>1단계 결과를 2단계의 입력으로</strong> 사용하는 거예요!</p>
+                </div>
+
+                <h4>📍 안쪽 쿼리 (1단계) 분석</h4>
+
+                <div class="line-explain">
+                    <div class="code-line">SELECT patient_id, MIN(session_date) AS first_visit, COUNT(*) AS total_visits</div>
+                    <div class="explain-text">
+                        각 환자별로:
+                        <ul>
+                            <li><code>MIN(session_date)</code>: 가장 빠른 치료일 = <strong>첫 방문일</strong></li>
+                            <li><code>COUNT(*)</code>: 전체 치료 횟수 = <strong>총 방문 횟수</strong></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="line-explain">
+                    <div class="code-line">FROM treatment_sessions GROUP BY patient_id</div>
+                    <div class="explain-text">
+                        <strong>환자별로 그룹화</strong>해서 각 환자의 통계를 계산합니다.
+                    </div>
+                </div>
+
+                <div class="result-example">
+                    <h4>📋 안쪽 쿼리 결과 예시 (patient_stats)</h4>
+                    <table class="result-table">
+                        <tr><th>patient_id</th><th>first_visit</th><th>total_visits</th></tr>
+                        <tr><td>P001</td><td>2024-01-05</td><td>8</td></tr>
+                        <tr><td>P002</td><td>2024-01-12</td><td>1</td></tr>
+                        <tr><td>P003</td><td>2024-01-15</td><td>3</td></tr>
+                        <tr><td>P004</td><td>2024-02-03</td><td>5</td></tr>
+                    </table>
+                    <p class="result-note">이 결과가 "patient_stats"라는 이름으로 바깥 쿼리에서 사용됩니다!</p>
+                </div>
+
+                <h4>📍 바깥 쿼리 (2단계) 분석</h4>
+
+                <div class="line-explain">
+                    <div class="code-line">FROM ( ... ) patient_stats</div>
+                    <div class="explain-text">
+                        <strong>서브쿼리 결과에 이름 붙이기!</strong><br><br>
+                        <code>( 서브쿼리 ) 별칭</code> 형태로 사용해요.<br>
+                        이제 이 결과를 <strong>patient_stats</strong>라는 테이블처럼 사용할 수 있어요!
+                    </div>
+                </div>
+
+                <div class="line-explain highlight-line">
+                    <div class="code-line">COUNT(CASE WHEN total_visits >= 2 THEN 1 END) AS 재방문환자</div>
+                    <div class="explain-text">
+                        <strong>조건부 카운트</strong>: 2번 이상 방문한 환자만 세기!<br><br>
+
+                        <div class="tip-inline">
+                            <strong>원리</strong><br>
+                            • <code>total_visits >= 2</code>이면 → 1 반환<br>
+                            • 아니면 → NULL 반환 (ELSE 생략)<br>
+                            • COUNT는 NULL을 세지 않음!<br>
+                            → 결과적으로 2번 이상 방문한 환자 수만 카운트
+                        </div>
+                    </div>
+                </div>
+
+                <div class="line-explain highlight-line">
+                    <div class="code-line">재방문환자 * 100.0 / 신환수</div>
+                    <div class="explain-text">
+                        <strong>재방문율 계산 공식</strong><br><br>
+
+                        <code>(재방문 환자 / 전체 신환) × 100 = 재방문율(%)</code><br><br>
+
+                        <div class="why-box">
+                            <h4>❓ 왜 100.0일까요?</h4>
+                            <p><code>100</code>이 아니라 <code>100.0</code>을 쓰는 이유:</p>
+                            <ul>
+                                <li>정수끼리 나누면 소수점이 버려져요 (5/3 = 1)</li>
+                                <li><code>100.0</code>을 곱하면 실수로 계산돼요 (5/3 = 1.666...)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-example">
+                <h4>📋 최종 실행 결과 예시</h4>
+                <table class="result-table">
+                    <tr><th>첫방문월</th><th>신환수</th><th>재방문환자</th><th>재방문율</th></tr>
+                    <tr><td>2024-02</td><td>25</td><td>18</td><td>72.0</td></tr>
+                    <tr><td>2024-01</td><td>32</td><td>21</td><td>65.6</td></tr>
+                    <tr><td>2023-12</td><td>28</td><td>20</td><td>71.4</td></tr>
+                </table>
+                <p class="result-note">2024년 1월에 첫 방문한 32명 중 21명(65.6%)이 재방문했어요!</p>
+            </div>
+
+            <div class="tip">
+                <strong>💡 재방문율 해석하기</strong><br><br>
+                • <strong>70% 이상</strong>: 우수! 환자 만족도가 높아요<br>
+                • <strong>50~70%</strong>: 보통. 개선 여지 있음<br>
+                • <strong>50% 미만</strong>: 주의! 환자 이탈 원인 분석 필요
+            </div>
+
+            <hr>
+
+            <!-- ===== 쿼리 2: 진단별 평균 치료 횟수 ===== -->
+            <h2>2. 진단별 평균 치료 횟수</h2>
+
+            <div class="concept-box">
+                <h3>🎯 이 쿼리가 필요한 상황</h3>
+                <p>"허리 환자는 보통 몇 번이나 치료받아?" - 진단별로 평균 치료 횟수를 알면 <strong>치료 계획 수립</strong>과 <strong>환자 상담</strong>에 도움이 됩니다.</p>
+            </div>
+
+            <pre><code>SELECT
+    d.diagnosis_name AS 진단명,
+    COUNT(DISTINCT pd.patient_id) AS 환자수,
+    ROUND(AVG(visit_counts.cnt), 1) AS 평균치료횟수
+FROM patient_diagnoses pd
+JOIN diagnosis_codes d ON pd.diagnosis_code = d.diagnosis_code
+JOIN (
+    SELECT patient_id, COUNT(*) AS cnt
+    FROM treatment_sessions
+    GROUP BY patient_id
+) visit_counts ON pd.patient_id = visit_counts.patient_id
+WHERE pd.is_primary = 'Y'
+GROUP BY d.diagnosis_code, d.diagnosis_name
+ORDER BY 평균치료횟수 DESC;</code></pre>
+
+            <div class="explanation-box">
+                <h3>📖 서브쿼리를 JOIN에서 사용하기</h3>
+
+                <p>이번엔 서브쿼리를 <strong>FROM이 아니라 JOIN에서</strong> 사용해요. 마치 임시 테이블처럼요!</p>
+
+                <div class="line-explain">
+                    <div class="code-line">JOIN ( SELECT patient_id, COUNT(*) AS cnt FROM treatment_sessions GROUP BY patient_id ) visit_counts</div>
+                    <div class="explain-text">
+                        <strong>환자별 방문 횟수 테이블을 만들어서 JOIN!</strong><br><br>
+
+                        <div class="analogy-box">
+                            <h4>🎭 비유로 이해하기</h4>
+                            <p>진단 정보와 방문 횟수를 연결하려면:</p>
+                            <ol>
+                                <li>먼저 "환자별 방문 횟수" 표를 만들고</li>
+                                <li>그 표를 진단 정보와 연결해요</li>
+                            </ol>
+                            <p>서브쿼리가 바로 그 "임시 표"를 만드는 거예요!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="line-explain">
+                    <div class="code-line">ON pd.patient_id = visit_counts.patient_id</div>
+                    <div class="explain-text">
+                        진단 테이블의 환자 ID와 방문횟수 테이블의 환자 ID를 <strong>연결</strong>합니다.
+                    </div>
+                </div>
+
+                <div class="line-explain">
+                    <div class="code-line">WHERE pd.is_primary = 'Y'</div>
+                    <div class="explain-text">
+                        <strong>주진단만</strong> 분석합니다.<br><br>
+                        한 환자가 여러 진단을 가질 수 있어서, 대표 진단(주진단)만 집계해요.
+                    </div>
+                </div>
+
+                <div class="line-explain highlight-line">
+                    <div class="code-line">AVG(visit_counts.cnt)</div>
+                    <div class="explain-text">
+                        <strong>평균 방문 횟수</strong> 계산!<br><br>
+                        진단별로 그룹화한 후, 그 그룹에 속한 환자들의 방문 횟수를 평균 냅니다.
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-example">
+                <h4>📋 실행 결과 예시</h4>
+                <table class="result-table">
+                    <tr><th>진단명</th><th>환자수</th><th>평균치료횟수</th></tr>
+                    <tr><td>척추관협착증</td><td>45</td><td>12.3</td></tr>
+                    <tr><td>추간판탈출증</td><td>78</td><td>8.7</td></tr>
+                    <tr><td>어깨 회전근개 손상</td><td>56</td><td>7.2</td></tr>
+                    <tr><td>발목 염좌</td><td>34</td><td>4.5</td></tr>
+                </table>
+                <p class="result-note">척추관협착증 환자는 평균 12.3회 치료, 발목 염좌는 4.5회로 차이가 크네요!</p>
+            </div>
+
+            <div class="tip">
+                <strong>💡 이 데이터 활용법</strong><br><br>
+                • <strong>환자 상담</strong>: "이 진단은 보통 8~10회 정도 치료합니다"<br>
+                • <strong>치료 계획</strong>: 진단별 예상 치료 기간 산정<br>
+                • <strong>이상치 발견</strong>: 평균보다 훨씬 많이 치료받은 환자 → 추가 분석 필요
+            </div>
+
+            <hr>
+
+            <!-- ===== 쿼리 3: 매출 성장률 ===== -->
+            <h2>3. 매출 성장률 (윈도우 함수)</h2>
+
+            <div class="concept-box">
+                <h3>🎯 이 쿼리가 필요한 상황</h3>
+                <p>"이번 달 매출이 지난달보다 얼마나 올랐어?" - 단순 매출이 아니라 <strong>성장률</strong>을 보면 추세를 파악할 수 있어요. 투자자나 원장님께 보고할 때 필수 지표입니다!</p>
+            </div>
+
+            <pre><code>SELECT
+    DATE_FORMAT(ts.session_date, '%Y-%m') AS 월,
+    SUM(b.total_amount) AS 매출,
+    LAG(SUM(b.total_amount)) OVER (ORDER BY DATE_FORMAT(ts.session_date, '%Y-%m')) AS 전월매출,
+    ROUND((SUM(b.total_amount) - LAG(SUM(b.total_amount)) OVER (ORDER BY DATE_FORMAT(ts.session_date, '%Y-%m')))
+        * 100.0 / LAG(SUM(b.total_amount)) OVER (ORDER BY DATE_FORMAT(ts.session_date, '%Y-%m')), 1) AS 성장률
+FROM treatment_sessions ts
+JOIN billings b ON ts.session_id = b.session_id
+WHERE ts.session_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+GROUP BY DATE_FORMAT(ts.session_date, '%Y-%m')
+ORDER BY 월;</code></pre>
+
+            <div class="explanation-box">
+                <h3>📖 윈도우 함수 LAG() 이해하기</h3>
+
+                <p><strong>LAG</strong>는 "뒤처지다, 지연되다"라는 뜻이에요. SQL에서는 <strong>이전 행의 값을 가져오는</strong> 함수입니다!</p>
+
+                <div class="analogy-box">
+                    <h4>🎭 비유로 이해하기: 줄 서기</h4>
+                    <p>월별 매출 데이터가 <strong>줄을 서있다</strong>고 생각해보세요:</p>
+                    <table class="mini-table">
+                        <tr><th>순서</th><th>월</th><th>매출</th><th>LAG (앞사람 값)</th></tr>
+                        <tr><td>1번</td><td>2024-01</td><td>500만</td><td>NULL (앞이 없음)</td></tr>
+                        <tr><td>2번</td><td>2024-02</td><td>600만</td><td>500만 (1번 값)</td></tr>
+                        <tr><td>3번</td><td>2024-03</td><td>550만</td><td>600만 (2번 값)</td></tr>
+                    </table>
+                    <p>LAG는 "내 앞에 선 사람의 값 가져와!"라고 하는 거예요.</p>
+                </div>
+
+                <div class="line-explain highlight-line">
+                    <div class="code-line">LAG(SUM(b.total_amount)) OVER (ORDER BY ...)</div>
+                    <div class="explain-text">
+                        <strong>윈도우 함수의 기본 구조</strong><br><br>
+
+                        <code>LAG(가져올_값) OVER (ORDER BY 정렬기준)</code><br><br>
+
+                        <ul>
+                            <li><code>LAG(SUM(b.total_amount))</code>: 이전 행의 매출 합계를 가져와!</li>
+                            <li><code>OVER</code>: 윈도우 함수임을 표시</li>
+                            <li><code>ORDER BY ...</code>: 월 순서로 정렬해서 "이전"을 결정</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="why-box">
+                    <h4>❓ 왜 윈도우 함수가 필요할까요?</h4>
+                    <p>일반 GROUP BY는 각 그룹을 <strong>독립적으로</strong> 계산해요.</p>
+                    <p>하지만 성장률은 <strong>"이번 달"과 "지난 달"을 비교</strong>해야 하죠!</p>
+                    <p>윈도우 함수를 쓰면 <strong>다른 행의 값을 참조</strong>할 수 있어요.</p>
+                </div>
+
+                <div class="line-explain">
+                    <div class="code-line">(이번달매출 - 전월매출) * 100.0 / 전월매출</div>
+                    <div class="explain-text">
+                        <strong>성장률 공식</strong><br><br>
+
+                        <code>성장률 = (현재값 - 이전값) / 이전값 × 100</code><br><br>
+
+                        예: 이번 달 600만, 지난 달 500만이면<br>
+                        (600 - 500) / 500 × 100 = <strong>20% 성장</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-example">
+                <h4>📋 실행 결과 예시</h4>
+                <table class="result-table">
+                    <tr><th>월</th><th>매출</th><th>전월매출</th><th>성장률</th></tr>
+                    <tr><td>2024-01</td><td>5,000,000</td><td>NULL</td><td>NULL</td></tr>
+                    <tr><td>2024-02</td><td>6,000,000</td><td>5,000,000</td><td>20.0</td></tr>
+                    <tr class="urgent-row"><td>2024-03</td><td>5,500,000</td><td>6,000,000</td><td>-8.3</td></tr>
+                    <tr><td>2024-04</td><td>7,200,000</td><td>5,500,000</td><td>30.9</td></tr>
+                </table>
+                <p class="result-note">첫 달은 비교 대상이 없어서 NULL. 3월은 전월 대비 -8.3% 감소!</p>
+            </div>
+
+            <div class="tip">
+                <strong>💡 관련 윈도우 함수들</strong><br><br>
+                • <code>LAG()</code>: 이전 행 값 (성장률 계산에 사용)<br>
+                • <code>LEAD()</code>: 다음 행 값 (예측에 사용 가능)<br>
+                • <code>ROW_NUMBER()</code>: 순번 매기기<br>
+                • <code>RANK()</code>: 순위 매기기
+            </div>
+
+            <div class="summary-box">
+                <h3>📝 이번 장 핵심 정리</h3>
+                <table class="summary-table">
+                    <tr>
+                        <th>개념</th>
+                        <th>설명</th>
+                        <th>사용 예</th>
+                    </tr>
+                    <tr>
+                        <td><strong>서브쿼리</strong></td>
+                        <td>쿼리 안의 쿼리</td>
+                        <td>2단계 분석 (환자별 → 월별)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>FROM 서브쿼리</strong></td>
+                        <td>결과를 테이블처럼 사용</td>
+                        <td>재방문율 분석</td>
+                    </tr>
+                    <tr>
+                        <td><strong>JOIN 서브쿼리</strong></td>
+                        <td>임시 테이블과 연결</td>
+                        <td>진단별 평균 치료횟수</td>
+                    </tr>
+                    <tr>
+                        <td><strong>LAG() 윈도우 함수</strong></td>
+                        <td>이전 행의 값 참조</td>
+                        <td>매출 성장률</td>
+                    </tr>
+                    <tr>
+                        <td><strong>OVER(ORDER BY)</strong></td>
+                        <td>윈도우 함수의 정렬 기준</td>
+                        <td>월 순서대로 이전 값 찾기</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="practice-box">
+                <h3>🏋️ 응용 연습</h3>
+                <p><strong>Q. 치료사별 월간 실적 성장률을 보려면?</strong></p>
+                <details>
+                    <summary>힌트 보기</summary>
+                    <p>LAG() 함수에 <code>PARTITION BY</code>를 추가하면 치료사별로 "이전 값"을 구할 수 있어요!</p>
+                    <pre><code>LAG(SUM(amount)) OVER (
+    PARTITION BY therapist_id  -- 치료사별로 나눠서
+    ORDER BY 월                -- 월 순서로 이전 값
+)</code></pre>
+                </details>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-8.html" class="nav-btn">← 이전</a>
+                <span class="page-num">9 / 12</span>
+                <a href="chapter-10.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

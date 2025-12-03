@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>7장: MySQL 연결 - 물리치료사를 위한 DB 4권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "4"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📕 물리치료사를 위한</h1>
+                <p>웹 앱 만들기 (4권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">MySQL 연결</h1>
+
+            <h2>드디어 진짜 데이터!</h2>
+
+            <p>지금까지는 Python 리스트에 임시 데이터를 넣어서 테스트했습니다. 이제 3권에서 만든 MySQL 데이터베이스와 연결합니다.</p>
+
+            <hr>
+
+            <h2>라이브러리 설치</h2>
+
+            <pre><code># 가상환경 활성화 확인 후
+pip install pymysql</code></pre>
+
+            <div class="tip"><strong>💡 pymysql vs mysql-connector</strong><br>
+            둘 다 MySQL 연결 라이브러리입니다. pymysql이 설치가 더 간단해서 이 책에서는 pymysql을 사용합니다.</div>
+
+            <hr>
+
+            <h2>기본 연결 테스트</h2>
+
+            <pre><code>import pymysql
+
+# 데이터베이스 연결
+connection = pymysql.connect(
+    host='localhost',
+    user='root',
+    password='your_password',  # 본인 비밀번호
+    database='healing_hands',
+    charset='utf8mb4'
+)
+
+# 커서 생성
+cursor = connection.cursor()
+
+# 쿼리 실행
+cursor.execute("SELECT * FROM patients LIMIT 5")
+
+# 결과 가져오기
+results = cursor.fetchall()
+for row in results:
+    print(row)
+
+# 연결 종료
+cursor.close()
+connection.close()</code></pre>
+
+            <h3>실행 결과 (예시)</h3>
+            <pre><code>(1, '김철수', '010-1234-5678', '1985-03-15', ...)
+(2, '이영희', '010-2345-6789', '1990-07-22', ...)
+...</code></pre>
+
+            <hr>
+
+            <h2>Flask와 통합</h2>
+
+            <p>Flask 앱에서 MySQL을 사용하는 패턴입니다.</p>
+
+            <pre><code>from flask import Flask, jsonify
+import pymysql
+
+app = Flask(__name__)
+app.config['JSON_AS_ASCII'] = False
+
+# DB 연결 함수
+def get_db_connection():
+    return pymysql.connect(
+        host='localhost',
+        user='root',
+        password='your_password',
+        database='healing_hands',
+        charset='utf8mb4',
+        cursorclass=pymysql.cursors.DictCursor  # 결과를 딕셔너리로
+    )
+
+@app.route('/api/patients')
+def get_patients():
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT patient_id, name, phone, birth_date FROM patients")
+        patients = cursor.fetchall()
+        return jsonify({
+            'success': True,
+            'data': patients,
+            'count': len(patients)
+        })
+    finally:
+        conn.close()
+
+if __name__ == '__main__':
+    app.run(debug=True)</code></pre>
+
+            <hr>
+
+            <h2>DictCursor 사용하기</h2>
+
+            <p>기본 커서는 튜플을 반환합니다. <code>DictCursor</code>를 사용하면 딕셔너리로 반환합니다.</p>
+
+            <h3>기본 커서 (튜플)</h3>
+            <pre><code>(1, '김철수', '010-1234-5678')
+# row[0], row[1], row[2] 로 접근</code></pre>
+
+            <h3>DictCursor (딕셔너리)</h3>
+            <pre><code>{'patient_id': 1, 'name': '김철수', 'phone': '010-1234-5678'}
+# row['name'], row['phone'] 으로 접근</code></pre>
+
+            <div class="tip"><strong>💡 DictCursor가 편리한 이유</strong><br>
+            JSON 응답을 만들 때 그대로 반환하면 됩니다. 컬럼 순서를 기억할 필요가 없습니다.</div>
+
+            <hr>
+
+            <h2>에러 처리</h2>
+
+            <pre><code>@app.route('/api/patients/&lt;int:patient_id&gt;')
+def get_patient(patient_id):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT * FROM patients WHERE patient_id = %s",
+            (patient_id,)
+        )
+        patient = cursor.fetchone()
+
+        if patient:
+            return jsonify({'success': True, 'data': patient})
+        else:
+            return jsonify({
+                'success': False,
+                'error': '환자를 찾을 수 없습니다'
+            }), 404
+
+    except pymysql.Error as e:
+        return jsonify({
+            'success': False,
+            'error': f'데이터베이스 오류: {str(e)}'
+        }), 500
+
+    finally:
+        conn.close()</code></pre>
+
+            <hr>
+
+            <h2>SQL 인젝션 방지</h2>
+
+            <div class="danger"><strong>🚨 절대 하면 안 되는 것!</strong></div>
+
+            <pre><code># ❌ 위험! SQL 인젝션 취약점
+cursor.execute(f"SELECT * FROM patients WHERE name = '{name}'")</code></pre>
+
+            <h3>안전한 방법</h3>
+            <pre><code># ✅ 안전! 파라미터 바인딩
+cursor.execute(
+    "SELECT * FROM patients WHERE name = %s",
+    (name,)
+)</code></pre>
+
+            <p><code>%s</code> 플레이스홀더를 사용하고, 값을 튜플로 전달하면 자동으로 이스케이프 처리됩니다.</p>
+
+            <hr>
+
+            <h2>설정 분리하기</h2>
+
+            <p>비밀번호 같은 정보는 코드에 직접 쓰지 않는 게 좋습니다.</p>
+
+            <h3>config.py 파일 생성</h3>
+            <pre><code># config.py
+DB_CONFIG = {
+    'host': 'localhost',
+    'user': 'root',
+    'password': 'your_password',
+    'database': 'healing_hands',
+    'charset': 'utf8mb4'
+}</code></pre>
+
+            <h3>app.py에서 사용</h3>
+            <pre><code>from config import DB_CONFIG
+
+def get_db_connection():
+    return pymysql.connect(
+        **DB_CONFIG,
+        cursorclass=pymysql.cursors.DictCursor
+    )</code></pre>
+
+            <div class="warning"><strong>⚠️ config.py는 .gitignore에 추가</strong><br>
+            비밀번호가 포함된 파일은 Git에 올리지 않습니다.</div>
+
+            <hr>
+
+            <h2>연결 테스트 체크리스트</h2>
+
+            <table>
+                <tr>
+                    <th>항목</th>
+                    <th>확인</th>
+                </tr>
+                <tr>
+                    <td>MySQL 서버 실행 중</td>
+                    <td>서비스/데몬 확인</td>
+                </tr>
+                <tr>
+                    <td>healing_hands DB 존재</td>
+                    <td>DBeaver에서 확인</td>
+                </tr>
+                <tr>
+                    <td>비밀번호 정확</td>
+                    <td>로그인 테스트</td>
+                </tr>
+                <tr>
+                    <td>pymysql 설치됨</td>
+                    <td>pip list 확인</td>
+                </tr>
+                <tr>
+                    <td>API 응답 확인</td>
+                    <td>/api/patients 접속</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li><code>pymysql</code>로 MySQL에 연결합니다</li>
+                <li><code>DictCursor</code>로 딕셔너리 결과를 받습니다</li>
+                <li><code>%s</code> 파라미터로 SQL 인젝션을 방지합니다</li>
+                <li>설정은 별도 파일로 분리합니다</li>
+            </ul>
+
+            <blockquote>다음 장에서는 환자 목록 API를 완성합니다. 검색, 페이징까지!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

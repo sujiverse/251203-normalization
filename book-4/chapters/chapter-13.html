@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>13장: JavaScript 핵심 - 물리치료사를 위한 DB 4권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "4"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📕 물리치료사를 위한</h1>
+                <p>웹 앱 만들기 (4권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">JavaScript 핵심</h1>
+
+            <h2>JavaScript란?</h2>
+
+            <p>JavaScript는 웹 페이지에 <strong>동작</strong>을 추가합니다. 버튼 클릭, 데이터 불러오기, 화면 업데이트 등.</p>
+
+            <hr>
+
+            <h2>변수와 자료형</h2>
+
+            <pre><code>// 변수 선언
+let name = '김철수';      // 변경 가능
+const PI = 3.14;          // 상수 (변경 불가)
+
+// 자료형
+let text = '문자열';
+let number = 42;
+let decimal = 3.14;
+let isActive = true;       // 불리언
+let items = [1, 2, 3];     // 배열
+let patient = {            // 객체
+    name: '김철수',
+    age: 35
+};</code></pre>
+
+            <hr>
+
+            <h2>함수</h2>
+
+            <pre><code>// 함수 선언
+function sayHello(name) {
+    return '안녕하세요, ' + name + '님!';
+}
+
+// 화살표 함수 (간결한 문법)
+const add = (a, b) => a + b;
+
+// 사용
+console.log(sayHello('김철수'));  // 안녕하세요, 김철수님!
+console.log(add(1, 2));           // 3</code></pre>
+
+            <hr>
+
+            <h2>DOM 조작</h2>
+
+            <p>DOM(Document Object Model)은 HTML을 JavaScript로 제어하는 방법입니다.</p>
+
+            <pre><code>// 요소 선택
+const title = document.getElementById('title');
+const buttons = document.querySelectorAll('.btn');
+const firstButton = document.querySelector('.btn');
+
+// 내용 변경
+title.textContent = '새로운 제목';
+title.innerHTML = '&lt;strong&gt;굵은 제목&lt;/strong&gt;';
+
+// 스타일 변경
+title.style.color = 'red';
+title.style.fontSize = '24px';
+
+// 클래스 조작
+title.classList.add('active');
+title.classList.remove('hidden');
+title.classList.toggle('selected');</code></pre>
+
+            <hr>
+
+            <h2>이벤트 처리</h2>
+
+            <pre><code>// 버튼 클릭
+const btn = document.getElementById('myButton');
+btn.addEventListener('click', function() {
+    alert('클릭되었습니다!');
+});
+
+// 화살표 함수로
+btn.addEventListener('click', () => {
+    console.log('클릭!');
+});
+
+// 폼 제출
+const form = document.getElementById('myForm');
+form.addEventListener('submit', (e) => {
+    e.preventDefault();  // 기본 동작 방지
+    // 폼 처리 로직
+});</code></pre>
+
+            <h3>자주 쓰는 이벤트</h3>
+            <table>
+                <tr>
+                    <th>이벤트</th>
+                    <th>설명</th>
+                </tr>
+                <tr>
+                    <td>click</td>
+                    <td>클릭</td>
+                </tr>
+                <tr>
+                    <td>submit</td>
+                    <td>폼 제출</td>
+                </tr>
+                <tr>
+                    <td>change</td>
+                    <td>값 변경</td>
+                </tr>
+                <tr>
+                    <td>input</td>
+                    <td>입력 중</td>
+                </tr>
+                <tr>
+                    <td>keydown</td>
+                    <td>키 누름</td>
+                </tr>
+                <tr>
+                    <td>load</td>
+                    <td>로드 완료</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>배열 메서드</h2>
+
+            <pre><code>const patients = [
+    { id: 1, name: '김철수', age: 35 },
+    { id: 2, name: '이영희', age: 28 },
+    { id: 3, name: '박민수', age: 42 }
+];
+
+// forEach - 각 항목에 대해 실행
+patients.forEach(p => {
+    console.log(p.name);
+});
+
+// map - 변환된 새 배열 생성
+const names = patients.map(p => p.name);
+// ['김철수', '이영희', '박민수']
+
+// filter - 조건에 맞는 항목만
+const over30 = patients.filter(p => p.age > 30);
+// [{id:1, ...}, {id:3, ...}]
+
+// find - 조건에 맞는 첫 항목
+const found = patients.find(p => p.id === 2);
+// {id: 2, name: '이영희', age: 28}</code></pre>
+
+            <hr>
+
+            <h2>비동기 처리 (async/await)</h2>
+
+            <pre><code>// API 호출 (비동기)
+async function getPatients() {
+    try {
+        const response = await fetch('/api/patients');
+        const data = await response.json();
+        console.log(data);
+        return data;
+    } catch (error) {
+        console.error('에러:', error);
+    }
+}
+
+// 사용
+getPatients().then(data => {
+    // 데이터 사용
+});</code></pre>
+
+            <div class="tip"><strong>💡 async/await</strong><br>
+            <code>async</code> 함수 안에서 <code>await</code>를 사용하면 비동기 코드를 동기처럼 읽기 쉽게 작성할 수 있습니다.</div>
+
+            <hr>
+
+            <h2>실전 예제: 테이블 채우기</h2>
+
+            <pre><code>// API에서 데이터 가져와서 테이블에 표시
+async function loadPatientTable() {
+    const response = await fetch('/api/patients');
+    const result = await response.json();
+
+    const tbody = document.querySelector('#patientTable tbody');
+    tbody.innerHTML = '';  // 기존 내용 제거
+
+    result.data.forEach(patient => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            &lt;td&gt;${patient.patient_id}&lt;/td&gt;
+            &lt;td&gt;${patient.name}&lt;/td&gt;
+            &lt;td&gt;${patient.phone}&lt;/td&gt;
+            &lt;td&gt;
+                &lt;button onclick="editPatient(${patient.patient_id})"&gt;수정&lt;/button&gt;
+                &lt;button onclick="deletePatient(${patient.patient_id})"&gt;삭제&lt;/button&gt;
+            &lt;/td&gt;
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// 페이지 로드 시 실행
+document.addEventListener('DOMContentLoaded', loadPatientTable);</code></pre>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li>변수: <code>let</code>, <code>const</code>로 선언</li>
+                <li>함수: <code>function</code> 또는 화살표 함수 <code>() => {}</code></li>
+                <li>DOM: <code>querySelector</code>로 선택, 내용/스타일 변경</li>
+                <li>이벤트: <code>addEventListener</code>로 동작 연결</li>
+                <li>비동기: <code>async/await</code>로 API 호출</li>
+            </ul>
+
+            <blockquote>다음 장에서는 fetch로 API를 호출하는 방법을 더 자세히 배웁니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>9장: 예외 상황 처리 - 물리치료사를 위한 데이터베이스 3권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "3"})
+
+    @@include('components/mobile-menu.html')
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📙 물리치료사를 위한</h1>
+                <p>실전 구축 & 대시보드 (3권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+<h1 class="title">예외 상황 처리</h1>
+
+<h2>현실에서 발생하는 특수 케이스</h2>
+
+<p>데이터베이스가 완벽하게 설계되어도, 현실의 업무는 항상 예외 상황이 발생합니다. 환자가 예약을 취소하고, 환불을 요청하고, 데이터를 잘못 입력하고... 이런 상황들을 어떻게 처리하는지 알아봅시다.</p>
+
+<h3>이번 장에서 다룰 예외 상황</h3>
+
+<ul>
+<li>예약 취소/노쇼 처리</li>
+<li>환불 처리</li>
+<li>데이터 수정/삭제</li>
+<li>환자 비활성화</li>
+<li>복합 결제 처리</li>
+</ul>
+
+<hr>
+
+<h2>1. 예약 취소/노쇼 처리</h2>
+
+<h3>예약 취소</h3>
+
+<pre><code>-- 예약 상태를 '취소'로 변경
+UPDATE treatment_sessions
+SET session_status = '취소',
+    notes = CONCAT(IFNULL(notes, ''), ' [취소: 환자 요청]')
+WHERE session_id = 100;
+
+-- 해당 청구도 취소 처리
+UPDATE billings
+SET payment_status = '취소',
+    memo = '예약 취소로 인한 청구 취소'
+WHERE session_id = 100;</code></pre>
+
+<h3>노쇼(No-Show) 처리</h3>
+
+<pre><code>-- 연락 없이 미방문한 경우
+UPDATE treatment_sessions
+SET session_status = '노쇼',
+    notes = CONCAT(IFNULL(notes, ''), ' [노쇼: 연락 안 됨]')
+WHERE session_id = 101;
+
+-- 노쇼 이력 조회 (상습 노쇼 환자 확인)
+SELECT
+    p.name as 환자명,
+    p.phone as 연락처,
+    COUNT(*) as 노쇼횟수,
+    MAX(ts.session_date) as 최근노쇼
+FROM treatment_sessions ts
+JOIN patients p ON ts.patient_id = p.patient_id
+WHERE ts.session_status = '노쇼'
+GROUP BY p.patient_id, p.name, p.phone
+HAVING COUNT(*) >= 2
+ORDER BY 노쇼횟수 DESC;</code></pre>
+
+<hr>
+
+<h2>2. 환불 처리</h2>
+
+<h3>전액 환불</h3>
+
+<pre><code>-- 청구 상태를 '환불'로 변경
+UPDATE billings
+SET payment_status = '환불',
+    memo = CONCAT(IFNULL(memo, ''), ' [환불: 2024-03-25 전액]')
+WHERE billing_id = 50;
+
+-- 또는 별도 환불 기록 추가 (마이너스 금액)
+INSERT INTO billings (
+    session_id, fee_code, quantity, unit_price,
+    total_amount, payment_status, payment_method, payment_date, memo
+) VALUES (
+    50, 'FEE001', 1, 80000,
+    -80000, '완료', '카드취소', '2024-03-25', '환불: 환자 요청'
+);</code></pre>
+
+<h3>부분 환불</h3>
+
+<pre><code>-- 80,000원 중 30,000원만 환불
+INSERT INTO billings (
+    session_id, fee_code, quantity, unit_price,
+    total_amount, payment_status, payment_method, payment_date, memo
+) VALUES (
+    50, 'FEE001', 1, 30000,
+    -30000, '완료', '현금', '2024-03-25', '부분환불: 치료 중단'
+);</code></pre>
+
+<hr>
+
+<h2>3. 데이터 수정</h2>
+
+<h3>환자 정보 수정</h3>
+
+<pre><code>-- 연락처 변경
+UPDATE patients
+SET phone = '010-9876-5432',
+    updated_at = CURRENT_TIMESTAMP
+WHERE patient_id = 'P001';
+
+-- 보험 정보 변경
+UPDATE patients
+SET insurance_code = 'INS002',
+    memo = CONCAT(IFNULL(memo, ''), ' [보험변경: 2024-03-25]'),
+    updated_at = CURRENT_TIMESTAMP
+WHERE patient_id = 'P001';</code></pre>
+
+<h3>치료 기록 수정</h3>
+
+<pre><code>-- 치료사 변경 (담당 변경)
+UPDATE treatment_sessions
+SET therapist_id = 'T002',
+    notes = CONCAT(IFNULL(notes, ''), ' [담당변경: T001→T002]'),
+    updated_at = CURRENT_TIMESTAMP
+WHERE session_id = 88;
+
+-- 치료 날짜 수정 (오입력 정정)
+UPDATE treatment_sessions
+SET session_date = '2024-03-24',
+    notes = CONCAT(IFNULL(notes, ''), ' [날짜정정: 3/25→3/24]'),
+    updated_at = CURRENT_TIMESTAMP
+WHERE session_id = 88;</code></pre>
+
+<h3>청구 금액 수정</h3>
+
+<pre><code>-- 할인 적용
+UPDATE billings
+SET unit_price = 70000,
+    total_amount = 70000,
+    memo = '10% 할인 적용',
+    updated_at = CURRENT_TIMESTAMP
+WHERE billing_id = 85;
+
+-- 치료 항목 변경
+UPDATE billings
+SET fee_code = 'FEE002',
+    unit_price = 150000,
+    total_amount = 150000,
+    memo = '60분 치료로 변경',
+    updated_at = CURRENT_TIMESTAMP
+WHERE billing_id = 85;</code></pre>
+
+<hr>
+
+<h2>4. 데이터 삭제</h2>
+
+<div class="danger"><strong>🚨 주의!</strong><br>
+삭제는 복구가 어렵습니다. 가능하면 '상태 변경'으로 처리하고, 정말 필요한 경우에만 삭제하세요. 삭제 전 반드시 백업하세요!</div>
+
+<h3>테스트 데이터 삭제</h3>
+
+<pre><code>-- 삭제 전 확인!
+SELECT * FROM treatment_sessions WHERE session_id = 999;
+
+-- 외래키 관계 때문에 순서가 중요
+-- 1. 자식 테이블부터 삭제
+DELETE FROM billings WHERE session_id = 999;
+DELETE FROM soap_notes WHERE session_id = 999;
+
+-- 2. 부모 테이블 삭제
+DELETE FROM treatment_sessions WHERE session_id = 999;</code></pre>
+
+<h3>환자 데이터 삭제 (비추천)</h3>
+
+<pre><code>-- 환자 삭제는 권장하지 않음!
+-- 대신 비활성화 처리를 권장
+
+-- 정말 삭제해야 한다면:
+-- 1. 관련 데이터 모두 삭제 필요
+DELETE FROM soap_notes WHERE session_id IN
+    (SELECT session_id FROM treatment_sessions WHERE patient_id = 'P999');
+DELETE FROM billings WHERE session_id IN
+    (SELECT session_id FROM treatment_sessions WHERE patient_id = 'P999');
+DELETE FROM treatment_sessions WHERE patient_id = 'P999';
+DELETE FROM patient_diagnoses WHERE patient_id = 'P999';
+DELETE FROM patients WHERE patient_id = 'P999';</code></pre>
+
+<hr>
+
+<h2>5. 환자 비활성화</h2>
+
+<p>환자가 더 이상 방문하지 않거나, 데이터 삭제 요청이 있을 때는 삭제 대신 비활성화를 권장합니다.</p>
+
+<pre><code>-- 환자 비활성화
+UPDATE patients
+SET is_active = 'N',
+    memo = CONCAT(IFNULL(memo, ''), ' [비활성화: 2024-03-25 이전요청]'),
+    updated_at = CURRENT_TIMESTAMP
+WHERE patient_id = 'P010';
+
+-- 비활성화된 환자는 일반 조회에서 제외
+SELECT * FROM patients WHERE is_active = 'Y';
+
+-- 비활성화된 환자 목록
+SELECT patient_id, name, phone, memo
+FROM patients
+WHERE is_active = 'N';</code></pre>
+
+<hr>
+
+<h2>6. 복합 결제 처리</h2>
+
+<h3>카드 + 현금 분할 결제</h3>
+
+<pre><code>-- 80,000원을 카드 50,000 + 현금 30,000으로 결제
+-- 방법 1: 청구를 2건으로 분리
+INSERT INTO billings (session_id, fee_code, quantity, unit_price, total_amount, payment_status, payment_method, payment_date, memo) VALUES
+(88, 'FEE001', 1, 50000, 50000, '완료', '카드', '2024-03-25', '분할결제 1/2'),
+(88, 'FEE001', 1, 30000, 30000, '완료', '현금', '2024-03-25', '분할결제 2/2');
+
+-- 방법 2: 메모에 기록 (단순화)
+INSERT INTO billings (session_id, fee_code, quantity, unit_price, total_amount, payment_status, payment_method, payment_date, memo) VALUES
+(88, 'FEE001', 1, 80000, 80000, '완료', '복합', '2024-03-25', '카드50000+현금30000');</code></pre>
+
+<h3>포인트/쿠폰 사용</h3>
+
+<pre><code>-- 쿠폰으로 10,000원 할인
+INSERT INTO billings (session_id, fee_code, quantity, unit_price, total_amount, payment_status, payment_method, payment_date, memo) VALUES
+(88, 'FEE001', 1, 80000, 70000, '완료', '카드', '2024-03-25', '신규환자 쿠폰 -10000원');</code></pre>
+
+<hr>
+
+<h2>7. 진단 변경</h2>
+
+<h3>주진단 변경</h3>
+
+<pre><code>-- 기존 주진단을 부진단으로
+UPDATE patient_diagnoses
+SET is_primary = 'N'
+WHERE patient_id = 'P001' AND is_primary = 'Y';
+
+-- 새 진단을 주진단으로 추가
+INSERT INTO patient_diagnoses (patient_id, diagnosis_code, diagnosis_date, is_primary, notes)
+VALUES ('P001', 'M51.1', '2024-03-25', 'Y', '주진단 변경: 요통→디스크');</code></pre>
+
+<h3>진단 추가</h3>
+
+<pre><code>-- 부진단 추가
+INSERT INTO patient_diagnoses (patient_id, diagnosis_code, diagnosis_date, is_primary, notes)
+VALUES ('P001', 'M79.1', '2024-03-25', 'N', '근막통증 추가');</code></pre>
+
+<hr>
+
+<h2>8. 자동차보험 환자 처리</h2>
+
+<h3>자보 환자 등록</h3>
+
+<pre><code>-- 자동차보험 환자 등록
+INSERT INTO patients (patient_id, name, gender, birth_date, phone, insurance_code, memo) VALUES
+('P050', '홍길동', 'M', '1985-05-05', '010-5555-5555', 'INS004', '자동차보험 환자, 사고일: 2024-03-20');
+
+-- 자보 치료 기록
+INSERT INTO treatment_sessions (patient_id, therapist_id, session_date, start_time, end_time, session_status, notes) VALUES
+('P050', 'T001', '2024-03-25', '11:00', '11:40', '완료', '자보치료');
+
+-- 자보 청구 (보험사 청구)
+INSERT INTO billings (session_id, fee_code, quantity, unit_price, total_amount, payment_status, payment_method, memo) VALUES
+(LAST_INSERT_ID(), 'FEE007', 1, 100000, 100000, '대기', NULL, '자동차보험 청구 예정');</code></pre>
+
+<h3>자보 수납 완료 처리</h3>
+
+<pre><code>-- 보험사에서 입금 확인 후
+UPDATE billings
+SET payment_status = '완료',
+    payment_method = '계좌이체',
+    payment_date = '2024-04-15',
+    memo = '자동차보험 입금완료'
+WHERE billing_id = 100;</code></pre>
+
+<hr>
+
+<h2>예외 처리 체크리스트</h2>
+
+<table>
+<tr><th>상황</th><th>처리 방법</th></tr>
+<tr><td>예약 취소</td><td>session_status를 '취소'로 변경</td></tr>
+<tr><td>노쇼</td><td>session_status를 '노쇼'로 변경</td></tr>
+<tr><td>환불</td><td>마이너스 청구 추가 또는 상태를 '환불'로</td></tr>
+<tr><td>정보 수정</td><td>UPDATE + 변경 이력 메모</td></tr>
+<tr><td>환자 탈퇴</td><td>삭제 대신 is_active = 'N'</td></tr>
+<tr><td>분할 결제</td><td>청구 분리 또는 메모 활용</td></tr>
+<tr><td>자보 환자</td><td>INS004 + payment_status '대기'</td></tr>
+</table>
+
+<hr>
+
+<h2>이번 장 요약</h2>
+
+<p>이번 장에서 배운 것:</p>
+
+<ol>
+<li><strong>취소/노쇼</strong> - 상태 변경으로 처리</li>
+<li><strong>환불</strong> - 마이너스 금액 또는 상태 변경</li>
+<li><strong>수정</strong> - UPDATE + 변경 이력 기록</li>
+<li><strong>삭제</strong> - 최후의 수단, 외래키 순서 주의</li>
+<li><strong>비활성화</strong> - 삭제 대신 권장</li>
+<li><strong>복합 결제</strong> - 분리 또는 메모</li>
+</ol>
+
+<p>핵심은 <strong>"삭제보다는 상태 변경"</strong>입니다. 데이터는 한 번 삭제하면 복구하기 어렵지만, 상태로 관리하면 언제든 이력을 확인할 수 있어요.</p>
+
+<p>다음 장에서는 문제가 발생했을 때 해결하는 트러블슈팅과 데이터베이스 유지보수에 대해 알아봅니다.</p>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

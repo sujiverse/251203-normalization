@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2장: SQL 인젝션 공격 - 물리치료사를 위한 DB 5권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "5"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>🛡️ 5권: 보안 편</h1>
+                <p>DB & 서버 보안</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">SQL 인젝션 공격</h1>
+
+            <h2>SQL 인젝션이란?</h2>
+
+            <p>사용자 입력에 SQL 코드를 삽입해서 데이터베이스를 조작하는 공격입니다.</p>
+
+            <blockquote>
+                <strong>OWASP Top 10</strong>에서 항상 상위권을 차지하는 가장 위험한 공격 중 하나입니다.
+            </blockquote>
+
+            <hr>
+
+            <h2>취약한 코드 예시</h2>
+
+            <p>힐링손 시스템에서 환자를 검색하는 코드를 봅시다.</p>
+
+            <pre><code># 취약한 코드 - 절대 이렇게 하면 안 됩니다!
+@app.route('/api/patients/search')
+def search_patients():
+    name = request.args.get('name')
+
+    # 사용자 입력을 직접 쿼리에 넣음
+    query = f"SELECT * FROM patients WHERE name = '{name}'"
+
+    cursor.execute(query)
+    return jsonify(cursor.fetchall())</code></pre>
+
+            <p>정상적인 사용:</p>
+            <pre><code>GET /api/patients/search?name=김철수
+
+실행되는 쿼리:
+SELECT * FROM patients WHERE name = '김철수'
+
+→ 정상 작동!</code></pre>
+
+            <hr>
+
+            <h2>공격 시나리오 1: 모든 데이터 탈취</h2>
+
+            <pre><code>GET /api/patients/search?name=' OR '1'='1
+
+실행되는 쿼리:
+SELECT * FROM patients WHERE name = '' OR '1'='1'
+
+→ '1'='1'은 항상 참!
+→ 모든 환자 정보가 반환됨!</code></pre>
+
+            <p>공격자가 입력한 값:</p>
+            <pre><code>' OR '1'='1</code></pre>
+
+            <p>이게 쿼리에 들어가면:</p>
+            <pre><code>WHERE name = '' OR '1'='1'
+              ↑        ↑
+         빈 문자열   항상 참</code></pre>
+
+            <hr>
+
+            <h2>공격 시나리오 2: 데이터 삭제</h2>
+
+            <pre><code>GET /api/patients/search?name='; DROP TABLE patients; --
+
+실행되는 쿼리:
+SELECT * FROM patients WHERE name = ''; DROP TABLE patients; --'
+
+→ patients 테이블 전체 삭제!</code></pre>
+
+            <p><code>--</code>는 SQL 주석입니다. 뒤의 <code>'</code>를 무시하게 만듭니다.</p>
+
+            <hr>
+
+            <h2>공격 시나리오 3: 관리자 로그인 우회</h2>
+
+            <pre><code># 취약한 로그인 코드
+def login(username, password):
+    query = f"""
+        SELECT * FROM users
+        WHERE username = '{username}'
+        AND password = '{password}'
+    """
+    result = cursor.execute(query).fetchone()
+    if result:
+        return "로그인 성공"</code></pre>
+
+            <p>공격:</p>
+            <pre><code>username: admin' --
+password: 아무거나
+
+실행되는 쿼리:
+SELECT * FROM users
+WHERE username = 'admin' --' AND password = '아무거나'
+
+→ 비밀번호 체크가 주석 처리됨!
+→ admin 계정으로 로그인 성공!</code></pre>
+
+            <hr>
+
+            <h2>공격 시나리오 4: UNION 공격</h2>
+
+            <p>다른 테이블의 데이터를 가져옵니다.</p>
+
+            <pre><code>GET /api/patients/search?name=' UNION SELECT username, password, null, null FROM users --
+
+실행되는 쿼리:
+SELECT * FROM patients WHERE name = ''
+UNION
+SELECT username, password, null, null FROM users --
+
+→ users 테이블의 사용자명과 비밀번호가 노출!</code></pre>
+
+            <hr>
+
+            <h2>공격 시나리오 5: 시간 기반 공격</h2>
+
+            <p>에러 메시지가 없어도 정보를 추출할 수 있습니다.</p>
+
+            <pre><code>GET /api/patients/search?name=' AND SLEEP(5) --
+
+→ 응답이 5초 지연되면 취약점 존재 확인!
+
+GET /api/patients/search?name=' AND IF(SUBSTRING(password,1,1)='a', SLEEP(5), 0) --
+
+→ 비밀번호 첫 글자가 'a'면 5초 지연
+→ 한 글자씩 추측 가능!</code></pre>
+
+            <hr>
+
+            <h2>실제 피해 사례</h2>
+
+            <table>
+                <tr>
+                    <th>연도</th>
+                    <th>피해 기업</th>
+                    <th>피해 규모</th>
+                </tr>
+                <tr>
+                    <td>2017</td>
+                    <td>Equifax</td>
+                    <td>1.4억 명 정보 유출</td>
+                </tr>
+                <tr>
+                    <td>2019</td>
+                    <td>Fortnite</td>
+                    <td>2억 명 계정 위험</td>
+                </tr>
+                <tr>
+                    <td>2020</td>
+                    <td>Freepik</td>
+                    <td>830만 명 정보 유출</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>왜 이런 일이 생길까?</h2>
+
+            <pre class="file-tree">문제의 근본 원인
+│
+├── 데이터와 코드의 혼합
+│   └── 사용자 입력이 SQL 코드의 일부가 됨
+│
+├── 입력 검증 부재
+│   └── 특수문자(', ", --)를 그대로 허용
+│
+└── 신뢰할 수 없는 데이터 사용
+    └── 사용자 입력을 무조건 신뢰</pre>
+
+            <hr>
+
+            <h2>취약점 테스트 방법</h2>
+
+            <div class="warning">
+                <strong>⚠️ 주의</strong><br>
+                반드시 <strong>자신의 테스트 환경</strong>에서만 시도하세요!
+            </div>
+
+            <h3>기본 테스트</h3>
+            <pre><code>' (작은따옴표)
+" (큰따옴표)
+' OR '1'='1
+' OR 1=1 --
+'; --
+' AND 1=2 --</code></pre>
+
+            <h3>에러 확인</h3>
+            <p>SQL 에러 메시지가 노출되면 취약점 존재:</p>
+            <pre><code>You have an error in your SQL syntax...
+Unclosed quotation mark...
+mysql_fetch_array()...</code></pre>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li>SQL 인젝션은 <strong>가장 위험한 공격</strong> 중 하나</li>
+                <li>사용자 입력을 쿼리에 직접 넣으면 취약</li>
+                <li>데이터 탈취, 삭제, 인증 우회 가능</li>
+                <li>에러 메시지가 없어도 공격 가능 (시간 기반)</li>
+            </ul>
+
+            <blockquote>다음 장에서는 SQL 인젝션을 방어하는 방법을 배웁니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[5장] 인센티브 & 급여 정산 - 물리치료사를 위한 DB 2권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>🏥</span> DB 완전정복</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2 active">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📙 2권: SQL 기초 편</h1><p>데이터베이스 활용</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <h1 class="title">[5장] 인센티브 & 급여 정산</h1>
+
+            <div class="intro-box">
+                <p>이번 장에서는 <strong>치료사 인센티브를 자동 계산</strong>하는 쿼리를 배웁니다. 치료 종류별 수당, 목표 달성 보너스 등을 SQL로 계산하면 급여 정산이 훨씬 정확하고 빨라져요!</p>
+            </div>
+
+            <div class="concept-box">
+                <h3>💰 인센티브 규칙 예시</h3>
+                <p>아래는 예시입니다. 각 치료실마다 기준이 다를 수 있어요!</p>
+                <table class="rule-table">
+                    <tr><th>항목</th><th>기준</th><th>금액</th></tr>
+                    <tr><td>도수치료</td><td>건당</td><td>5,000원</td></tr>
+                    <tr><td>운동치료</td><td>건당</td><td>3,000원</td></tr>
+                    <tr><td>신환 유치</td><td>명당</td><td>10,000원</td></tr>
+                    <tr><td>매출 목표</td><td>300만원 이상</td><td>100,000원</td></tr>
+                </table>
+            </div>
+
+            <hr>
+
+            <!-- ===== 쿼리 1: 치료 종류별 인센티브 ===== -->
+            <h2>1. 치료 종류별 인센티브</h2>
+
+            <div class="concept-box">
+                <h3>🎯 이 쿼리가 필요한 상황</h3>
+                <p>"도수치료 1건에 5,000원, 운동치료 1건에 3,000원 인센티브" - 치료 종류에 따라 다른 수당을 자동으로 계산합니다.</p>
+            </div>
+
+            <pre><code>SELECT
+    t.name AS 치료사,
+    SUM(CASE WHEN fi.fee_name = '도수치료' THEN 5000 ELSE 0 END) AS 도수인센티브,
+    SUM(CASE WHEN fi.fee_name = '운동치료' THEN 3000 ELSE 0 END) AS 운동인센티브,
+    SUM(CASE WHEN fi.fee_name = '도수치료' THEN 5000
+             WHEN fi.fee_name = '운동치료' THEN 3000 ELSE 0 END) AS 총인센티브
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+JOIN billings b ON ts.session_id = b.session_id
+JOIN fee_items fi ON b.fee_code = fi.fee_code
+WHERE ts.session_date >= '2024-01-01'
+  AND ts.session_date < '2024-02-01'
+GROUP BY t.therapist_id, t.name;</code></pre>
+
+            <div class="explanation-box">
+                <h3>📖 SUM + CASE WHEN 콤보 기술!</h3>
+
+                <p>이 쿼리의 핵심은 <strong>SUM과 CASE WHEN을 함께 사용</strong>하는 것입니다. 처음 보면 복잡해 보이지만, 원리를 이해하면 아주 강력한 기술이에요!</p>
+
+                <div class="line-explain highlight-line">
+                    <div class="code-line">SUM(CASE WHEN fi.fee_name = '도수치료' THEN 5000 ELSE 0 END)</div>
+                    <div class="explain-text">
+                        이 구문을 단계별로 뜯어봅시다!<br><br>
+
+                        <strong>Step 1: CASE WHEN이 각 행마다 판단</strong><br>
+                        <table class="mini-table">
+                            <tr><th>치료종류</th><th>CASE 결과</th></tr>
+                            <tr><td>도수치료</td><td>5000</td></tr>
+                            <tr><td>운동치료</td><td>0</td></tr>
+                            <tr><td>도수치료</td><td>5000</td></tr>
+                            <tr><td>물리치료</td><td>0</td></tr>
+                        </table>
+
+                        <br><strong>Step 2: SUM이 이 값들을 합산</strong><br>
+                        5000 + 0 + 5000 + 0 = <strong>10,000원</strong><br><br>
+
+                        <div class="analogy-box">
+                            <h4>🎭 비유로 이해하기</h4>
+                            <p>엑셀의 <strong>SUMIF 함수</strong>와 같은 역할이에요!</p>
+                            <p>"도수치료인 경우에만 5000을 더해라"</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="line-explain">
+                    <div class="code-line">SUM(CASE WHEN ... THEN 5000 WHEN ... THEN 3000 ELSE 0 END)</div>
+                    <div class="explain-text">
+                        <strong>총인센티브</strong> 계산에서는 CASE WHEN을 여러 개 연결했어요.<br><br>
+
+                        <pre class="inline-code">CASE
+    WHEN 도수치료 THEN 5000   -- 도수면 5000
+    WHEN 운동치료 THEN 3000   -- 운동이면 3000
+    ELSE 0                    -- 그 외는 0
+END</pre>
+
+                        <p>각 치료 건마다 해당하는 인센티브를 계산하고, 전부 합산합니다!</p>
+                    </div>
+                </div>
+
+                <div class="line-explain">
+                    <div class="code-line">JOIN fee_items fi ON b.fee_code = fi.fee_code</div>
+                    <div class="explain-text">
+                        <strong>fee_items 테이블</strong>에서 치료 종류 이름을 가져옵니다.<br><br>
+
+                        <div class="why-box">
+                            <h4>❓ 왜 fee_items를 JOIN할까요?</h4>
+                            <p>billings에는 fee_code(수가 코드)만 있어요. 예: "FEE001"</p>
+                            <p>fee_items에 fee_name(수가 이름)이 있습니다. 예: "도수치료"</p>
+                            <p>그래서 "도수치료인지 운동치료인지" 알려면 fee_items를 연결해야 해요.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-example">
+                <h4>📋 실행 결과 예시</h4>
+                <table class="result-table">
+                    <tr><th>치료사</th><th>도수인센티브</th><th>운동인센티브</th><th>총인센티브</th></tr>
+                    <tr><td>박치료</td><td>250,000</td><td>120,000</td><td>370,000</td></tr>
+                    <tr><td>김재활</td><td>400,000</td><td>45,000</td><td>445,000</td></tr>
+                    <tr><td>이물리</td><td>50,000</td><td>210,000</td><td>260,000</td></tr>
+                </table>
+                <p class="result-note">김재활은 도수치료 전문, 이물리는 운동치료 전문인 것을 알 수 있어요!</p>
+            </div>
+
+            <div class="tip">
+                <strong>💡 인센티브 기준 수정하기</strong><br><br>
+                치료실 기준이 바뀌면 숫자만 바꾸면 됩니다!<br>
+                <code>THEN 5000</code> → <code>THEN 7000</code>
+            </div>
+
+            <hr>
+
+            <!-- ===== 쿼리 2: 매출 목표 달성 보너스 ===== -->
+            <h2>2. 매출 목표 달성 보너스</h2>
+
+            <div class="concept-box">
+                <h3>🎯 이 쿼리가 필요한 상황</h3>
+                <p>"월 매출 300만원 넘으면 보너스 10만원" - 목표 달성 여부를 자동으로 판단하고 보너스를 계산합니다.</p>
+            </div>
+
+            <pre><code>SELECT
+    t.name AS 치료사,
+    SUM(b.total_amount) AS 총매출,
+    CASE
+        WHEN SUM(b.total_amount) >= 3000000 THEN 100000
+        ELSE 0
+    END AS 목표달성보너스
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+JOIN billings b ON ts.session_id = b.session_id
+WHERE ts.session_date >= '2024-01-01'
+  AND ts.session_date < '2024-02-01'
+GROUP BY t.therapist_id, t.name;</code></pre>
+
+            <div class="explanation-box">
+                <h3>📖 그룹 집계 후 CASE WHEN</h3>
+
+                <div class="line-explain highlight-line">
+                    <div class="code-line">CASE WHEN SUM(b.total_amount) >= 3000000 THEN 100000 ELSE 0 END</div>
+                    <div class="explain-text">
+                        이전 쿼리와 다른 점이 있어요!<br><br>
+
+                        <strong>이전 (1번 쿼리)</strong>: <code>SUM(CASE WHEN ...)</code><br>
+                        → 각 행마다 CASE 판단 후 합산<br><br>
+
+                        <strong>이번 (2번 쿼리)</strong>: <code>CASE WHEN SUM(...)</code><br>
+                        → 먼저 합산한 후 CASE 판단<br><br>
+
+                        <div class="compare-box">
+                            <div class="compare-item">
+                                <h5>SUM(CASE WHEN ...)</h5>
+                                <p>"각 행을 판단해서 더하기"</p>
+                                <p>도수치료 건수 × 5000</p>
+                            </div>
+                            <div class="compare-item">
+                                <h5>CASE WHEN SUM(...)</h5>
+                                <p>"다 더한 후 판단하기"</p>
+                                <p>총매출이 300만 이상?</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analogy-box">
+                    <h4>🎭 비유로 이해하기</h4>
+                    <p><strong>SUM(CASE WHEN)</strong>: 시험 볼 때마다 맞으면 +10점씩 더하기</p>
+                    <p><strong>CASE WHEN SUM</strong>: 총점이 90점 이상이면 A 등급</p>
+                </div>
+
+                <div class="why-box">
+                    <h4>❓ >= 3000000 vs > 3000000</h4>
+                    <p><code>>=</code>: 3000000 <strong>이상</strong> (3000000 포함)</p>
+                    <p><code>></code>: 3000000 <strong>초과</strong> (3000000 미포함)</p>
+                    <p>보통 "~만원 이상"이면 <code>>=</code>를 사용합니다!</p>
+                </div>
+            </div>
+
+            <div class="result-example">
+                <h4>📋 실행 결과 예시</h4>
+                <table class="result-table">
+                    <tr><th>치료사</th><th>총매출</th><th>목표달성보너스</th></tr>
+                    <tr class="success-row"><td>박치료</td><td>5,080,000</td><td>100,000</td></tr>
+                    <tr class="success-row"><td>김재활</td><td>4,410,000</td><td>100,000</td></tr>
+                    <tr><td>이물리</td><td>2,300,000</td><td>0</td></tr>
+                </table>
+                <p class="result-note">박치료와 김재활은 목표 달성! 이물리는 아쉽게 미달</p>
+            </div>
+
+            <hr>
+
+            <!-- ===== 응용: 단계별 보너스 ===== -->
+            <h2>3. 응용: 단계별 보너스</h2>
+
+            <div class="concept-box">
+                <h3>🎯 이 쿼리가 필요한 상황</h3>
+                <p>더 복잡한 인센티브 체계: "300만 이상 10만원, 500만 이상 20만원, 700만 이상 30만원"</p>
+            </div>
+
+            <pre><code>SELECT
+    t.name AS 치료사,
+    SUM(b.total_amount) AS 총매출,
+    CASE
+        WHEN SUM(b.total_amount) >= 7000000 THEN 300000
+        WHEN SUM(b.total_amount) >= 5000000 THEN 200000
+        WHEN SUM(b.total_amount) >= 3000000 THEN 100000
+        ELSE 0
+    END AS 목표달성보너스,
+    CASE
+        WHEN SUM(b.total_amount) >= 7000000 THEN '🏆 최우수'
+        WHEN SUM(b.total_amount) >= 5000000 THEN '🥇 우수'
+        WHEN SUM(b.total_amount) >= 3000000 THEN '🥈 달성'
+        ELSE '📈 노력중'
+    END AS 등급
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+JOIN billings b ON ts.session_id = b.session_id
+WHERE ts.session_date >= '2024-01-01'
+  AND ts.session_date < '2024-02-01'
+GROUP BY t.therapist_id, t.name
+ORDER BY 총매출 DESC;</code></pre>
+
+            <div class="explanation-box">
+                <h3>📖 CASE WHEN 순서가 중요해요!</h3>
+
+                <div class="warning">
+                    <strong>⚠️ 주의: CASE WHEN은 위에서부터 순서대로 검사합니다!</strong><br><br>
+                    잘못된 순서:
+                    <pre class="inline-code">CASE
+    WHEN 매출 >= 300만 THEN 10만   -- 700만도 여기서 걸림!
+    WHEN 매출 >= 500만 THEN 20만   -- 실행 안 됨
+    WHEN 매출 >= 700만 THEN 30만   -- 실행 안 됨
+END</pre>
+                    <p>700만 매출자도 첫 번째 조건(300만 이상)에서 걸려서 10만원만 받게 됩니다!</p>
+                </div>
+
+                <p><strong>올바른 순서</strong>: 큰 조건부터 먼저!</p>
+                <pre class="inline-code">CASE
+    WHEN 매출 >= 700만 THEN 30만   -- 700만 이상 먼저 체크
+    WHEN 매출 >= 500만 THEN 20만   -- 그 다음 500만
+    WHEN 매출 >= 300만 THEN 10만   -- 마지막으로 300만
+    ELSE 0
+END</pre>
+            </div>
+
+            <div class="result-example">
+                <h4>📋 실행 결과 예시</h4>
+                <table class="result-table">
+                    <tr><th>치료사</th><th>총매출</th><th>목표달성보너스</th><th>등급</th></tr>
+                    <tr><td>박치료</td><td>7,200,000</td><td>300,000</td><td>🏆 최우수</td></tr>
+                    <tr><td>김재활</td><td>5,500,000</td><td>200,000</td><td>🥇 우수</td></tr>
+                    <tr><td>최물리</td><td>3,800,000</td><td>100,000</td><td>🥈 달성</td></tr>
+                    <tr><td>이물리</td><td>2,300,000</td><td>0</td><td>📈 노력중</td></tr>
+                </table>
+            </div>
+
+            <div class="summary-box">
+                <h3>📝 이번 장 핵심 정리</h3>
+                <table class="summary-table">
+                    <tr>
+                        <th>패턴</th>
+                        <th>용도</th>
+                        <th>예시</th>
+                    </tr>
+                    <tr>
+                        <td><strong>SUM(CASE WHEN)</strong></td>
+                        <td>조건별 합계 (각 행 판단)</td>
+                        <td>도수치료 건수 × 5000</td>
+                    </tr>
+                    <tr>
+                        <td><strong>CASE WHEN SUM</strong></td>
+                        <td>합계 후 조건 판단</td>
+                        <td>총매출 300만 이상?</td>
+                    </tr>
+                    <tr>
+                        <td><strong>다중 WHEN</strong></td>
+                        <td>단계별 조건</td>
+                        <td>300만/500만/700만</td>
+                    </tr>
+                </table>
+                <br>
+                <p><strong>🔑 핵심</strong>: CASE WHEN은 순서가 중요! 큰 조건부터 먼저 검사하세요.</p>
+            </div>
+
+            <div class="practice-box">
+                <h3>🏋️ 응용 연습</h3>
+                <p><strong>Q. 치료 종류별 인센티브 + 목표 달성 보너스를 합친 "총 급여"를 계산하려면?</strong></p>
+                <details>
+                    <summary>힌트 보기</summary>
+                    <p>두 CASE WHEN의 결과를 더하면 됩니다!</p>
+                    <pre><code>SELECT
+    t.name,
+    -- 치료별 인센티브
+    SUM(CASE WHEN fi.fee_name = '도수치료' THEN 5000
+             WHEN fi.fee_name = '운동치료' THEN 3000 ELSE 0 END) AS 치료인센티브,
+    -- 목표 달성 보너스
+    CASE WHEN SUM(b.total_amount) >= 3000000 THEN 100000 ELSE 0 END AS 목표보너스,
+    -- 총 급여 (위 두 개 합산)
+    SUM(CASE WHEN fi.fee_name = '도수치료' THEN 5000
+             WHEN fi.fee_name = '운동치료' THEN 3000 ELSE 0 END)
+    + CASE WHEN SUM(b.total_amount) >= 3000000 THEN 100000 ELSE 0 END AS 총급여
+FROM ...</code></pre>
+                </details>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-4.html" class="nav-btn">← 이전</a>
+                <span class="page-num">5 / 12</span>
+                <a href="chapter-6.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

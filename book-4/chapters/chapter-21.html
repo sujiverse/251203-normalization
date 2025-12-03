@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>21장: 편집 → DB 저장 - 물리치료사를 위한 DB 4권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "4"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📕 물리치료사를 위한</h1>
+                <p>웹 앱 만들기 (4권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">편집 → DB 저장</h1>
+
+            <h2>전체 흐름</h2>
+
+            <div class="file-tree">
+1. 셀 편집 감지 (hook)
+      ↓
+2. JavaScript: 변경 데이터 추출
+      ↓
+3. fetch()로 API 호출
+      ↓
+4. Flask: 요청 처리
+      ↓
+5. MySQL: INSERT/UPDATE
+      ↓
+6. 응답 → 화면 업데이트
+            </div>
+
+            <hr>
+
+            <h2>백엔드 API 작성</h2>
+
+            <pre><code># app.py
+
+# 예약 생성/수정
+@app.route('/api/reservations', methods=['POST'])
+def save_reservation():
+    data = request.get_json()
+
+    patient_id = data.get('patient_id')
+    session_date = data.get('session_date')
+    start_time = data.get('start_time')
+    therapist_id = data.get('therapist_id')
+
+    if not all([patient_id, session_date, start_time, therapist_id]):
+        return jsonify({'success': False, 'error': '필수 정보 누락'}), 400
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 기존 예약 확인
+        cursor.execute("""
+            SELECT session_id FROM treatment_sessions
+            WHERE patient_id = %s AND session_date = %s
+        """, (patient_id, session_date))
+
+        existing = cursor.fetchone()
+
+        if existing:
+            # 수정
+            cursor.execute("""
+                UPDATE treatment_sessions
+                SET start_time = %s, therapist_id = %s
+                WHERE session_id = %s
+            """, (start_time, therapist_id, existing['session_id']))
+        else:
+            # 신규 생성
+            cursor.execute("""
+                INSERT INTO treatment_sessions
+                (patient_id, session_date, start_time, therapist_id, status)
+                VALUES (%s, %s, %s, %s, '예약')
+            """, (patient_id, session_date, start_time, therapist_id))
+
+        conn.commit()
+        return jsonify({'success': True})
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        conn.close()
+
+
+# 예약 삭제
+@app.route('/api/reservations', methods=['DELETE'])
+def delete_reservation():
+    data = request.get_json()
+
+    patient_id = data.get('patient_id')
+    session_date = data.get('session_date')
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            DELETE FROM treatment_sessions
+            WHERE patient_id = %s AND session_date = %s
+        """, (patient_id, session_date))
+
+        conn.commit()
+
+        if cursor.rowcount > 0:
+            return jsonify({'success': True, 'message': '삭제 완료'})
+        else:
+            return jsonify({'success': False, 'error': '예약 없음'})
+
+    finally:
+        conn.close()</code></pre>
+
+            <hr>
+
+            <h2>프론트엔드 저장 함수</h2>
+
+            <pre><code>// static/js/sheet.js
+
+async function saveReservation(patientId, date, time, therapistId) {
+    try {
+        const response = await fetch('/api/reservations', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                patient_id: patientId,
+                session_date: date,
+                start_time: time,
+                therapist_id: therapistId
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast('저장되었습니다');
+            return true;
+        } else {
+            showToast('저장 실패: ' + result.error, 'error');
+            return false;
+        }
+    } catch (error) {
+        console.error('저장 오류:', error);
+        showToast('네트워크 오류', 'error');
+        return false;
+    }
+}
+
+
+async function deleteReservation(patientId, date) {
+    try {
+        const response = await fetch('/api/reservations', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                patient_id: patientId,
+                session_date: date
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast('삭제되었습니다');
+            return true;
+        } else {
+            showToast('삭제 실패', 'error');
+            return false;
+        }
+    } catch (error) {
+        console.error('삭제 오류:', error);
+        return false;
+    }
+}</code></pre>
+
+            <hr>
+
+            <h2>토스트 메시지</h2>
+
+            <pre><code>&lt;!-- HTML --&gt;
+&lt;div id="toast" class="toast"&gt;&lt;/div&gt;
+
+/* CSS */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 24px;
+    background: #1e293b;
+    color: white;
+    border-radius: 8px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 10000;
+}
+
+.toast.show {
+    opacity: 1;
+}
+
+.toast.error {
+    background: #dc2626;
+}
+
+// JavaScript
+function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.className = 'toast show' + (type === 'error' ? ' error' : '');
+
+    setTimeout(() => {
+        toast.className = 'toast';
+    }, 3000);
+}</code></pre>
+
+            <hr>
+
+            <h2>셀 편집 시 자동 저장</h2>
+
+            <pre><code>// 셀 업데이트 훅
+function onCellUpdated(row, column, oldValue, newValue) {
+    if (row === 0 || column === 0) return;
+
+    const { patients, dates } = window.sheetData;
+    const patient = patients[row - 1];
+    const date = dates[column - 1];
+
+    if (!patient || !date) return;
+
+    // 값이 비어있으면 삭제
+    if (!newValue || newValue.trim() === '') {
+        deleteReservation(patient.patient_id, date.date);
+        return;
+    }
+
+    // 시간|치료사ID 형식 파싱
+    const [time, therapistId] = newValue.split('|');
+
+    if (time && therapistId) {
+        saveReservation(patient.patient_id, date.date, time, therapistId);
+    } else {
+        showToast('형식 오류: 시간|치료사ID', 'error');
+    }
+}
+
+luckysheet.create({
+    // ...
+    hook: {
+        cellUpdated: onCellUpdated
+    }
+});</code></pre>
+
+            <hr>
+
+            <h2>모달에서 저장</h2>
+
+            <pre><code>// 모달 저장 버튼
+async function saveModal() {
+    const time = document.getElementById('modalTime').value;
+    const therapistId = document.getElementById('modalTherapist').value;
+
+    if (!time || !therapistId) {
+        alert('시간과 치료사를 선택하세요');
+        return;
+    }
+
+    const { patient, date } = currentModalData;
+
+    // API 호출
+    const success = await saveReservation(
+        patient.patient_id,
+        date.date,
+        time,
+        therapistId
+    );
+
+    if (success) {
+        closeModal();
+
+        // 시트 셀 업데이트
+        const row = window.sheetData.patients.indexOf(patient) + 1;
+        const col = window.sheetData.dates.indexOf(date) + 1;
+
+        luckysheet.setCellValue(row, col, {
+            v: `${time}|${therapistId}`,
+            m: time,
+            bg: getTherapistColor(therapistId)
+        });
+    }
+}
+
+// 모달 삭제 버튼
+async function deleteFromModal() {
+    if (!confirm('예약을 삭제하시겠습니까?')) return;
+
+    const { patient, date } = currentModalData;
+
+    const success = await deleteReservation(
+        patient.patient_id,
+        date.date
+    );
+
+    if (success) {
+        closeModal();
+
+        // 셀 비우기
+        const row = window.sheetData.patients.indexOf(patient) + 1;
+        const col = window.sheetData.dates.indexOf(date) + 1;
+
+        luckysheet.setCellValue(row, col, null);
+    }
+}</code></pre>
+
+            <hr>
+
+            <h2>에러 처리</h2>
+
+            <pre><code>async function saveReservation(patientId, date, time, therapistId) {
+    // 로딩 표시
+    showLoading(true);
+
+    try {
+        const response = await fetch('/api/reservations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                patient_id: patientId,
+                session_date: date,
+                start_time: time,
+                therapist_id: therapistId
+            })
+        });
+
+        // HTTP 에러 체크
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast('저장 완료');
+            return true;
+        } else {
+            showToast(result.error || '저장 실패', 'error');
+            return false;
+        }
+
+    } catch (error) {
+        // 네트워크 에러
+        if (error.name === 'TypeError') {
+            showToast('서버 연결 실패', 'error');
+        } else {
+            showToast('오류: ' + error.message, 'error');
+        }
+        return false;
+
+    } finally {
+        showLoading(false);
+    }
+}</code></pre>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li>POST /api/reservations: 예약 생성/수정</li>
+                <li>DELETE /api/reservations: 예약 삭제</li>
+                <li>fetch()로 JSON 데이터 전송</li>
+                <li>토스트 메시지로 결과 표시</li>
+                <li>try-catch로 에러 처리</li>
+            </ul>
+
+            <blockquote>다음 장에서는 여러 사용자가 동시 편집할 때 동기화하는 방법을 배웁니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

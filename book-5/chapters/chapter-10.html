@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>10장: 민감 데이터 암호화 - 물리치료사를 위한 DB 5권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "5"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>🛡️ 5권: 보안 편</h1>
+                <p>DB & 서버 보안</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">민감 데이터 암호화</h1>
+
+            <h2>암호화가 필요한 데이터</h2>
+
+            <pre class="file-tree">힐링손 민감 데이터
+│
+├── 개인정보
+│   ├── 주민등록번호
+│   ├── 휴대폰 번호
+│   └── 주소
+│
+├── 의료정보
+│   ├── 진단 내역
+│   └── 처방 기록
+│
+└── 결제정보
+    ├── 카드번호
+    └── 계좌번호</pre>
+
+            <blockquote>
+                DB가 유출되더라도 암호화된 데이터는 읽을 수 없습니다.
+            </blockquote>
+
+            <hr>
+
+            <h2>암호화 종류</h2>
+
+            <table>
+                <tr>
+                    <th>구분</th>
+                    <th>대칭키 (AES)</th>
+                    <th>비대칭키 (RSA)</th>
+                </tr>
+                <tr>
+                    <td>키</td>
+                    <td>암호화/복호화 같은 키</td>
+                    <td>공개키/개인키 쌍</td>
+                </tr>
+                <tr>
+                    <td>속도</td>
+                    <td>빠름</td>
+                    <td>느림</td>
+                </tr>
+                <tr>
+                    <td>용도</td>
+                    <td>대용량 데이터</td>
+                    <td>작은 데이터, 키 교환</td>
+                </tr>
+            </table>
+
+            <p>DB 칼럼 암호화에는 주로 <strong>AES (대칭키)</strong>를 사용합니다.</p>
+
+            <hr>
+
+            <h2>Python에서 AES 암호화</h2>
+
+            <pre><code>from cryptography.fernet import Fernet
+import base64
+import os
+
+# 키 생성 (한 번만 실행, 안전하게 저장)
+def generate_key():
+    return Fernet.generate_key()
+
+# 환경변수에서 키 로드
+ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY')
+cipher = Fernet(ENCRYPTION_KEY)
+
+def encrypt(plaintext):
+    """문자열 암호화"""
+    if plaintext is None:
+        return None
+    return cipher.encrypt(plaintext.encode()).decode()
+
+def decrypt(ciphertext):
+    """문자열 복호화"""
+    if ciphertext is None:
+        return None
+    return cipher.decrypt(ciphertext.encode()).decode()
+
+# 사용 예시
+phone = "010-1234-5678"
+encrypted_phone = encrypt(phone)
+print(encrypted_phone)  # gAAAAABhX... (알아볼 수 없는 문자열)
+
+decrypted_phone = decrypt(encrypted_phone)
+print(decrypted_phone)  # 010-1234-5678</code></pre>
+
+            <hr>
+
+            <h2>암호화 키 관리</h2>
+
+            <div class="danger">
+                <strong>중요!</strong><br>
+                암호화 키는 절대 코드에 하드코딩하지 마세요!
+            </div>
+
+            <pre><code># ❌ 위험: 코드에 키 하드코딩
+ENCRYPTION_KEY = b'my-secret-key-12345'
+
+# ✅ 안전: 환경변수 사용
+import os
+ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY')
+
+# ✅ 안전: 별도 설정 파일 (권한 제한)
+# /etc/healing-hands/secrets.env
+# chmod 600 secrets.env</code></pre>
+
+            <h3>키 저장 옵션</h3>
+            <pre class="file-tree">키 관리 방법
+│
+├── 환경변수
+│   └── 서버 재시작 시 설정 필요
+│
+├── 비밀 관리 서비스
+│   ├── AWS Secrets Manager
+│   ├── HashiCorp Vault
+│   └── Azure Key Vault
+│
+└── HSM (Hardware Security Module)
+    └── 대기업, 금융권 사용</pre>
+
+            <hr>
+
+            <h2>환자 정보 암호화 저장</h2>
+
+            <pre><code>class PatientService:
+    def create_patient(self, data):
+        """환자 정보 암호화 후 저장"""
+        cursor = self.conn.cursor()
+
+        query = """
+            INSERT INTO patients
+            (patient_id, name, phone_encrypted, address_encrypted)
+            VALUES (%s, %s, %s, %s)
+        """
+
+        cursor.execute(query, (
+            data['patient_id'],
+            data['name'],  # 이름은 검색용으로 평문 저장
+            encrypt(data['phone']),     # 전화번호 암호화
+            encrypt(data['address'])    # 주소 암호화
+        ))
+
+        self.conn.commit()
+
+    def get_patient(self, patient_id):
+        """환자 정보 복호화 후 반환"""
+        cursor = self.conn.cursor(dictionary=True)
+
+        cursor.execute(
+            "SELECT * FROM patients WHERE patient_id = %s",
+            (patient_id,)
+        )
+
+        patient = cursor.fetchone()
+
+        if patient:
+            # 복호화
+            patient['phone'] = decrypt(patient['phone_encrypted'])
+            patient['address'] = decrypt(patient['address_encrypted'])
+            del patient['phone_encrypted']
+            del patient['address_encrypted']
+
+        return patient</code></pre>
+
+            <hr>
+
+            <h2>테이블 설계</h2>
+
+            <pre><code>CREATE TABLE patients (
+    patient_id VARCHAR(10) PRIMARY KEY,
+    name VARCHAR(30) NOT NULL,               -- 검색용 평문
+    name_search VARCHAR(64),                 -- 검색용 해시 (선택)
+    phone_encrypted VARCHAR(255),            -- 암호화된 전화번호
+    address_encrypted TEXT,                  -- 암호화된 주소
+    insurance_code_encrypted VARCHAR(255),   -- 암호화된 보험정보
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);</code></pre>
+
+            <hr>
+
+            <h2>MySQL 내장 암호화 함수</h2>
+
+            <p>MySQL 자체 암호화 함수도 사용할 수 있습니다.</p>
+
+            <pre><code>-- 암호화 (AES)
+INSERT INTO patients (patient_id, phone_encrypted)
+VALUES ('P001', AES_ENCRYPT('010-1234-5678', 'encryption_key'));
+
+-- 복호화
+SELECT patient_id,
+       CAST(AES_DECRYPT(phone_encrypted, 'encryption_key') AS CHAR) as phone
+FROM patients;
+
+-- 참고: 키를 SQL에 직접 넣는 것은 보안상 좋지 않습니다.
+-- 앱 레벨 암호화를 권장합니다.</code></pre>
+
+            <hr>
+
+            <h2>암호화된 데이터 검색</h2>
+
+            <p>암호화된 칼럼은 직접 검색할 수 없습니다. 해결 방법:</p>
+
+            <h3>1. 블라인드 인덱스</h3>
+            <pre><code>import hashlib
+
+def create_search_hash(value):
+    """검색용 해시 생성"""
+    # 솔트 + 값을 해시
+    salted = f"search_salt_{value}"
+    return hashlib.sha256(salted.encode()).hexdigest()
+
+# 저장 시
+phone_hash = create_search_hash("010-1234-5678")
+cursor.execute("""
+    INSERT INTO patients (patient_id, phone_encrypted, phone_hash)
+    VALUES (%s, %s, %s)
+""", (patient_id, encrypt(phone), phone_hash))
+
+# 검색 시
+search_hash = create_search_hash("010-1234-5678")
+cursor.execute("""
+    SELECT * FROM patients WHERE phone_hash = %s
+""", (search_hash,))</code></pre>
+
+            <h3>2. 부분 평문 저장</h3>
+            <pre><code># 전화번호 뒤 4자리만 평문으로 저장 (검색용)
+phone = "010-1234-5678"
+phone_last4 = phone[-4:]  # "5678"
+phone_encrypted = encrypt(phone)
+
+# 검색 시 뒤 4자리로 필터링 후 복호화해서 확인</code></pre>
+
+            <hr>
+
+            <h2>전송 구간 암호화 (TLS)</h2>
+
+            <pre><code># MySQL 연결 시 TLS 사용
+import mysql.connector
+
+conn = mysql.connector.connect(
+    host='db-server.com',
+    user='healing_app',
+    password='password',
+    database='healing_hands',
+    ssl_ca='/path/to/ca-cert.pem',      # CA 인증서
+    ssl_cert='/path/to/client-cert.pem', # 클라이언트 인증서
+    ssl_key='/path/to/client-key.pem'    # 클라이언트 키
+)</code></pre>
+
+            <pre><code># MySQL 서버 설정 (my.cnf)
+[mysqld]
+require_secure_transport = ON
+ssl_ca = /var/lib/mysql/ca.pem
+ssl_cert = /var/lib/mysql/server-cert.pem
+ssl_key = /var/lib/mysql/server-key.pem</code></pre>
+
+            <hr>
+
+            <h2>암호화 체크리스트</h2>
+
+            <table>
+                <tr>
+                    <th>항목</th>
+                    <th>확인</th>
+                </tr>
+                <tr>
+                    <td>민감 칼럼 식별 및 암호화</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>암호화 키 안전하게 보관</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>DB 연결 TLS 사용</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>키 로테이션 계획</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>복호화 권한 제한</td>
+                    <td>☐</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li>민감 데이터는 <strong>암호화</strong>해서 저장</li>
+                <li><strong>AES</strong>가 가장 널리 사용되는 암호화 알고리즘</li>
+                <li>암호화 키는 <strong>코드에 넣지 말고</strong> 별도 관리</li>
+                <li>암호화된 데이터 검색은 <strong>블라인드 인덱스</strong> 활용</li>
+                <li>DB 연결도 <strong>TLS</strong>로 암호화</li>
+            </ul>
+
+            <blockquote>다음 장에서는 WAS 서버 보안 설정을 배웁니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

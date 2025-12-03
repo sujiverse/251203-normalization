@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[4장] 변수의 역할별 분류 - 연구 데이터 설계</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>📊</span> 연구 데이터 설계</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+            <a href="../../book-6/index.html" class="top-nav-link book-6 active">6권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📘 6권: 연구 데이터 설계</h1><p>변수부터 회귀분석까지</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <div class="part-header">1부: 연구와 데이터의 기초</div>
+            <h1 class="title">[4장] 변수의 역할별 분류</h1>
+
+            <div class="intro-box">
+                <p>이 장에서는 연구에서 변수가 맡는 <strong>역할에 따른 분류</strong>를 배웁니다. 독립변수, 종속변수부터 매개변수, 조절변수까지 완전히 이해합니다.</p>
+            </div>
+
+            <hr>
+
+            <h2>1. 독립변수 (Independent Variable)</h2>
+
+            <p>독립변수는 다른 변수에 영향을 미치는 <strong>원인</strong> 또는 <strong>예측자</strong>로 가정되는 변수입니다.</p>
+
+            <div class="concept-box">
+                <h3>정의와 특성</h3>
+                <ul>
+                    <li><strong>다른 이름:</strong> 예측변수(Predictor), 설명변수(Explanatory variable), 처리변수(Treatment)</li>
+                    <li><strong>위치:</strong> 인과 모형에서 화살표의 시작점</li>
+                    <li><strong>표기:</strong> 보통 X로 표기 (X → Y)</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>실험 연구에서의 독립변수</h3>
+                <p>연구자가 의도적으로 <strong>조작(manipulation)</strong>합니다.</p>
+                <ul>
+                    <li>참가자를 조건에 무선 할당</li>
+                    <li>처치의 유무나 종류를 결정</li>
+                    <li>예: 약물 투여 여부, 교육 프로그램 유형</li>
+                </ul>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>participant_id</th><th>treatment</th><th>outcome_score</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>1</td><td>experimental</td><td>85</td></tr>
+                            <tr><td>2</td><td>control</td><td>72</td></tr>
+                            <tr><td>3</td><td>experimental</td><td>88</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="concept-box">
+                <h3>비실험 연구에서의 독립변수</h3>
+                <p>연구자가 조작하지 않고 있는 그대로 <strong>관찰</strong>합니다.</p>
+                <ul>
+                    <li>참가자의 기존 특성을 측정</li>
+                    <li>인과관계 추론에 제한이 있음</li>
+                    <li>예: 성별, 연령, 흡연 여부</li>
+                </ul>
+                <p><strong>주의:</strong> 비실험 연구에서 "독립변수"라는 용어 대신 "예측변수"를 사용하는 것이 더 정확합니다.</p>
+            </div>
+
+            <hr>
+
+            <h2>2. 종속변수 (Dependent Variable)</h2>
+
+            <p>종속변수는 독립변수의 영향을 받는 <strong>결과</strong>로 가정되는 변수입니다.</p>
+
+            <div class="concept-box">
+                <h3>정의와 특성</h3>
+                <ul>
+                    <li><strong>다른 이름:</strong> 결과변수(Outcome), 반응변수(Response), 준거변수(Criterion)</li>
+                    <li><strong>위치:</strong> 인과 모형에서 화살표의 끝점</li>
+                    <li><strong>표기:</strong> 보통 Y로 표기 (X → Y)</li>
+                    <li><strong>핵심:</strong> 연구자가 설명하거나 예측하고자 하는 변수</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>종속변수 선정 기준</h3>
+                <ul>
+                    <li><strong>타당성:</strong> 연구 질문에서 알고자 하는 것을 반영</li>
+                    <li><strong>신뢰성:</strong> 일관되게 측정 가능</li>
+                    <li><strong>민감성:</strong> 독립변수의 변화를 감지할 수 있음</li>
+                    <li><strong>실용성:</strong> 측정이 현실적으로 가능</li>
+                </ul>
+            </div>
+
+            <div class="example-box">
+                <h3>예시: 물리치료 효과 연구</h3>
+                <ul>
+                    <li><strong>독립변수:</strong> 치료 유형 (실험군: 신규 치료 / 대조군: 기존 치료)</li>
+                    <li><strong>종속변수:</strong>
+                        <ul>
+                            <li>통증 강도 (VAS 0-100)</li>
+                            <li>기능 장애 (ODI 0-100%)</li>
+                            <li>삶의 질 (SF-36 점수)</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+
+            <hr>
+
+            <h2>3. 통제변수 (Control Variable)</h2>
+
+            <p>통제변수는 종속변수에 영향을 미칠 수 있어서 그 영향을 <strong>통제</strong>하는 변수입니다.</p>
+
+            <div class="concept-box">
+                <h3>왜 통제하는가?</h3>
+                <p>독립변수와 종속변수의 관계를 더 정확하게 파악하기 위해서입니다.</p>
+                <ul>
+                    <li>제3의 변수가 결과에 영향을 미치면 독립변수의 진정한 효과를 알 수 없음</li>
+                    <li>통제를 통해 "다른 조건이 같을 때" 독립변수의 효과를 분리</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>통제 방법</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>방법</th><th>설명</th><th>예시</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>실험적 통제</td>
+                                <td>무선 할당으로 집단 간 동등성 확보</td>
+                                <td>치료군/대조군에 무작위 배정</td>
+                            </tr>
+                            <tr>
+                                <td>제한/배제</td>
+                                <td>특정 조건의 참가자만 포함</td>
+                                <td>여성만 연구에 포함</td>
+                            </tr>
+                            <tr>
+                                <td>짝짓기</td>
+                                <td>집단 간 통제변수를 동일하게</td>
+                                <td>나이, 성별을 매칭</td>
+                            </tr>
+                            <tr>
+                                <td>통계적 통제</td>
+                                <td>분석 시 공변량으로 포함</td>
+                                <td>ANCOVA, 회귀분석에서 통제</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="sql-box">
+                <p><strong>DB 설계:</strong> 통제변수 저장</p>
+                <pre>CREATE TABLE participants (
+    id INTEGER PRIMARY KEY,
+    condition TEXT,        -- 독립변수: 실험 조건
+
+    -- 통제변수들 (공변량)
+    age INTEGER,
+    gender TEXT,
+    bmi REAL,
+    baseline_pain REAL,    -- 사전 통증 점수
+
+    -- 종속변수
+    post_pain REAL         -- 사후 통증 점수
+);
+
+-- 통계적 통제를 위한 쿼리 준비
+-- ANCOVA나 회귀분석에서 age, gender, bmi, baseline_pain을 공변량으로 사용</pre>
+            </div>
+
+            <hr>
+
+            <h2>4. 매개변수 (Mediator)</h2>
+
+            <p>매개변수는 독립변수가 종속변수에 영향을 미치는 <strong>경로상의 중간 변수</strong>입니다.</p>
+
+            <div class="concept-box">
+                <h3>매개효과의 구조</h3>
+                <p class="formula"><strong>X → M → Y</strong></p>
+                <ul>
+                    <li><strong>X (독립변수):</strong> 원인</li>
+                    <li><strong>M (매개변수):</strong> 메커니즘, "어떻게"</li>
+                    <li><strong>Y (종속변수):</strong> 결과</li>
+                </ul>
+                <p>매개변수는 <strong>"왜" 효과가 발생하는지</strong>의 메커니즘을 설명합니다.</p>
+            </div>
+
+            <div class="example-box">
+                <h3>예시: 운동 → 자기효능감 → 우울 감소</h3>
+                <ul>
+                    <li><strong>X (운동):</strong> 운동 프로그램 참여</li>
+                    <li><strong>M (자기효능감):</strong> 자신감 향상</li>
+                    <li><strong>Y (우울):</strong> 우울 증상 감소</li>
+                </ul>
+                <p>운동이 우울을 줄이는 이유 중 하나가 자기효능감 향상일 수 있습니다.</p>
+            </div>
+
+            <div class="concept-box">
+                <h3>완전 매개 vs 부분 매개</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>유형</th><th>설명</th><th>경로</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>완전 매개<br>(Full Mediation)</td>
+                                <td>X→Y 직접 효과가 없어짐<br>모든 효과가 M을 통해 전달</td>
+                                <td>X → M → Y<br>(X → Y = 0)</td>
+                            </tr>
+                            <tr>
+                                <td>부분 매개<br>(Partial Mediation)</td>
+                                <td>X→Y 직접 효과도 존재<br>일부 효과가 M을 통해 전달</td>
+                                <td>X → M → Y<br>X → Y (감소하지만 존재)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="concept-box">
+                <h3>매개효과 검증 조건 (Baron & Kenny, 1986)</h3>
+                <ol>
+                    <li>X → Y 관계가 유의해야 함 (총효과)</li>
+                    <li>X → M 관계가 유의해야 함</li>
+                    <li>M → Y 관계가 유의해야 함 (X 통제 상태에서)</li>
+                    <li>M을 투입하면 X → Y 관계가 감소 또는 사라짐</li>
+                </ol>
+                <p><strong>참고:</strong> 현대적 방법은 부트스트래핑(Bootstrapping)으로 간접효과의 유의성을 직접 검정합니다.</p>
+            </div>
+
+            <hr>
+
+            <h2>5. 조절변수 (Moderator)</h2>
+
+            <p>조절변수는 독립변수와 종속변수 간 관계의 <strong>강도나 방향</strong>을 변화시키는 변수입니다.</p>
+
+            <div class="concept-box">
+                <h3>조절효과의 구조</h3>
+                <p>X → Y 관계가 W의 값에 따라 달라집니다.</p>
+                <ul>
+                    <li><strong>X (독립변수):</strong> 원인</li>
+                    <li><strong>W (조절변수):</strong> "언제", "누구에게"</li>
+                    <li><strong>Y (종속변수):</strong> 결과</li>
+                    <li><strong>X × W (상호작용):</strong> 조절효과를 나타내는 항</li>
+                </ul>
+                <p>조절변수는 <strong>"언제" 또는 "누구에게"</strong> 효과가 다른지를 설명합니다.</p>
+            </div>
+
+            <div class="example-box">
+                <h3>예시: 치료 효과의 성별 차이</h3>
+                <ul>
+                    <li><strong>X (치료):</strong> 신규 치료 vs 기존 치료</li>
+                    <li><strong>W (성별):</strong> 남성 vs 여성</li>
+                    <li><strong>Y (통증):</strong> 통증 감소</li>
+                </ul>
+                <p>치료 효과가 남성에서는 크고 여성에서는 작다면, 성별이 조절변수입니다.</p>
+            </div>
+
+            <div class="concept-box">
+                <h3>조절효과 검증: 상호작용 항</h3>
+                <p>회귀분석에서 X × W 상호작용 항이 유의한지 검정합니다.</p>
+                <div class="sql-box">
+                    <pre>Y = b₀ + b₁X + b₂W + b₃(X × W) + ε
+
+-- b₃가 유의하면 조절효과가 있음</pre>
+                </div>
+                <p><strong>해석:</strong> X가 Y에 미치는 효과가 W의 수준에 따라 달라짐</p>
+            </div>
+
+            <div class="comparison-table">
+                <h3>매개변수 vs 조절변수</h3>
+                <table>
+                    <thead>
+                        <tr><th>구분</th><th>매개변수 (Mediator)</th><th>조절변수 (Moderator)</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>질문</td><td>"어떻게" 효과가 발생하나?</td><td>"언제/누구에게" 효과가 다른가?</td></tr>
+                        <tr><td>경로</td><td>X → M → Y (순차적)</td><td>X × W → Y (상호작용)</td></tr>
+                        <tr><td>인과 구조</td><td>M은 X와 Y 사이에 위치</td><td>W는 X-Y 관계를 수정</td></tr>
+                        <tr><td>분석 방법</td><td>매개분석, 부트스트래핑</td><td>상호작용 분석, 조건부 효과</td></tr>
+                        <tr><td>예시</td><td>운동 → 자기효능감 → 우울</td><td>치료 × 성별 → 통증</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <hr>
+
+            <h2>6. 혼입변수 (Confounding Variable)</h2>
+
+            <p>혼입변수(교란변수)는 독립변수와 종속변수 <strong>모두에 영향</strong>을 미쳐 허위 관계를 만드는 변수입니다.</p>
+
+            <div class="concept-box">
+                <h3>혼입의 구조</h3>
+                <pre>
+    C (혼입변수)
+   ↙     ↘
+  X   →   Y  (허위 관계)
+                </pre>
+                <ul>
+                    <li><strong>C → X:</strong> 혼입변수가 독립변수에 영향</li>
+                    <li><strong>C → Y:</strong> 혼입변수가 종속변수에 영향</li>
+                    <li><strong>X → Y:</strong> 실제로는 인과관계가 없거나 약할 수 있음</li>
+                </ul>
+            </div>
+
+            <div class="example-box">
+                <h3>예시: 아이스크림 판매와 익사 사고</h3>
+                <ul>
+                    <li><strong>X (아이스크림 판매량):</strong> 여름에 증가</li>
+                    <li><strong>Y (익사 사고):</strong> 여름에 증가</li>
+                    <li><strong>C (기온/계절):</strong> 둘 다에 영향</li>
+                </ul>
+                <p>아이스크림 판매와 익사 사고는 상관이 있지만, 아이스크림이 익사를 유발하지 않습니다. 기온(계절)이 혼입변수입니다.</p>
+            </div>
+
+            <div class="concept-box">
+                <h3>혼입변수의 조건</h3>
+                <ol>
+                    <li>독립변수(X)와 관련이 있어야 함</li>
+                    <li>종속변수(Y)에 영향을 미쳐야 함</li>
+                    <li>독립변수(X)의 결과가 아니어야 함 (X → C가 아님)</li>
+                </ol>
+            </div>
+
+            <div class="concept-box">
+                <h3>혼입 통제 방법</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>방법</th><th>설명</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>무선 할당</td>
+                                <td>실험 연구에서 가장 강력한 방법. 알려진/알려지지 않은 혼입변수 모두 통제</td>
+                            </tr>
+                            <tr>
+                                <td>제한</td>
+                                <td>혼입변수의 특정 수준만 포함 (예: 남성만)</td>
+                            </tr>
+                            <tr>
+                                <td>짝짓기</td>
+                                <td>비교 집단 간 혼입변수를 동일하게 맞춤</td>
+                            </tr>
+                            <tr>
+                                <td>층화</td>
+                                <td>혼입변수 수준별로 나누어 분석</td>
+                            </tr>
+                            <tr>
+                                <td>통계적 조정</td>
+                                <td>회귀분석에서 공변량으로 포함</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="warning-box">
+                <h3>통제변수 vs 혼입변수</h3>
+                <ul>
+                    <li><strong>혼입변수:</strong> 통제하지 않으면 결과를 왜곡 (문제)</li>
+                    <li><strong>통제변수:</strong> 분석에서 그 영향을 제거하고자 하는 변수 (해결책)</li>
+                </ul>
+                <p>혼입변수는 <strong>통제해야 할 대상</strong>이고, 통제변수는 <strong>통제하는 행위</strong>를 반영합니다. 혼입변수를 통제변수로 포함하여 분석합니다.</p>
+            </div>
+
+            <hr>
+
+            <h2>7. 변수 역할 관계도</h2>
+
+            <p>연구 모형에서 각 변수의 역할을 한눈에 정리합니다.</p>
+
+            <div class="concept-box">
+                <h3>전체 관계도</h3>
+                <pre>
+                    혼입변수 (C)
+                   ↙         ↘
+  통제변수 (CV)    독립변수 (X) ──────→ 종속변수 (Y)
+       ↘              ↓              ↑
+        ──────→  매개변수 (M) ────→
+                      ↑
+                 조절변수 (W)
+                (X × W 상호작용)
+                </pre>
+                <ul>
+                    <li><strong>X → Y:</strong> 직접 효과</li>
+                    <li><strong>X → M → Y:</strong> 간접 효과 (매개)</li>
+                    <li><strong>X × W → Y:</strong> 조절 효과</li>
+                    <li><strong>C → X, C → Y:</strong> 혼입 (통제 필요)</li>
+                    <li><strong>CV → Y:</strong> 통제변수의 영향 (분석에서 제거)</li>
+                </ul>
+            </div>
+
+            <div class="example-box">
+                <h3>예시: 운동 프로그램 연구 모형</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>역할</th><th>변수</th><th>설명</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>독립변수 (X)</td><td>운동 프로그램</td><td>실험군: 운동 / 대조군: 미참여</td></tr>
+                            <tr><td>종속변수 (Y)</td><td>우울 점수</td><td>PHQ-9로 측정</td></tr>
+                            <tr><td>매개변수 (M)</td><td>자기효능감</td><td>운동이 자기효능감을 높여 우울 감소</td></tr>
+                            <tr><td>조절변수 (W)</td><td>사회적 지지</td><td>지지가 높으면 운동 효과 증가</td></tr>
+                            <tr><td>통제변수 (CV)</td><td>나이, 성별, 기저 우울</td><td>집단 간 차이 통제</td></tr>
+                            <tr><td>잠재적 혼입 (C)</td><td>기저 신체 활동 수준</td><td>운동 참여와 우울 모두에 영향</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="sql-box">
+                <p><strong>DB 설계:</strong> 변수 역할 메타데이터</p>
+                <pre>CREATE TABLE study_variables (
+    id INTEGER PRIMARY KEY,
+    variable_name TEXT NOT NULL,
+    variable_label TEXT,
+    role TEXT CHECK(role IN (
+        'independent', 'dependent', 'control',
+        'mediator', 'moderator', 'confound'
+    )),
+    data_type TEXT,
+    measurement_instrument TEXT
+);
+
+INSERT INTO study_variables VALUES
+(1, 'exercise_group', '운동 프로그램', 'independent', 'categorical', NULL),
+(2, 'depression_phq9', '우울 점수', 'dependent', 'continuous', 'PHQ-9'),
+(3, 'self_efficacy', '자기효능감', 'mediator', 'continuous', 'GSE'),
+(4, 'social_support', '사회적 지지', 'moderator', 'continuous', 'MSPSS'),
+(5, 'age', '나이', 'control', 'continuous', NULL),
+(6, 'baseline_activity', '기저 활동량', 'confound', 'continuous', 'IPAQ');</pre>
+            </div>
+
+            <div class="summary-box">
+                <h3>📝 이 장의 핵심 정리</h3>
+                <table>
+                    <thead>
+                        <tr><th>변수 역할</th><th>정의</th><th>질문</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>독립변수 (X)</td><td>원인으로 가정되는 변수</td><td>"무엇이 영향을 미치나?"</td></tr>
+                        <tr><td>종속변수 (Y)</td><td>결과로 측정되는 변수</td><td>"무엇을 예측/설명하나?"</td></tr>
+                        <tr><td>통제변수 (CV)</td><td>영향을 통제하는 변수</td><td>"무엇을 일정하게 유지할까?"</td></tr>
+                        <tr><td>매개변수 (M)</td><td>X→Y 경로의 중간 변수</td><td>"어떻게 효과가 발생하나?"</td></tr>
+                        <tr><td>조절변수 (W)</td><td>X→Y 관계를 변화시키는 변수</td><td>"언제/누구에게 효과가 다른가?"</td></tr>
+                        <tr><td>혼입변수 (C)</td><td>X와 Y 모두에 영향, 허위 관계 유발</td><td>"제3의 변수가 결과를 왜곡하나?"</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-3.html" class="nav-btn">← 이전</a>
+                <span class="page-num">4 / 20</span>
+                <a href="chapter-5.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

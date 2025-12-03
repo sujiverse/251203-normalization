@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[10장] 횡단 연구 - 연구 데이터 설계</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>📊</span> 연구 데이터 설계</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+            <a href="../../book-6/index.html" class="top-nav-link book-6 active">6권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📘 6권: 연구 데이터 설계</h1><p>변수부터 회귀분석까지</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <div class="part-header">3부: 연구 형태별 DB 설계</div>
+            <h1 class="title">[10장] 횡단 연구 (Cross-sectional)</h1>
+
+            <div class="intro-box">
+                <p>이 장에서는 <strong>한 시점에서 데이터를 수집하는 횡단 연구</strong>의 DB 설계를 배웁니다. 가장 기본적이면서 가장 흔한 연구 형태로, 데이터베이스 구조도 가장 단순합니다.</p>
+            </div>
+
+            <hr>
+
+            <h2>1. 횡단 연구란?</h2>
+
+            <div class="concept-box">
+                <h3>📖 횡단 연구의 정의</h3>
+                <p><strong>횡단 연구(Cross-sectional Study)</strong>는 특정 시점에서 모든 변수를 동시에 측정하는 연구 설계입니다.</p>
+                <ul>
+                    <li><strong>시간</strong>: 한 시점 (스냅샷)</li>
+                    <li><strong>측정 횟수</strong>: 참가자당 1회</li>
+                    <li><strong>목적</strong>: 변수 간 관련성 탐색, 현황 파악</li>
+                </ul>
+            </div>
+
+            <h3>1.1 횡단 연구의 장점</h3>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>장점</th>
+                            <th>설명</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>빠른 수행</td>
+                            <td>추적관찰 없이 한 번에 데이터 수집 완료</td>
+                        </tr>
+                        <tr>
+                            <td>비용 효율적</td>
+                            <td>장기 추적에 따른 비용 없음</td>
+                        </tr>
+                        <tr>
+                            <td>탈락 없음</td>
+                            <td>추적관찰 중 탈락(dropout) 문제 없음</td>
+                        </tr>
+                        <tr>
+                            <td>여러 결과 동시 조사</td>
+                            <td>다양한 변수를 한꺼번에 측정 가능</td>
+                        </tr>
+                        <tr>
+                            <td>유병률 추정</td>
+                            <td>특정 시점의 질병/상태 유병률 파악</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>1.2 횡단 연구의 단점</h3>
+
+            <div class="warning-box">
+                <h3>⚠️ 횡단 연구의 한계</h3>
+                <ul>
+                    <li><strong>인과관계 추론 불가</strong>: 원인과 결과의 시간적 선후관계를 알 수 없음</li>
+                    <li><strong>역인과성 문제</strong>: A가 B를 유발했는지, B가 A를 유발했는지 구분 불가</li>
+                    <li><strong>발생률 추정 불가</strong>: 새로운 케이스의 발생(incidence)을 측정할 수 없음</li>
+                    <li><strong>생존자 편향</strong>: 연구 시점에 생존한 사람만 포함됨</li>
+                </ul>
+            </div>
+
+            <h3>1.3 횡단 연구에 적합한 연구 질문</h3>
+
+            <div class="example-box">
+                <h3>📝 적합한 연구 질문 예시</h3>
+                <table>
+                    <thead>
+                        <tr><th>유형</th><th>연구 질문</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>유병률 조사</td>
+                            <td>만성 요통 환자 중 우울증 동반 비율은?</td>
+                        </tr>
+                        <tr>
+                            <td>상관관계 탐색</td>
+                            <td>악력과 낙상 두려움 사이에 관련이 있는가?</td>
+                        </tr>
+                        <tr>
+                            <td>집단 비교</td>
+                            <td>남성과 여성의 균형 능력에 차이가 있는가?</td>
+                        </tr>
+                        <tr>
+                            <td>요인 탐색</td>
+                            <td>노인 낙상과 관련된 요인은 무엇인가?</td>
+                        </tr>
+                        <tr>
+                            <td>척도 타당화</td>
+                            <td>K-WOMAC의 구성타당도는 적절한가?</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <hr>
+
+            <h2>2. 1회 측정 구조</h2>
+
+            <p>횡단 연구의 데이터 구조는 매우 단순합니다: <strong>1명의 참가자 = 1개의 행</strong></p>
+
+            <h3>2.1 기본 구조: Wide Format</h3>
+
+            <div class="concept-box">
+                <h3>📖 Wide Format 구조</h3>
+                <p>횡단 연구는 본질적으로 Wide format입니다:</p>
+                <ul>
+                    <li>각 행: 한 명의 참가자</li>
+                    <li>각 열: 하나의 변수</li>
+                    <li>셀: 해당 참가자의 해당 변수 값</li>
+                </ul>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>participant_id</th>
+                            <th>age</th>
+                            <th>gender</th>
+                            <th>height_cm</th>
+                            <th>weight_kg</th>
+                            <th>pain_vas</th>
+                            <th>function_score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>P001</td><td>65</td><td>F</td><td>158.5</td><td>62.3</td><td>45</td><td>72</td></tr>
+                        <tr><td>P002</td><td>72</td><td>M</td><td>170.2</td><td>75.8</td><td>30</td><td>85</td></tr>
+                        <tr><td>P003</td><td>58</td><td>F</td><td>162.0</td><td>58.5</td><td>60</td><td>65</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>2.2 단일 테이블 vs 다중 테이블</h3>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>상황</th>
+                            <th>설계</th>
+                            <th>이유</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>변수 10개 미만, 간단한 설문</td>
+                            <td>단일 테이블</td>
+                            <td>간단함, JOIN 없이 조회</td>
+                        </tr>
+                        <tr>
+                            <td>변수 매우 많음 (50개 이상)</td>
+                            <td>영역별 테이블 분리</td>
+                            <td>관리 용이, 모듈화</td>
+                        </tr>
+                        <tr>
+                            <td>여러 척도 사용</td>
+                            <td>척도별 테이블 분리</td>
+                            <td>각 척도 독립 관리</td>
+                        </tr>
+                        <tr>
+                            <td>신체측정 + 설문</td>
+                            <td>테이블 분리 고려</td>
+                            <td>측정 유형별 구분</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <hr>
+
+            <h2>3. 참가자-응답 테이블 설계</h2>
+
+            <h3>3.1 단일 테이블 설계</h3>
+
+            <div class="sql-box">
+                <h3>💻 단일 테이블 (간단한 횡단 연구)</h3>
+                <pre><code>-- 모든 데이터를 하나의 테이블에 저장
+CREATE TABLE survey_data (
+    participant_id TEXT PRIMARY KEY,
+    collection_date DATE NOT NULL,
+
+    -- 인구통계학적 정보
+    age INTEGER,
+    gender TEXT CHECK (gender IN ('M', 'F')),
+    education TEXT,
+    occupation TEXT,
+
+    -- 신체 측정
+    height_cm DECIMAL(5,1),
+    weight_kg DECIMAL(5,2),
+    bmi DECIMAL(4,2),
+
+    -- 임상 측정
+    pain_vas INTEGER CHECK (pain_vas BETWEEN 0 AND 100),
+    rom_flexion INTEGER,
+    grip_strength_kg DECIMAL(4,1),
+
+    -- 설문 점수
+    phq9_total INTEGER,
+    gad7_total INTEGER,
+    function_score INTEGER,
+
+    -- 메타 정보
+    assessor_id TEXT,
+    notes TEXT
+);</code></pre>
+            </div>
+
+            <h3>3.2 다중 테이블 설계 (정규화)</h3>
+
+            <div class="sql-box">
+                <h3>💻 다중 테이블 (복잡한 횡단 연구)</h3>
+                <pre><code>-- 1. 참가자 기본 정보
+CREATE TABLE participants (
+    participant_id TEXT PRIMARY KEY,
+    enrollment_date DATE NOT NULL,
+    age INTEGER,
+    gender TEXT CHECK (gender IN ('M', 'F')),
+    education TEXT,
+    occupation TEXT
+);
+
+-- 2. 신체 측정 데이터
+CREATE TABLE physical_measurements (
+    measurement_id INTEGER PRIMARY KEY,
+    participant_id TEXT NOT NULL,
+    measurement_date DATE NOT NULL,
+    height_cm DECIMAL(5,1),
+    weight_kg DECIMAL(5,2),
+    waist_cm DECIMAL(5,1),
+    hip_cm DECIMAL(5,1),
+    FOREIGN KEY (participant_id) REFERENCES participants(participant_id)
+);
+
+-- 3. 임상 평가 데이터
+CREATE TABLE clinical_assessments (
+    assessment_id INTEGER PRIMARY KEY,
+    participant_id TEXT NOT NULL,
+    assessment_date DATE NOT NULL,
+    assessor_id TEXT,
+    pain_vas INTEGER CHECK (pain_vas BETWEEN 0 AND 100),
+    rom_flexion INTEGER,
+    rom_extension INTEGER,
+    grip_right_kg DECIMAL(4,1),
+    grip_left_kg DECIMAL(4,1),
+    tug_time_sec DECIMAL(5,2),
+    FOREIGN KEY (participant_id) REFERENCES participants(participant_id)
+);
+
+-- 4. 설문 응답 (원점수)
+CREATE TABLE questionnaire_responses (
+    response_id INTEGER PRIMARY KEY,
+    participant_id TEXT NOT NULL,
+    questionnaire_name TEXT NOT NULL,  -- 'PHQ9', 'GAD7', 'SF36' 등
+    response_date DATE NOT NULL,
+    -- 개별 문항 점수 (JSON 또는 별도 테이블)
+    item_scores TEXT,  -- JSON: '[0, 1, 2, 1, 0, 1, 2, 1, 1]'
+    total_score INTEGER,
+    FOREIGN KEY (participant_id) REFERENCES participants(participant_id)
+);
+
+-- VIEW로 통합 조회
+CREATE VIEW survey_complete AS
+SELECT
+    p.participant_id,
+    p.age,
+    p.gender,
+    pm.height_cm,
+    pm.weight_kg,
+    ROUND(pm.weight_kg / (pm.height_cm/100.0 * pm.height_cm/100.0), 1) AS bmi,
+    ca.pain_vas,
+    ca.tug_time_sec,
+    phq.total_score AS phq9_total,
+    gad.total_score AS gad7_total
+FROM participants p
+LEFT JOIN physical_measurements pm ON p.participant_id = pm.participant_id
+LEFT JOIN clinical_assessments ca ON p.participant_id = ca.participant_id
+LEFT JOIN questionnaire_responses phq ON p.participant_id = phq.participant_id
+    AND phq.questionnaire_name = 'PHQ9'
+LEFT JOIN questionnaire_responses gad ON p.participant_id = gad.participant_id
+    AND gad.questionnaire_name = 'GAD7';</code></pre>
+            </div>
+
+            <h3>3.3 정규화 여부 결정 기준</h3>
+
+            <div class="concept-box">
+                <h3>📖 언제 테이블을 분리하는가?</h3>
+                <table>
+                    <thead>
+                        <tr><th>분리 권장</th><th>단일 테이블 유지</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>변수가 50개 이상</td>
+                            <td>변수가 20개 미만</td>
+                        </tr>
+                        <tr>
+                            <td>다른 시점에 측정될 가능성</td>
+                            <td>모든 변수를 동시에 측정</td>
+                        </tr>
+                        <tr>
+                            <td>여러 평가자가 다른 부분 담당</td>
+                            <td>한 사람이 모든 데이터 수집</td>
+                        </tr>
+                        <tr>
+                            <td>표준 척도 여러 개 사용</td>
+                            <td>자체 개발 설문지 하나</td>
+                        </tr>
+                        <tr>
+                            <td>추후 종단 연구로 확장 가능성</td>
+                            <td>일회성 조사</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <hr>
+
+            <h2>4. 비교 집단 설계</h2>
+
+            <p>횡단 연구에서 집단 간 비교는 매우 흔한 분석입니다.</p>
+
+            <h3>4.1 집단 변수 추가</h3>
+
+            <div class="sql-box">
+                <h3>💻 집단 변수가 있는 테이블 설계</h3>
+                <pre><code>CREATE TABLE comparison_study (
+    participant_id TEXT PRIMARY KEY,
+    collection_date DATE NOT NULL,
+
+    -- 집단 변수
+    group_code TEXT NOT NULL CHECK (group_code IN ('control', 'patient')),
+    -- 또는 더 상세하게
+    diagnosis TEXT,  -- 'healthy', 'LBP', 'OA_knee', 'stroke' 등
+    disease_severity TEXT,  -- 'mild', 'moderate', 'severe'
+
+    -- 측정 변수들
+    age INTEGER,
+    gender TEXT,
+    pain_vas INTEGER,
+    function_score INTEGER,
+    balance_score DECIMAL(4,2)
+);
+
+-- 집단별 기술통계
+SELECT
+    group_code,
+    COUNT(*) AS n,
+    AVG(age) AS mean_age,
+    AVG(pain_vas) AS mean_pain,
+    AVG(function_score) AS mean_function
+FROM comparison_study
+GROUP BY group_code;</code></pre>
+            </div>
+
+            <h3>4.2 다집단 비교</h3>
+
+            <div class="sql-box">
+                <h3>💻 3개 이상 집단 비교</h3>
+                <pre><code>CREATE TABLE multi_group_study (
+    participant_id TEXT PRIMARY KEY,
+
+    -- 다중 집단 변수 (3개 이상)
+    age_group TEXT CHECK (age_group IN ('young', 'middle', 'old')),
+    exercise_level TEXT CHECK (exercise_level IN ('sedentary', 'moderate', 'active')),
+    pain_category TEXT CHECK (pain_category IN ('none', 'mild', 'moderate', 'severe')),
+
+    -- 결과 변수
+    balance_score DECIMAL(4,2),
+    strength_kg DECIMAL(4,1),
+    endurance_sec INTEGER
+);
+
+-- 각 집단별 통계
+SELECT
+    age_group,
+    exercise_level,
+    COUNT(*) AS n,
+    ROUND(AVG(balance_score), 2) AS mean_balance,
+    ROUND(AVG(strength_kg), 1) AS mean_strength
+FROM multi_group_study
+GROUP BY age_group, exercise_level
+ORDER BY age_group, exercise_level;</code></pre>
+            </div>
+
+            <h3>4.3 매칭된 비교 집단</h3>
+
+            <div class="sql-box">
+                <h3>💻 매칭 정보 저장</h3>
+                <pre><code>-- 환자-대조군 매칭 연구
+CREATE TABLE matched_pairs (
+    pair_id INTEGER PRIMARY KEY,
+    patient_id TEXT NOT NULL,
+    control_id TEXT NOT NULL,
+    match_criteria TEXT,  -- 'age±5, gender, bmi±2'
+    FOREIGN KEY (patient_id) REFERENCES participants(participant_id),
+    FOREIGN KEY (control_id) REFERENCES participants(participant_id)
+);
+
+-- 매칭 품질 확인
+SELECT
+    mp.pair_id,
+    p_patient.age AS patient_age,
+    p_control.age AS control_age,
+    ABS(p_patient.age - p_control.age) AS age_diff,
+    p_patient.gender AS patient_gender,
+    p_control.gender AS control_gender
+FROM matched_pairs mp
+JOIN participants p_patient ON mp.patient_id = p_patient.participant_id
+JOIN participants p_control ON mp.control_id = p_control.participant_id;</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>5. 횡단 연구의 한계</h2>
+
+            <h3>5.1 인과관계 추론의 한계</h3>
+
+            <div class="example-box">
+                <h3>📝 인과관계 해석의 문제</h3>
+                <p><strong>연구 결과</strong>: 통증이 높은 사람이 우울 점수도 높다 (r = 0.45)</p>
+                <p><strong>가능한 해석</strong>:</p>
+                <ol>
+                    <li>통증 → 우울: 만성 통증이 우울을 유발</li>
+                    <li>우울 → 통증: 우울이 통증 지각을 높임</li>
+                    <li>양방향: 서로 영향을 주고받음</li>
+                    <li>제3변수: 다른 요인(예: 수면장애)이 둘 다 유발</li>
+                </ol>
+                <p><strong>횡단 연구에서는 이 중 어떤 해석이 맞는지 알 수 없습니다.</strong></p>
+            </div>
+
+            <div class="warning-box">
+                <h3>⚠️ 횡단 연구 결과 기술 시 주의</h3>
+                <table>
+                    <thead>
+                        <tr><th>잘못된 기술</th><th>올바른 기술</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>"운동이 통증을 감소시켰다"</td>
+                            <td>"운동량이 많은 사람의 통증이 낮았다"</td>
+                        </tr>
+                        <tr>
+                            <td>"우울이 기능 저하를 유발했다"</td>
+                            <td>"우울과 기능은 음의 상관을 보였다"</td>
+                        </tr>
+                        <tr>
+                            <td>"낙상이 두려움을 일으켰다"</td>
+                            <td>"낙상 경험과 낙상 두려움은 관련이 있었다"</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>5.2 종단 연구와의 비교</h3>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>특성</th>
+                            <th>횡단 연구</th>
+                            <th>종단 연구</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>측정 시점</td>
+                            <td>1회</td>
+                            <td>2회 이상</td>
+                        </tr>
+                        <tr>
+                            <td>인과관계</td>
+                            <td>추론 불가</td>
+                            <td>추론 가능 (제한적)</td>
+                        </tr>
+                        <tr>
+                            <td>시간/비용</td>
+                            <td>적음</td>
+                            <td>많음</td>
+                        </tr>
+                        <tr>
+                            <td>탈락 문제</td>
+                            <td>없음</td>
+                            <td>있음</td>
+                        </tr>
+                        <tr>
+                            <td>유병률</td>
+                            <td>측정 가능</td>
+                            <td>측정 가능</td>
+                        </tr>
+                        <tr>
+                            <td>발생률</td>
+                            <td>측정 불가</td>
+                            <td>측정 가능</td>
+                        </tr>
+                        <tr>
+                            <td>변화 측정</td>
+                            <td>불가</td>
+                            <td>가능</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <hr>
+
+            <h2>6. 횡단 연구 DB 설계 예시</h2>
+
+            <h3>6.1 완전한 스키마 예시</h3>
+
+            <div class="sql-box">
+                <h3>💻 노인 낙상 요인 횡단 연구</h3>
+                <pre><code>-- 연구 제목: 지역사회 노인의 낙상 관련 요인
+-- 설계: 횡단 연구, 비교 집단 (낙상군 vs 비낙상군)
+
+-- 1. 참가자 기본 정보
+CREATE TABLE fall_study_participants (
+    participant_id TEXT PRIMARY KEY,
+    enrollment_date DATE NOT NULL,
+
+    -- 인구통계
+    birth_date DATE,
+    gender TEXT CHECK (gender IN ('M', 'F')),
+    education_years INTEGER,
+    living_alone INTEGER CHECK (living_alone IN (0, 1)),
+
+    -- 집단 분류
+    fall_history INTEGER CHECK (fall_history IN (0, 1)),  -- 지난 1년 낙상 여부
+    fall_count INTEGER DEFAULT 0,  -- 낙상 횟수
+
+    -- 의료 정보
+    comorbidity_count INTEGER,
+    medication_count INTEGER,
+    vision_impairment INTEGER CHECK (vision_impairment IN (0, 1)),
+    hearing_impairment INTEGER CHECK (hearing_impairment IN (0, 1))
+);
+
+-- 2. 신체 기능 측정
+CREATE TABLE fall_study_physical (
+    measurement_id INTEGER PRIMARY KEY,
+    participant_id TEXT NOT NULL,
+    measurement_date DATE NOT NULL,
+    assessor_id TEXT,
+
+    -- 신체 계측
+    height_cm DECIMAL(5,1),
+    weight_kg DECIMAL(5,2),
+
+    -- 근력
+    grip_strength_kg DECIMAL(4,1),
+    chair_stand_count INTEGER,  -- 30초 의자 앉았다 일어서기
+
+    -- 균형
+    tandem_stance_sec DECIMAL(5,2),  -- 일렬 서기 시간
+    single_leg_stance_sec DECIMAL(5,2),  -- 한발 서기 시간
+
+    -- 이동성
+    tug_time_sec DECIMAL(5,2),  -- Timed Up and Go
+    gait_speed_ms DECIMAL(4,2),  -- 보행 속도 (m/s)
+
+    FOREIGN KEY (participant_id) REFERENCES fall_study_participants(participant_id)
+);
+
+-- 3. 설문 응답
+CREATE TABLE fall_study_questionnaires (
+    response_id INTEGER PRIMARY KEY,
+    participant_id TEXT NOT NULL,
+    response_date DATE NOT NULL,
+
+    -- 낙상 효능감 (FES-I, 16문항, 16-64점)
+    fes_i_total INTEGER CHECK (fes_i_total BETWEEN 16 AND 64),
+
+    -- 우울 (GDS-15, 15문항, 0-15점)
+    gds_15_total INTEGER CHECK (gds_15_total BETWEEN 0 AND 15),
+
+    -- 인지 (MMSE, 0-30점)
+    mmse_total INTEGER CHECK (mmse_total BETWEEN 0 AND 30),
+
+    -- 일상생활활동 (K-ADL, K-IADL)
+    adl_score INTEGER,
+    iadl_score INTEGER,
+
+    FOREIGN KEY (participant_id) REFERENCES fall_study_participants(participant_id)
+);
+
+-- 4. 통합 VIEW
+CREATE VIEW fall_study_complete AS
+SELECT
+    p.participant_id,
+    -- 나이 계산
+    (strftime('%Y', 'now') - strftime('%Y', p.birth_date)) -
+    (strftime('%m-%d', 'now') < strftime('%m-%d', p.birth_date)) AS age,
+    p.gender,
+    p.fall_history,
+    p.fall_count,
+    p.comorbidity_count,
+    p.medication_count,
+
+    -- 신체 측정
+    ph.height_cm,
+    ph.weight_kg,
+    ROUND(ph.weight_kg / (ph.height_cm/100.0 * ph.height_cm/100.0), 1) AS bmi,
+    ph.grip_strength_kg,
+    ph.tug_time_sec,
+    ph.gait_speed_ms,
+
+    -- 설문
+    q.fes_i_total,
+    q.gds_15_total,
+    q.mmse_total
+
+FROM fall_study_participants p
+LEFT JOIN fall_study_physical ph ON p.participant_id = ph.participant_id
+LEFT JOIN fall_study_questionnaires q ON p.participant_id = q.participant_id;</code></pre>
+            </div>
+
+            <h3>6.2 분석용 쿼리 예시</h3>
+
+            <div class="sql-box">
+                <h3>💻 분석 쿼리</h3>
+                <pre><code>-- 1. 집단별 기술통계
+SELECT
+    CASE fall_history WHEN 1 THEN '낙상군' ELSE '비낙상군' END AS group_name,
+    COUNT(*) AS n,
+    ROUND(AVG(age), 1) AS mean_age,
+    SUM(CASE WHEN gender = 'F' THEN 1 ELSE 0 END) AS female_count,
+    ROUND(AVG(grip_strength_kg), 1) AS mean_grip,
+    ROUND(AVG(tug_time_sec), 2) AS mean_tug,
+    ROUND(AVG(fes_i_total), 1) AS mean_fes
+FROM fall_study_complete
+GROUP BY fall_history;
+
+-- 2. 낙상 관련 요인 탐색 (이분형 결과변수 준비)
+SELECT
+    participant_id,
+    fall_history,
+    age,
+    CASE WHEN gender = 'F' THEN 1 ELSE 0 END AS female,
+    grip_strength_kg,
+    tug_time_sec,
+    fes_i_total,
+    gds_15_total,
+    comorbidity_count
+FROM fall_study_complete
+WHERE grip_strength_kg IS NOT NULL
+  AND tug_time_sec IS NOT NULL;
+
+-- 3. 위험 요인별 낙상률
+SELECT
+    CASE
+        WHEN tug_time_sec > 12 THEN 'TUG > 12초'
+        ELSE 'TUG ≤ 12초'
+    END AS tug_category,
+    COUNT(*) AS total,
+    SUM(fall_history) AS fall_count,
+    ROUND(100.0 * SUM(fall_history) / COUNT(*), 1) AS fall_rate_pct
+FROM fall_study_complete
+WHERE tug_time_sec IS NOT NULL
+GROUP BY CASE WHEN tug_time_sec > 12 THEN 'TUG > 12초' ELSE 'TUG ≤ 12초' END;
+
+-- 4. 상관관계 분석 준비 (연속 변수 추출)
+SELECT
+    age,
+    grip_strength_kg,
+    tug_time_sec,
+    gait_speed_ms,
+    fes_i_total,
+    gds_15_total
+FROM fall_study_complete
+WHERE grip_strength_kg IS NOT NULL;</code></pre>
+            </div>
+
+            <div class="summary-box">
+                <h3>📝 이 장의 핵심 정리</h3>
+                <ol>
+                    <li><strong>횡단 연구</strong>: 한 시점에서 모든 변수를 측정하는 연구 설계</li>
+                    <li><strong>데이터 구조</strong>: 1명 = 1행의 Wide format이 기본</li>
+                    <li><strong>테이블 설계</strong>: 단순한 연구는 단일 테이블, 복잡한 연구는 분리</li>
+                    <li><strong>집단 비교</strong>: group 변수로 집단 구분, 매칭 정보는 별도 테이블</li>
+                    <li><strong>한계</strong>: 인과관계 추론 불가, "관련이 있다"로 기술</li>
+                    <li><strong>활용</strong>: 유병률 조사, 요인 탐색, 척도 타당화에 적합</li>
+                </ol>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-9.html" class="nav-btn">← 이전</a>
+                <span class="page-num">10 / 20</span>
+                <a href="chapter-11.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

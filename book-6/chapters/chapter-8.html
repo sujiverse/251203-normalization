@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[8장] 특수 변수 처리 - 연구 데이터 설계</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>📊</span> 연구 데이터 설계</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+            <a href="../../book-6/index.html" class="top-nav-link book-6 active">6권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📘 6권: 연구 데이터 설계</h1><p>변수부터 회귀분석까지</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <div class="part-header">2부: 변수 유형과 저장 원칙</div>
+            <h1 class="title">[8장] 특수 변수 처리</h1>
+
+            <div class="intro-box">
+                <p>이 장에서는 <strong>날짜, 결측치, 이상치, 텍스트</strong> 등 특수한 형태의 변수를 어떻게 처리하는지 배웁니다. 이들은 일반적인 수치형, 범주형 변수와는 다른 처리 방식이 필요합니다.</p>
+            </div>
+
+            <hr>
+
+            <h2>1. 날짜와 시간 변수</h2>
+
+            <p>날짜와 시간은 연구에서 필수적인 변수입니다. 입원일, 수술일, 측정일, 추적관찰 기간 등 다양한 곳에서 사용됩니다.</p>
+
+            <h3>1.1 SQL 날짜/시간 데이터 타입</h3>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>타입</th>
+                            <th>저장 형식</th>
+                            <th>예시</th>
+                            <th>용도</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>DATE</td>
+                            <td>YYYY-MM-DD</td>
+                            <td>2024-03-15</td>
+                            <td>생년월일, 수술일, 입원일</td>
+                        </tr>
+                        <tr>
+                            <td>TIME</td>
+                            <td>HH:MM:SS</td>
+                            <td>14:30:00</td>
+                            <td>치료 시작 시간, 측정 시간</td>
+                        </tr>
+                        <tr>
+                            <td>DATETIME</td>
+                            <td>YYYY-MM-DD HH:MM:SS</td>
+                            <td>2024-03-15 14:30:00</td>
+                            <td>정확한 시점 기록</td>
+                        </tr>
+                        <tr>
+                            <td>TIMESTAMP</td>
+                            <td>YYYY-MM-DD HH:MM:SS</td>
+                            <td>2024-03-15 14:30:00</td>
+                            <td>자동 기록 (생성/수정 시간)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="concept-box">
+                <h3>📖 ISO 8601 표준</h3>
+                <p>날짜 형식의 국제 표준입니다. 데이터 호환성을 위해 이 형식을 사용해야 합니다.</p>
+                <ul>
+                    <li><strong>날짜</strong>: YYYY-MM-DD (2024-03-15)</li>
+                    <li><strong>시간</strong>: HH:MM:SS (14:30:00)</li>
+                    <li><strong>날짜+시간</strong>: YYYY-MM-DDTHH:MM:SS (2024-03-15T14:30:00)</li>
+                </ul>
+                <p><strong>피해야 할 형식</strong>: 03/15/2024, 15-Mar-24, 2024년 3월 15일</p>
+            </div>
+
+            <div class="sql-box">
+                <h3>💻 날짜 저장 테이블 설계</h3>
+                <pre><code>CREATE TABLE patient_timeline (
+    event_id INTEGER PRIMARY KEY,
+    patient_id INTEGER NOT NULL,
+
+    -- 날짜 정보
+    birth_date DATE NOT NULL,
+    admission_date DATE,
+    surgery_date DATE,
+    discharge_date DATE,
+
+    -- 시간까지 필요한 경우
+    surgery_start_time DATETIME,
+    surgery_end_time DATETIME,
+
+    -- 자동 기록 (SQLite는 DEFAULT로 구현)
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (patient_id) REFERENCES patients(patient_id)
+);</code></pre>
+            </div>
+
+            <h3>1.2 날짜 계산</h3>
+
+            <div class="sql-box">
+                <h3>💻 날짜 계산 SQL</h3>
+                <pre><code>-- 나이 계산 (연도 차이)
+SELECT
+    patient_id,
+    birth_date,
+    -- SQLite
+    (strftime('%Y', 'now') - strftime('%Y', birth_date)) -
+    (strftime('%m-%d', 'now') < strftime('%m-%d', birth_date)) AS age
+
+FROM patients;
+
+-- 입원 기간 계산 (일 수)
+SELECT
+    patient_id,
+    admission_date,
+    discharge_date,
+    -- SQLite
+    julianday(discharge_date) - julianday(admission_date) AS hospital_days
+FROM patient_timeline;
+
+-- 수술 후 경과일
+SELECT
+    patient_id,
+    surgery_date,
+    measurement_date,
+    julianday(measurement_date) - julianday(surgery_date) AS days_after_surgery
+FROM measurements m
+JOIN patient_timeline pt ON m.patient_id = pt.patient_id;
+
+-- 특정 기간 내 데이터 필터링
+SELECT * FROM measurements
+WHERE measurement_date BETWEEN '2024-01-01' AND '2024-12-31';
+
+-- 최근 30일 이내 데이터
+SELECT * FROM measurements
+WHERE measurement_date >= date('now', '-30 days');</code></pre>
+            </div>
+
+            <div class="warning-box">
+                <h3>⚠️ 날짜 저장 시 주의사항</h3>
+                <ul>
+                    <li><strong>텍스트로 저장하지 않기</strong>: '2024년 3월'처럼 저장하면 계산 불가</li>
+                    <li><strong>연도 4자리 사용</strong>: 24가 아닌 2024로 저장</li>
+                    <li><strong>NULL 허용</strong>: 아직 발생하지 않은 이벤트(퇴원일 등)는 NULL</li>
+                    <li><strong>논리적 순서 확인</strong>: 입원일 < 수술일 < 퇴원일</li>
+                </ul>
+            </div>
+
+            <hr>
+
+            <h2>2. 결측치의 3가지 유형</h2>
+
+            <p>결측치(Missing Value)는 데이터가 없는 것을 의미합니다. 결측의 <strong>발생 원인</strong>에 따라 세 가지로 분류됩니다.</p>
+
+            <h3>2.1 MCAR (Missing Completely At Random)</h3>
+
+            <div class="concept-box">
+                <h3>📖 완전 무작위 결측</h3>
+                <p><strong>정의</strong>: 결측 발생이 어떤 변수와도 관련 없이 순수하게 무작위로 발생</p>
+                <p><strong>예시</strong>:</p>
+                <ul>
+                    <li>혈액 샘플이 실험실 이동 중 파손</li>
+                    <li>설문지 일부가 분실</li>
+                    <li>데이터 입력 시 우연히 누락</li>
+                </ul>
+                <p><strong>특징</strong>: 결측이 있는 데이터와 없는 데이터의 특성이 동일</p>
+                <p><strong>처리</strong>: 단순 삭제해도 편향이 발생하지 않음</p>
+            </div>
+
+            <h3>2.2 MAR (Missing At Random)</h3>
+
+            <div class="concept-box">
+                <h3>📖 무작위 결측</h3>
+                <p><strong>정의</strong>: 결측 발생이 <strong>관측된 다른 변수</strong>와 관련 있지만, 결측 값 자체와는 무관</p>
+                <p><strong>예시</strong>:</p>
+                <ul>
+                    <li>남성이 여성보다 우울증 설문 응답을 더 많이 거부 (성별과 관련)</li>
+                    <li>고령 환자가 인지기능 검사를 더 자주 중단 (나이와 관련)</li>
+                    <li>특정 병원에서만 특정 검사를 시행하지 않음 (병원과 관련)</li>
+                </ul>
+                <p><strong>특징</strong>: 관측된 변수를 통제하면 결측이 무작위가 됨</p>
+                <p><strong>처리</strong>: 관련 변수를 활용한 대체(imputation)가 효과적</p>
+            </div>
+
+            <h3>2.3 MNAR (Missing Not At Random)</h3>
+
+            <div class="concept-box">
+                <h3>📖 비무작위 결측</h3>
+                <p><strong>정의</strong>: 결측 발생이 <strong>결측 값 자체</strong>와 관련</p>
+                <p><strong>예시</strong>:</p>
+                <ul>
+                    <li>소득이 매우 높거나 낮은 사람이 소득 질문에 응답하지 않음</li>
+                    <li>우울증이 심한 환자가 우울증 설문을 완료하지 못함</li>
+                    <li>통증이 심한 환자가 측정을 거부</li>
+                    <li>상태가 악화된 환자가 추적관찰에서 탈락</li>
+                </ul>
+                <p><strong>특징</strong>: 결측 자체가 정보를 담고 있음</p>
+                <p><strong>처리</strong>: 가장 다루기 어려움. 민감도 분석 필요</p>
+            </div>
+
+            <h3>2.4 결측 유형 진단</h3>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>방법</th>
+                            <th>설명</th>
+                            <th>해석</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Little's MCAR Test</td>
+                            <td>카이제곱 검정 기반</td>
+                            <td>p > 0.05면 MCAR 가정 지지</td>
+                        </tr>
+                        <tr>
+                            <td>결측 패턴 분석</td>
+                            <td>어떤 변수들이 함께 결측되는지</td>
+                            <td>패턴이 있으면 MAR 또는 MNAR</td>
+                        </tr>
+                        <tr>
+                            <td>결측 지시 변수 분석</td>
+                            <td>결측 여부와 다른 변수의 관계</td>
+                            <td>관계 있으면 MAR 가능성</td>
+                        </tr>
+                        <tr>
+                            <td>도메인 지식</td>
+                            <td>결측 발생 원인 추론</td>
+                            <td>MNAR 판단에 필수</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="sql-box">
+                <h3>💻 결측 현황 파악 SQL</h3>
+                <pre><code>-- 각 변수별 결측 수와 비율
+SELECT
+    COUNT(*) AS total_rows,
+    SUM(CASE WHEN height_cm IS NULL THEN 1 ELSE 0 END) AS height_missing,
+    ROUND(100.0 * SUM(CASE WHEN height_cm IS NULL THEN 1 ELSE 0 END) / COUNT(*), 1)
+        AS height_missing_pct,
+    SUM(CASE WHEN weight_kg IS NULL THEN 1 ELSE 0 END) AS weight_missing,
+    SUM(CASE WHEN grip_strength IS NULL THEN 1 ELSE 0 END) AS grip_missing
+FROM measurements;
+
+-- 결측 지시 변수와 다른 변수의 관계 분석
+SELECT
+    gender,
+    COUNT(*) AS total,
+    SUM(CASE WHEN depression_score IS NULL THEN 1 ELSE 0 END) AS depression_missing,
+    ROUND(100.0 * SUM(CASE WHEN depression_score IS NULL THEN 1 ELSE 0 END) /
+        COUNT(*), 1) AS missing_pct
+FROM patients
+GROUP BY gender;
+-- 결과: 남성의 결측 비율이 높으면 MAR 의심</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>3. 결측치 처리 방법</h2>
+
+            <h3>3.1 삭제 방법 (Deletion)</h3>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>방법</th>
+                            <th>설명</th>
+                            <th>장점</th>
+                            <th>단점</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Listwise Deletion<br>(Complete Case Analysis)</td>
+                            <td>결측이 있는 행 전체 삭제</td>
+                            <td>간단함, MCAR이면 편향 없음</td>
+                            <td>표본 크기 감소, MAR/MNAR이면 편향</td>
+                        </tr>
+                        <tr>
+                            <td>Pairwise Deletion<br>(Available Case Analysis)</td>
+                            <td>분석에 필요한 변수만 있으면 사용</td>
+                            <td>데이터 활용 극대화</td>
+                            <td>분석마다 표본 크기 다름, 비일관성</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="sql-box">
+                <h3>💻 결측 삭제 SQL</h3>
+                <pre><code>-- Listwise: 모든 변수가 있는 행만 선택
+SELECT * FROM measurements
+WHERE height_cm IS NOT NULL
+  AND weight_kg IS NOT NULL
+  AND grip_strength IS NOT NULL;
+
+-- Pairwise: 각 분석에 필요한 변수만 확인
+-- 키-체중 상관분석용
+SELECT height_cm, weight_kg FROM measurements
+WHERE height_cm IS NOT NULL AND weight_kg IS NOT NULL;
+
+-- 악력-보행속도 상관분석용 (다른 표본 크기)
+SELECT grip_strength, gait_speed FROM measurements
+WHERE grip_strength IS NOT NULL AND gait_speed IS NOT NULL;</code></pre>
+            </div>
+
+            <h3>3.2 단일 대체 방법 (Single Imputation)</h3>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>방법</th>
+                            <th>적용 대상</th>
+                            <th>장점</th>
+                            <th>단점</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>평균 대체</td>
+                            <td>연속형 변수</td>
+                            <td>간단함</td>
+                            <td>분산 축소, 상관관계 왜곡</td>
+                        </tr>
+                        <tr>
+                            <td>중앙값 대체</td>
+                            <td>왜곡된 분포의 연속형</td>
+                            <td>이상치에 강건</td>
+                            <td>분산 축소</td>
+                        </tr>
+                        <tr>
+                            <td>최빈값 대체</td>
+                            <td>범주형 변수</td>
+                            <td>간단함</td>
+                            <td>범주 비율 왜곡</td>
+                        </tr>
+                        <tr>
+                            <td>LOCF (Last Observation Carried Forward)</td>
+                            <td>종단 데이터</td>
+                            <td>간단함</td>
+                            <td>시간 효과 무시</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="sql-box">
+                <h3>💻 단일 대체 SQL</h3>
+                <pre><code>-- 평균 대체
+UPDATE measurements
+SET grip_strength = (SELECT AVG(grip_strength) FROM measurements
+                     WHERE grip_strength IS NOT NULL)
+WHERE grip_strength IS NULL;
+
+-- 중앙값 대체 (SQLite)
+WITH ordered AS (
+    SELECT grip_strength,
+           ROW_NUMBER() OVER (ORDER BY grip_strength) AS rn,
+           COUNT(*) OVER () AS cnt
+    FROM measurements WHERE grip_strength IS NOT NULL
+)
+UPDATE measurements
+SET grip_strength = (
+    SELECT AVG(grip_strength) FROM ordered
+    WHERE rn IN ((cnt + 1) / 2, (cnt + 2) / 2)
+)
+WHERE grip_strength IS NULL;
+
+-- 그룹별 평균 대체 (더 정확함)
+UPDATE measurements m
+SET grip_strength = (
+    SELECT AVG(grip_strength)
+    FROM measurements m2
+    JOIN patients p ON m2.patient_id = p.patient_id
+    WHERE p.gender = (SELECT gender FROM patients WHERE patient_id = m.patient_id)
+      AND grip_strength IS NOT NULL
+)
+WHERE grip_strength IS NULL;
+
+-- LOCF: 이전 측정값으로 대체
+UPDATE measurements m
+SET grip_strength = (
+    SELECT grip_strength
+    FROM measurements m2
+    WHERE m2.patient_id = m.patient_id
+      AND m2.measurement_date < m.measurement_date
+      AND m2.grip_strength IS NOT NULL
+    ORDER BY m2.measurement_date DESC
+    LIMIT 1
+)
+WHERE grip_strength IS NULL;</code></pre>
+            </div>
+
+            <h3>3.3 다중 대체 (Multiple Imputation)</h3>
+
+            <div class="concept-box">
+                <h3>📖 다중 대체의 원리</h3>
+                <p>결측값을 하나의 값으로 대체하는 대신, <strong>여러 개의 그럴듯한 값</strong>을 생성하여 불확실성을 반영합니다.</p>
+                <ol>
+                    <li><strong>대체(Imputation)</strong>: 결측값을 m번(보통 5~20회) 다른 값으로 대체 → m개의 완전한 데이터셋 생성</li>
+                    <li><strong>분석(Analysis)</strong>: 각 데이터셋에서 동일한 분석 수행 → m개의 결과</li>
+                    <li><strong>통합(Pooling)</strong>: m개 결과를 Rubin's rule로 통합 → 최종 추정치와 표준오차</li>
+                </ol>
+                <p><strong>장점</strong>: 대체의 불확실성을 표준오차에 반영, MAR 가정 하에서 편향 없음</p>
+                <p><strong>구현</strong>: R의 mice 패키지, Python의 fancyimpute, SPSS의 Multiple Imputation</p>
+            </div>
+
+            <div class="warning-box">
+                <h3>⚠️ 결측 처리 방법 선택 가이드</h3>
+                <table>
+                    <thead>
+                        <tr><th>결측 비율</th><th>결측 유형</th><th>권장 방법</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>< 5%</td><td>MCAR</td><td>Listwise 삭제 가능</td></tr>
+                        <tr><td>5~20%</td><td>MAR</td><td>다중 대체 권장</td></tr>
+                        <tr><td>> 20%</td><td>MAR/MNAR</td><td>다중 대체 + 민감도 분석</td></tr>
+                        <tr><td>-</td><td>MNAR 확실</td><td>민감도 분석, 패턴 혼합 모델</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <hr>
+
+            <h2>4. 이상치 탐지와 처리</h2>
+
+            <h3>4.1 이상치란?</h3>
+
+            <div class="concept-box">
+                <h3>📖 이상치(Outlier)의 정의</h3>
+                <p>다른 관측값들과 현저하게 다른 값. 이상치는 두 가지 원인으로 발생합니다:</p>
+                <ul>
+                    <li><strong>오류</strong>: 측정 오류, 입력 오류, 장비 오작동
+                        <br>예: 키 1720cm (1720mm를 잘못 입력)</li>
+                    <li><strong>실제 극단값</strong>: 드물지만 진짜로 존재하는 값
+                        <br>예: 올림픽 선수의 체력 측정값</li>
+                </ul>
+                <p><strong>중요</strong>: 이상치를 무조건 제거하면 안 됩니다. 원인을 파악해야 합니다.</p>
+            </div>
+
+            <h3>4.2 이상치 탐지 방법</h3>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>방법</th>
+                            <th>기준</th>
+                            <th>장점</th>
+                            <th>단점</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>IQR 방법</td>
+                            <td>Q1 - 1.5×IQR 미만<br>Q3 + 1.5×IQR 초과</td>
+                            <td>분포 가정 없음, 강건함</td>
+                            <td>왜곡된 분포에서 민감</td>
+                        </tr>
+                        <tr>
+                            <td>Z-점수</td>
+                            <td>|Z| > 3 (또는 2.5)</td>
+                            <td>간단함, 해석 쉬움</td>
+                            <td>정규분포 가정 필요</td>
+                        </tr>
+                        <tr>
+                            <td>시각적 방법</td>
+                            <td>박스플롯, 산점도</td>
+                            <td>직관적, 패턴 파악</td>
+                            <td>주관적 판단</td>
+                        </tr>
+                        <tr>
+                            <td>도메인 기준</td>
+                            <td>물리적/의학적 가능 범위</td>
+                            <td>가장 신뢰할 수 있음</td>
+                            <td>전문 지식 필요</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="sql-box">
+                <h3>💻 이상치 탐지 SQL</h3>
+                <pre><code>-- IQR 방법으로 이상치 탐지
+WITH quartiles AS (
+    SELECT
+        -- Q1, Q3 계산 (근사)
+        (SELECT grip_strength FROM measurements
+         WHERE grip_strength IS NOT NULL
+         ORDER BY grip_strength
+         LIMIT 1 OFFSET (SELECT COUNT(*) FROM measurements
+                         WHERE grip_strength IS NOT NULL) / 4) AS Q1,
+        (SELECT grip_strength FROM measurements
+         WHERE grip_strength IS NOT NULL
+         ORDER BY grip_strength
+         LIMIT 1 OFFSET (SELECT COUNT(*) FROM measurements
+                         WHERE grip_strength IS NOT NULL) * 3 / 4) AS Q3
+),
+iqr_calc AS (
+    SELECT Q1, Q3, (Q3 - Q1) AS IQR,
+           Q1 - 1.5 * (Q3 - Q1) AS lower_bound,
+           Q3 + 1.5 * (Q3 - Q1) AS upper_bound
+    FROM quartiles
+)
+SELECT m.*, 'outlier' AS status
+FROM measurements m, iqr_calc
+WHERE m.grip_strength < lower_bound OR m.grip_strength > upper_bound;
+
+-- Z-점수로 이상치 탐지
+WITH stats AS (
+    SELECT AVG(grip_strength) AS mean_val,
+           -- 표본 표준편차
+           SQRT(SUM((grip_strength - (SELECT AVG(grip_strength) FROM measurements))
+                * (grip_strength - (SELECT AVG(grip_strength) FROM measurements)))
+                / (COUNT(*) - 1)) AS sd_val
+    FROM measurements WHERE grip_strength IS NOT NULL
+)
+SELECT m.*,
+       ABS(m.grip_strength - stats.mean_val) / stats.sd_val AS z_score
+FROM measurements m, stats
+WHERE ABS(m.grip_strength - stats.mean_val) / stats.sd_val > 3;
+
+-- 도메인 기준 (물리적 범위)
+SELECT * FROM measurements
+WHERE height_cm < 50 OR height_cm > 250  -- 신장
+   OR weight_kg < 20 OR weight_kg > 300  -- 체중
+   OR grip_strength < 0 OR grip_strength > 100;  -- 악력</code></pre>
+            </div>
+
+            <h3>4.3 이상치 처리 방법</h3>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>방법</th>
+                            <th>설명</th>
+                            <th>적용 상황</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>수정</td>
+                            <td>원본 확인 후 올바른 값으로 교정</td>
+                            <td>입력 오류가 명확할 때</td>
+                        </tr>
+                        <tr>
+                            <td>제거</td>
+                            <td>분석에서 제외</td>
+                            <td>측정 오류가 확실할 때</td>
+                        </tr>
+                        <tr>
+                            <td>윈저화(Winsorization)</td>
+                            <td>극단값을 특정 백분위로 대체</td>
+                            <td>실제 극단값이지만 영향 줄이고 싶을 때</td>
+                        </tr>
+                        <tr>
+                            <td>변환</td>
+                            <td>로그/제곱근 변환으로 영향 감소</td>
+                            <td>왜곡된 분포일 때</td>
+                        </tr>
+                        <tr>
+                            <td>강건 통계량 사용</td>
+                            <td>중앙값, MAD, 절사평균 사용</td>
+                            <td>이상치가 많을 때</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="sql-box">
+                <h3>💻 이상치 처리 SQL</h3>
+                <pre><code>-- 윈저화: 5%~95% 범위로 제한
+WITH percentiles AS (
+    SELECT
+        (SELECT grip_strength FROM measurements WHERE grip_strength IS NOT NULL
+         ORDER BY grip_strength LIMIT 1
+         OFFSET (SELECT COUNT(*) FROM measurements WHERE grip_strength IS NOT NULL) * 5 / 100) AS p5,
+        (SELECT grip_strength FROM measurements WHERE grip_strength IS NOT NULL
+         ORDER BY grip_strength LIMIT 1
+         OFFSET (SELECT COUNT(*) FROM measurements WHERE grip_strength IS NOT NULL) * 95 / 100) AS p95
+)
+UPDATE measurements
+SET grip_strength = CASE
+    WHEN grip_strength < (SELECT p5 FROM percentiles) THEN (SELECT p5 FROM percentiles)
+    WHEN grip_strength > (SELECT p95 FROM percentiles) THEN (SELECT p95 FROM percentiles)
+    ELSE grip_strength
+END;
+
+-- 이상치 플래그 컬럼 추가 (삭제 대신)
+ALTER TABLE measurements ADD COLUMN is_outlier INTEGER DEFAULT 0;
+UPDATE measurements SET is_outlier = 1
+WHERE grip_strength < 0 OR grip_strength > 100;
+
+-- 분석 시 이상치 제외
+SELECT AVG(grip_strength) AS mean_grip
+FROM measurements
+WHERE is_outlier = 0;</code></pre>
+            </div>
+
+            <div class="warning-box">
+                <h3>⚠️ 이상치 처리 원칙</h3>
+                <ol>
+                    <li><strong>원인 먼저 파악</strong>: 오류인지 실제 값인지 구분</li>
+                    <li><strong>문서화</strong>: 몇 개의 이상치를 어떻게 처리했는지 기록</li>
+                    <li><strong>민감도 분석</strong>: 이상치 포함/제외 결과를 비교</li>
+                    <li><strong>원본 보존</strong>: 처리 전 원본 데이터 백업</li>
+                </ol>
+            </div>
+
+            <hr>
+
+            <h2>5. 텍스트 변수</h2>
+
+            <p>개방형 질문 응답, 메모, 진단명 등 텍스트 형태의 데이터도 연구에서 수집됩니다.</p>
+
+            <h3>5.1 텍스트 저장 원칙</h3>
+
+            <div class="sql-box">
+                <h3>💻 텍스트 변수 테이블 설계</h3>
+                <pre><code>CREATE TABLE patient_notes (
+    note_id INTEGER PRIMARY KEY,
+    patient_id INTEGER NOT NULL,
+    note_date DATE NOT NULL,
+
+    -- 짧은 텍스트 (제한된 길이)
+    diagnosis_text VARCHAR(500),
+    treatment_note VARCHAR(1000),
+
+    -- 긴 텍스트 (제한 없음)
+    clinical_observation TEXT,
+    patient_feedback TEXT,
+
+    -- 분류 가능한 텍스트는 코드와 함께 저장
+    pain_location_text VARCHAR(200),
+    pain_location_code VARCHAR(20),  -- 'shoulder', 'knee', 'back' 등
+
+    FOREIGN KEY (patient_id) REFERENCES patients(patient_id)
+);</code></pre>
+            </div>
+
+            <h3>5.2 텍스트 정제</h3>
+
+            <div class="sql-box">
+                <h3>💻 텍스트 정제 SQL</h3>
+                <pre><code>-- 앞뒤 공백 제거
+UPDATE patient_notes
+SET diagnosis_text = TRIM(diagnosis_text);
+
+-- 연속 공백을 하나로
+UPDATE patient_notes
+SET diagnosis_text = REPLACE(REPLACE(REPLACE(diagnosis_text,
+    '  ', ' '), '  ', ' '), '  ', ' ');
+
+-- 대소문자 통일 (소문자로)
+UPDATE patient_notes
+SET pain_location_code = LOWER(pain_location_code);
+
+-- 특정 패턴 찾기
+SELECT * FROM patient_notes
+WHERE clinical_observation LIKE '%fall%'
+   OR clinical_observation LIKE '%낙상%';
+
+-- 길이 확인
+SELECT
+    patient_id,
+    LENGTH(clinical_observation) AS note_length
+FROM patient_notes
+ORDER BY note_length DESC;</code></pre>
+            </div>
+
+            <h3>5.3 텍스트의 범주화</h3>
+
+            <div class="example-box">
+                <h3>📝 텍스트를 범주로 변환</h3>
+                <pre><code>-- 개방형 응답을 범주로 코딩
+UPDATE patient_notes
+SET pain_location_code = CASE
+    WHEN pain_location_text LIKE '%어깨%' OR pain_location_text LIKE '%shoulder%'
+        THEN 'shoulder'
+    WHEN pain_location_text LIKE '%무릎%' OR pain_location_text LIKE '%knee%'
+        THEN 'knee'
+    WHEN pain_location_text LIKE '%허리%' OR pain_location_text LIKE '%back%'
+        THEN 'lower_back'
+    WHEN pain_location_text LIKE '%목%' OR pain_location_text LIKE '%neck%'
+        THEN 'neck'
+    ELSE 'other'
+END;</code></pre>
+                <p><strong>주의</strong>: 자동 범주화는 오류가 있을 수 있으므로 수동 검토 필요</p>
+            </div>
+
+            <hr>
+
+            <h2>6. 파일 경로 저장</h2>
+
+            <p>영상 파일(X-ray, MRI), 동영상, 문서 등 외부 파일을 데이터베이스와 연결해야 할 때가 있습니다.</p>
+
+            <h3>6.1 파일 경로 저장 방법</h3>
+
+            <div class="sql-box">
+                <h3>💻 파일 경로 테이블 설계</h3>
+                <pre><code>CREATE TABLE patient_files (
+    file_id INTEGER PRIMARY KEY,
+    patient_id INTEGER NOT NULL,
+    file_date DATE NOT NULL,
+
+    -- 파일 정보
+    file_type VARCHAR(50) NOT NULL,  -- 'xray', 'mri', 'video', 'document'
+    file_name VARCHAR(255) NOT NULL,
+
+    -- 상대 경로 권장 (프로젝트 폴더 기준)
+    file_path VARCHAR(500) NOT NULL,
+    -- 예: 'images/xray/P001_20240315_xray.jpg'
+
+    -- 메타데이터
+    file_size_bytes INTEGER,
+    description TEXT,
+
+    FOREIGN KEY (patient_id) REFERENCES patients(patient_id)
+);
+
+-- 예시 데이터
+INSERT INTO patient_files (patient_id, file_date, file_type, file_name, file_path)
+VALUES
+(1, '2024-03-15', 'xray', 'P001_shoulder_AP.jpg', 'images/xray/2024/P001_shoulder_AP.jpg'),
+(1, '2024-03-15', 'video', 'P001_gait_analysis.mp4', 'videos/gait/P001_gait_analysis.mp4');</code></pre>
+            </div>
+
+            <div class="concept-box">
+                <h3>📖 상대 경로 vs 절대 경로</h3>
+                <table>
+                    <thead>
+                        <tr><th>유형</th><th>예시</th><th>장점</th><th>단점</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>상대 경로</td>
+                            <td>images/xray/file.jpg</td>
+                            <td>이식성 좋음, 폴더 이동 가능</td>
+                            <td>기준 폴더 명확히 해야 함</td>
+                        </tr>
+                        <tr>
+                            <td>절대 경로</td>
+                            <td>C:\Research\images\file.jpg</td>
+                            <td>명확함</td>
+                            <td>컴퓨터/폴더 변경 시 깨짐</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p><strong>권장</strong>: 상대 경로 사용, 프로젝트 루트 폴더 기준</p>
+            </div>
+
+            <h3>6.2 파일 관리 규칙</h3>
+
+            <div class="warning-box">
+                <h3>⚠️ 파일 경로 관리 주의사항</h3>
+                <ul>
+                    <li><strong>파일명에 ID 포함</strong>: P001_20240315_xray.jpg (환자ID_날짜_유형)</li>
+                    <li><strong>폴더 구조 일관성</strong>: images/유형/연도/ 형태로 정리</li>
+                    <li><strong>한글, 공백 피하기</strong>: 파일명에 특수문자나 공백 사용 금지</li>
+                    <li><strong>백업</strong>: 데이터베이스와 파일 폴더 함께 백업</li>
+                    <li><strong>파일 존재 확인</strong>: 분석 전 경로의 파일이 실제로 있는지 확인</li>
+                </ul>
+            </div>
+
+            <div class="summary-box">
+                <h3>📝 이 장의 핵심 정리</h3>
+                <ol>
+                    <li><strong>날짜 변수</strong>: ISO 8601 형식(YYYY-MM-DD), DATE/DATETIME 타입 사용</li>
+                    <li><strong>결측 유형</strong>: MCAR(완전무작위), MAR(무작위), MNAR(비무작위) 구분</li>
+                    <li><strong>결측 처리</strong>: 결측 비율 5% 미만이면 삭제, 이상이면 다중 대체 고려</li>
+                    <li><strong>이상치</strong>: IQR/Z-점수로 탐지, 원인 파악 후 처리, 문서화 필수</li>
+                    <li><strong>텍스트</strong>: 가능하면 범주화, TRIM으로 정제, VARCHAR/TEXT 타입</li>
+                    <li><strong>파일 경로</strong>: 상대 경로 사용, 파일명 규칙 통일, 백업 필수</li>
+                </ol>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-7.html" class="nav-btn">← 이전</a>
+                <span class="page-num">8 / 20</span>
+                <a href="chapter-9.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

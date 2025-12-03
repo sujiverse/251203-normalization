@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>7장: 데이터 검증 - 물리치료사를 위한 데이터베이스 3권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "3"})
+
+    @@include('components/mobile-menu.html')
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📙 물리치료사를 위한</h1>
+                <p>실전 구축 & 대시보드 (3권)</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+<h1 class="title">데이터 검증</h1>
+
+<h2>데이터가 제대로 들어갔을까?</h2>
+
+<p>앞 장에서 많은 데이터를 입력했습니다. 하지만 "입력했다"와 "제대로 입력했다"는 다른 이야기입니다. 잘못된 데이터가 들어가면 나중에 대시보드 숫자가 이상하게 나오거나, 중요한 의사결정에 잘못된 정보를 제공할 수 있어요.</p>
+
+<p>이번 장에서는 데이터가 정확하게 들어갔는지 검증하고, 문제가 있다면 수정하는 방법을 배웁니다.</p>
+
+<h3>검증할 항목</h3>
+
+<ul>
+<li>데이터 개수 확인</li>
+<li>필수 값 누락 확인</li>
+<li>관계 무결성 확인</li>
+<li>데이터 일관성 확인</li>
+<li>비즈니스 규칙 확인</li>
+</ul>
+
+<hr>
+
+<h2>1. 데이터 개수 확인</h2>
+
+<p>가장 기본적인 검증입니다. 입력하려고 했던 만큼 데이터가 들어갔는지 확인합니다.</p>
+
+<pre><code>-- 전체 테이블 데이터 개수 확인
+SELECT
+    'patients' as 테이블, COUNT(*) as 개수, 30 as 예상
+FROM patients
+UNION ALL
+SELECT 'therapists', COUNT(*), 4 FROM therapists
+UNION ALL
+SELECT 'treatment_sessions', COUNT(*), 87 FROM treatment_sessions
+UNION ALL
+SELECT 'billings', COUNT(*), 87 FROM billings
+UNION ALL
+SELECT 'patient_diagnoses', COUNT(*), 40 FROM patient_diagnoses
+UNION ALL
+SELECT 'soap_notes', COUNT(*), 6 FROM soap_notes;</code></pre>
+
+<p>예상 개수와 실제 개수가 다르다면 어딘가에서 입력이 누락되었거나 중복 입력되었을 수 있습니다.</p>
+
+<hr>
+
+<h2>2. 필수 값 누락 확인</h2>
+
+<p>NOT NULL로 지정하지 않은 컬럼이라도, 비즈니스적으로 반드시 있어야 하는 값들이 있습니다.</p>
+
+<h3>환자 필수 정보 확인</h3>
+
+<pre><code>-- 이름이나 연락처가 없는 환자
+SELECT patient_id, name, phone
+FROM patients
+WHERE name IS NULL
+   OR name = ''
+   OR phone IS NULL
+   OR phone = '';
+
+-- 결과가 없어야 정상!</code></pre>
+
+<h3>치료 세션 필수 정보 확인</h3>
+
+<pre><code>-- 환자나 치료사가 지정되지 않은 세션
+SELECT session_id, patient_id, therapist_id, session_date
+FROM treatment_sessions
+WHERE patient_id IS NULL
+   OR therapist_id IS NULL
+   OR session_date IS NULL;
+
+-- 결과가 없어야 정상!</code></pre>
+
+<h3>청구 필수 정보 확인</h3>
+
+<pre><code>-- 세션 연결이 없는 청구
+SELECT billing_id, session_id, fee_code
+FROM billings
+WHERE session_id IS NULL
+   OR fee_code IS NULL;
+
+-- 결과가 없어야 정상!</code></pre>
+
+<hr>
+
+<h2>3. 관계 무결성 확인</h2>
+
+<p>외래키 관계가 제대로 연결되어 있는지 확인합니다. 외래키 제약조건이 있으면 데이터베이스가 자동으로 막아주지만, 이중 체크는 항상 좋습니다.</p>
+
+<h3>존재하지 않는 환자 참조</h3>
+
+<pre><code>-- 치료 세션에서 존재하지 않는 환자를 참조하는 경우
+SELECT ts.session_id, ts.patient_id
+FROM treatment_sessions ts
+LEFT JOIN patients p ON ts.patient_id = p.patient_id
+WHERE p.patient_id IS NULL;
+
+-- 결과가 없어야 정상!</code></pre>
+
+<h3>존재하지 않는 치료사 참조</h3>
+
+<pre><code>-- 치료 세션에서 존재하지 않는 치료사를 참조하는 경우
+SELECT ts.session_id, ts.therapist_id
+FROM treatment_sessions ts
+LEFT JOIN therapists t ON ts.therapist_id = t.therapist_id
+WHERE t.therapist_id IS NULL;
+
+-- 결과가 없어야 정상!</code></pre>
+
+<h3>존재하지 않는 세션 참조</h3>
+
+<pre><code>-- 청구에서 존재하지 않는 세션을 참조하는 경우
+SELECT b.billing_id, b.session_id
+FROM billings b
+LEFT JOIN treatment_sessions ts ON b.session_id = ts.session_id
+WHERE ts.session_id IS NULL;
+
+-- 결과가 없어야 정상!</code></pre>
+
+<hr>
+
+<h2>4. 데이터 일관성 확인</h2>
+
+<p>데이터 간의 논리적 일관성을 확인합니다.</p>
+
+<h3>치료 건수와 청구 건수 일치</h3>
+
+<pre><code>-- 모든 치료에 청구가 있어야 함
+SELECT
+    (SELECT COUNT(*) FROM treatment_sessions) as 치료건수,
+    (SELECT COUNT(*) FROM billings) as 청구건수,
+    (SELECT COUNT(*) FROM treatment_sessions) -
+    (SELECT COUNT(*) FROM billings) as 차이;
+
+-- 차이가 0이어야 정상!</code></pre>
+
+<h3>청구 금액 일관성</h3>
+
+<pre><code>-- unit_price * quantity = total_amount 확인
+SELECT billing_id, unit_price, quantity, total_amount,
+       unit_price * quantity as 계산값
+FROM billings
+WHERE unit_price * quantity != total_amount;
+
+-- 결과가 없어야 정상!</code></pre>
+
+<h3>날짜 논리 확인</h3>
+
+<pre><code>-- 미래 날짜의 치료가 있는지
+SELECT session_id, session_date
+FROM treatment_sessions
+WHERE session_date > CURDATE();
+
+-- 있다면 테스트 데이터이거나 입력 오류
+
+-- 청구일이 치료일보다 이전인 경우
+SELECT b.billing_id, ts.session_date, b.payment_date
+FROM billings b
+JOIN treatment_sessions ts ON b.session_id = ts.session_id
+WHERE b.payment_date IS NOT NULL
+  AND b.payment_date < ts.session_date;
+
+-- 결과가 없어야 정상!</code></pre>
+
+<hr>
+
+<h2>5. 비즈니스 규칙 확인</h2>
+
+<p>클리닉의 운영 규칙에 맞는지 확인합니다.</p>
+
+<h3>치료 시간 확인</h3>
+
+<pre><code>-- 영업시간 외 치료가 있는지 (평일 9시~20시, 토요일 9시~14시)
+SELECT session_id, session_date, start_time,
+       DAYNAME(session_date) as 요일
+FROM treatment_sessions
+WHERE start_time < '09:00:00'
+   OR (DAYOFWEEK(session_date) BETWEEN 2 AND 6 AND start_time > '20:00:00')
+   OR (DAYOFWEEK(session_date) = 7 AND start_time > '14:00:00')
+   OR DAYOFWEEK(session_date) = 1;  -- 일요일
+
+-- 있다면 확인 필요</code></pre>
+
+<h3>치료사 휴무일 확인</h3>
+
+<pre><code>-- 비활성 치료사의 치료 기록
+SELECT ts.session_id, ts.therapist_id, t.name, ts.session_date
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+WHERE t.is_active = 'N';
+
+-- 결과가 없어야 정상 (퇴사한 치료사가 없다면)</code></pre>
+
+<h3>수납 상태 논리 확인</h3>
+
+<pre><code>-- '완료'인데 결제일이 없는 경우
+SELECT billing_id, payment_status, payment_date, payment_method
+FROM billings
+WHERE payment_status = '완료'
+  AND total_amount > 0
+  AND payment_date IS NULL;
+
+-- '대기'인데 결제일이 있는 경우
+SELECT billing_id, payment_status, payment_date
+FROM billings
+WHERE payment_status = '대기'
+  AND payment_date IS NOT NULL;
+
+-- 둘 다 결과가 없어야 정상!</code></pre>
+
+<hr>
+
+<h2>6. 요약 통계로 전체 파악</h2>
+
+<p>전체적인 데이터 분포를 보면서 이상한 점이 없는지 확인합니다.</p>
+
+<h3>월별 현황 요약</h3>
+
+<pre><code>SELECT
+    DATE_FORMAT(ts.session_date, '%Y-%m') as 월,
+    COUNT(DISTINCT ts.patient_id) as 환자수,
+    COUNT(ts.session_id) as 치료건수,
+    SUM(b.total_amount) as 총매출,
+    SUM(CASE WHEN b.payment_status = '완료' THEN b.total_amount ELSE 0 END) as 수납완료,
+    SUM(CASE WHEN b.payment_status = '대기' THEN b.total_amount ELSE 0 END) as 미수금
+FROM treatment_sessions ts
+JOIN billings b ON ts.session_id = b.session_id
+GROUP BY DATE_FORMAT(ts.session_date, '%Y-%m')
+ORDER BY 월;</code></pre>
+
+<h3>치료사별 현황 요약</h3>
+
+<pre><code>SELECT
+    t.name as 치료사,
+    COUNT(DISTINCT ts.patient_id) as 담당환자수,
+    COUNT(ts.session_id) as 치료건수,
+    SUM(b.total_amount) as 매출
+FROM therapists t
+LEFT JOIN treatment_sessions ts ON t.therapist_id = ts.therapist_id
+LEFT JOIN billings b ON ts.session_id = b.session_id
+WHERE t.is_active = 'Y'
+GROUP BY t.therapist_id, t.name
+ORDER BY 매출 DESC;</code></pre>
+
+<hr>
+
+<h2>7. 문제 발견 시 수정 방법</h2>
+
+<p>검증 중 문제를 발견했다면 수정해야 합니다.</p>
+
+<h3>단일 레코드 수정</h3>
+
+<pre><code>-- 잘못된 전화번호 수정
+UPDATE patients
+SET phone = '010-1234-5678'
+WHERE patient_id = 'P001';
+
+-- 결제 상태 수정
+UPDATE billings
+SET payment_status = '완료',
+    payment_date = '2024-03-25',
+    payment_method = '카드'
+WHERE billing_id = 100;</code></pre>
+
+<h3>잘못된 데이터 삭제</h3>
+
+<pre><code>-- 주의: 외래키 관계 때문에 순서가 중요!
+-- 1. 자식 테이블 먼저 삭제
+DELETE FROM billings WHERE session_id = 999;
+DELETE FROM soap_notes WHERE session_id = 999;
+
+-- 2. 부모 테이블 삭제
+DELETE FROM treatment_sessions WHERE session_id = 999;</code></pre>
+
+<div class="danger"><strong>🚨 주의사항</strong><br>
+DELETE는 복구가 어렵습니다! 반드시 백업을 먼저 하거나, SELECT로 삭제 대상을 먼저 확인하세요.<br>
+<code>SELECT * FROM ... WHERE ...</code> 로 확인 후<br>
+<code>DELETE FROM ... WHERE ...</code> 실행</div>
+
+<hr>
+
+<h2>✅ 검증 체크리스트</h2>
+
+<table>
+<tr><th>항목</th><th>확인</th></tr>
+<tr><td>환자 30명 입력됨</td><td>☐</td></tr>
+<tr><td>치료사 4명 입력됨</td><td>☐</td></tr>
+<tr><td>치료 세션 87건 입력됨</td><td>☐</td></tr>
+<tr><td>청구 87건 입력됨</td><td>☐</td></tr>
+<tr><td>치료 건수 = 청구 건수</td><td>☐</td></tr>
+<tr><td>존재하지 않는 참조 없음</td><td>☐</td></tr>
+<tr><td>금액 계산 일치</td><td>☐</td></tr>
+<tr><td>날짜 논리 정상</td><td>☐</td></tr>
+<tr><td>수납 상태 논리 정상</td><td>☐</td></tr>
+</table>
+
+<hr>
+
+<h2>이번 장 요약</h2>
+
+<p>이번 장에서 배운 것:</p>
+
+<ol>
+<li><strong>데이터 개수 확인</strong> - 예상만큼 들어갔는지</li>
+<li><strong>필수 값 확인</strong> - 빠진 정보가 없는지</li>
+<li><strong>관계 무결성</strong> - 연결이 제대로 되었는지</li>
+<li><strong>일관성 확인</strong> - 데이터 간 논리가 맞는지</li>
+<li><strong>비즈니스 규칙</strong> - 운영 규칙에 맞는지</li>
+<li><strong>수정 방법</strong> - 문제 발견 시 대처</li>
+</ol>
+
+<p>데이터 검증은 귀찮지만 정말 중요합니다. "쓰레기를 넣으면 쓰레기가 나온다(Garbage In, Garbage Out)"는 말이 있어요. 좋은 데이터가 있어야 좋은 분석 결과가 나옵니다!</p>
+
+<p>다음 장에서는 일상적인 업무 시뮬레이션을 해봅니다. 실제로 클리닉을 운영하는 것처럼 데이터를 조회하고 입력해볼 거예요.</p>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

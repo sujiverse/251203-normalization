@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[10권] 통계와 인센티브 계산 - 물리치료사를 위한 DB</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "1"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📗 1권: 정규화 편</h1>
+                <p>데이터베이스 기초 개념</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">[실전] 통계 처리와 인센티브 계산</h1>
+            <p>치료사별 실적을 집계하고, 인센티브를 계산하는 실전 쿼리들이에요!</p>
+            <hr>
+
+            <h2>1. 치료사별 월간 치료 횟수</h2>
+            <p>이번 달 각 치료사가 몇 회 치료했는지</p>
+            <pre><code>SELECT
+    t.name AS 치료사,
+    COUNT(*) AS 치료횟수
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+WHERE ts.session_date >= '2024-01-01'
+  AND ts.session_date < '2024-02-01'
+GROUP BY t.therapist_id, t.name
+ORDER BY 치료횟수 DESC;</code></pre>
+            <p><strong>결과 예시:</strong></p>
+            <pre><code>치료사  | 치료횟수
+박물리  | 87
+이재활  | 65
+최신입  | 42</code></pre>
+            <hr>
+
+            <h2>2. 치료사별 담당 환자 수</h2>
+            <p>중복 없이 순수하게 몇 명의 환자를 치료했는지</p>
+            <pre><code>SELECT
+    t.name AS 치료사,
+    COUNT(DISTINCT ts.patient_id) AS 담당환자수,
+    COUNT(*) AS 총치료횟수,
+    ROUND(COUNT(*) * 1.0 / COUNT(DISTINCT ts.patient_id), 1) AS 환자당평균치료
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+WHERE ts.session_date >= '2024-01-01'
+  AND ts.session_date < '2024-02-01'
+GROUP BY t.therapist_id, t.name
+ORDER BY 담당환자수 DESC;</code></pre>
+            <p><strong>결과 예시:</strong></p>
+            <pre><code>치료사  | 담당환자수 | 총치료횟수 | 환자당평균치료
+박물리  | 32         | 87         | 2.7
+이재활  | 28         | 65         | 2.3
+최신입  | 20         | 42         | 2.1</code></pre>
+            <hr>
+
+            <h2>3. 치료 종류별 횟수 (도수/운동/전기 등)</h2>
+            <pre><code>SELECT
+    t.name AS 치료사,
+    fi.fee_name AS 치료종류,
+    COUNT(*) AS 횟수,
+    SUM(b.total_amount) AS 매출액
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+JOIN billings b ON ts.session_id = b.session_id
+JOIN fee_items fi ON b.fee_code = fi.fee_code
+WHERE ts.session_date >= '2024-01-01'
+  AND ts.session_date < '2024-02-01'
+GROUP BY t.therapist_id, t.name, fi.fee_code, fi.fee_name
+ORDER BY t.name, 횟수 DESC;</code></pre>
+            <p><strong>결과 예시:</strong></p>
+            <pre><code>치료사  | 치료종류 | 횟수 | 매출액
+박물리  | 도수치료 | 52   | 2,600,000
+박물리  | 운동치료 | 35   | 1,050,000
+이재활  | 운동치료 | 40   | 1,200,000
+이재활  | 도수치료 | 25   | 1,250,000</code></pre>
+            <hr>
+
+            <h2>4. 치료사별 월간 매출 집계</h2>
+            <pre><code>SELECT
+    t.name AS 치료사,
+    COUNT(*) AS 치료횟수,
+    SUM(b.total_amount) AS 총매출,
+    SUM(CASE WHEN b.payment_status = '완료' THEN b.total_amount ELSE 0 END) AS 수납완료,
+    SUM(CASE WHEN b.payment_status = '대기' THEN b.total_amount ELSE 0 END) AS 미수금
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+JOIN billings b ON ts.session_id = b.session_id
+WHERE ts.session_date >= '2024-01-01'
+  AND ts.session_date < '2024-02-01'
+GROUP BY t.therapist_id, t.name
+ORDER BY 총매출 DESC;</code></pre>
+            <p><strong>결과 예시:</strong></p>
+            <pre><code>치료사  | 치료횟수 | 총매출    | 수납완료  | 미수금
+박물리  | 87       | 3,650,000 | 3,200,000 | 450,000
+이재활  | 65       | 2,450,000 | 2,450,000 | 0
+최신입  | 42       | 1,680,000 | 1,500,000 | 180,000</code></pre>
+            <hr>
+
+            <h2>5. 🎯 인센티브 계산 쿼리</h2>
+            <h3>기본 인센티브 규칙 예시</h3>
+            <table>
+                <tr><th>항목</th><th>기준</th><th>인센티브</th></tr>
+                <tr><td>도수치료</td><td>건당</td><td>5,000원</td></tr>
+                <tr><td>운동치료</td><td>건당</td><td>3,000원</td></tr>
+                <tr><td>신환 유치</td><td>명당</td><td>10,000원</td></tr>
+                <tr><td>매출 목표 달성</td><td>300만원 이상</td><td>100,000원</td></tr>
+            </table>
+            <h3>치료 종류별 인센티브 계산</h3>
+            <pre><code>SELECT
+    t.name AS 치료사,
+    SUM(CASE WHEN fi.fee_name = '도수치료' THEN 1 ELSE 0 END) AS 도수치료횟수,
+    SUM(CASE WHEN fi.fee_name = '도수치료' THEN 1 ELSE 0 END) * 5000 AS 도수인센티브,
+    SUM(CASE WHEN fi.fee_name = '운동치료' THEN 1 ELSE 0 END) AS 운동치료횟수,
+    SUM(CASE WHEN fi.fee_name = '운동치료' THEN 1 ELSE 0 END) * 3000 AS 운동인센티브,
+    SUM(CASE WHEN fi.fee_name = '도수치료' THEN 1 ELSE 0 END) * 5000 +
+    SUM(CASE WHEN fi.fee_name = '운동치료' THEN 1 ELSE 0 END) * 3000 AS 치료인센티브합계
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+JOIN billings b ON ts.session_id = b.session_id
+JOIN fee_items fi ON b.fee_code = fi.fee_code
+WHERE ts.session_date >= '2024-01-01'
+  AND ts.session_date < '2024-02-01'
+GROUP BY t.therapist_id, t.name;</code></pre>
+            <p><strong>결과 예시:</strong></p>
+            <pre><code>치료사  | 도수치료횟수 | 도수인센티브 | 운동치료횟수 | 운동인센티브 | 치료인센티브합계
+박물리  | 52           | 260,000      | 35           | 105,000      | 365,000
+이재활  | 25           | 125,000      | 40           | 120,000      | 245,000</code></pre>
+            <hr>
+
+            <h2>6. 신환 유치 인센티브</h2>
+            <p>이번 달 처음 온 환자를 누가 첫 치료했는지</p>
+            <pre><code>SELECT
+    t.name AS 치료사,
+    COUNT(DISTINCT first_visit.patient_id) AS 신환수,
+    COUNT(DISTINCT first_visit.patient_id) * 10000 AS 신환인센티브
+FROM (
+    -- 환자별 첫 방문 세션 찾기
+    SELECT patient_id, MIN(session_id) AS first_session_id
+    FROM treatment_sessions
+    WHERE session_date >= '2024-01-01'
+      AND session_date < '2024-02-01'
+    GROUP BY patient_id
+    HAVING MIN(session_date) >= '2024-01-01'  -- 이번달이 진짜 첫 방문인 경우만
+) first_visit
+JOIN treatment_sessions ts ON first_visit.first_session_id = ts.session_id
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+GROUP BY t.therapist_id, t.name
+ORDER BY 신환수 DESC;</code></pre>
+            <p><strong>결과 예시:</strong></p>
+            <pre><code>치료사  | 신환수 | 신환인센티브
+박물리  | 8      | 80,000
+이재활  | 5      | 50,000
+최신입  | 12     | 120,000</code></pre>
+            <hr>
+
+            <h2>7. 📊 종합 인센티브 리포트</h2>
+            <p>모든 인센티브를 한 번에 계산!</p>
+            <pre><code>SELECT
+    t.name AS 치료사,
+
+    -- 치료 횟수
+    COUNT(*) AS 총치료횟수,
+    SUM(CASE WHEN fi.fee_name = '도수치료' THEN 1 ELSE 0 END) AS 도수횟수,
+    SUM(CASE WHEN fi.fee_name = '운동치료' THEN 1 ELSE 0 END) AS 운동횟수,
+
+    -- 매출
+    SUM(b.total_amount) AS 총매출,
+
+    -- 인센티브 계산
+    SUM(CASE WHEN fi.fee_name = '도수치료' THEN 5000 ELSE 0 END) AS 도수인센티브,
+    SUM(CASE WHEN fi.fee_name = '운동치료' THEN 3000 ELSE 0 END) AS 운동인센티브,
+    CASE WHEN SUM(b.total_amount) >= 3000000 THEN 100000 ELSE 0 END AS 목표달성보너스,
+
+    -- 총 인센티브
+    SUM(CASE WHEN fi.fee_name = '도수치료' THEN 5000 ELSE 0 END) +
+    SUM(CASE WHEN fi.fee_name = '운동치료' THEN 3000 ELSE 0 END) +
+    CASE WHEN SUM(b.total_amount) >= 3000000 THEN 100000 ELSE 0 END AS 총인센티브
+
+FROM treatment_sessions ts
+JOIN therapists t ON ts.therapist_id = t.therapist_id
+JOIN billings b ON ts.session_id = b.session_id
+JOIN fee_items fi ON b.fee_code = fi.fee_code
+WHERE ts.session_date >= '2024-01-01'
+  AND ts.session_date < '2024-02-01'
+GROUP BY t.therapist_id, t.name
+ORDER BY 총인센티브 DESC;</code></pre>
+            <p><strong>결과 예시:</strong></p>
+            <pre><code>치료사  | 총치료횟수 | 총매출    | 도수인센티브 | 운동인센티브 | 목표달성보너스 | 총인센티브
+박물리  | 87         | 3,650,000 | 260,000      | 105,000      | 100,000        | 465,000
+이재활  | 65         | 2,450,000 | 125,000      | 120,000      | 0              | 245,000
+최신입  | 42         | 1,680,000 | 100,000      | 60,000       | 0              | 160,000</code></pre>
+            <hr>
+
+            <h2>💡 실무 활용 팁</h2>
+            <table>
+                <tr><th>용도</th><th>사용할 쿼리</th></tr>
+                <tr><td>월말 급여 정산</td><td>종합 인센티브 리포트 (#7)</td></tr>
+                <tr><td>치료사 면담</td><td>월별 추이 비교</td></tr>
+                <tr><td>스케줄 조정</td><td>요일/시간대 분포</td></tr>
+                <tr><td>신입 평가</td><td>신환 유치 (#6) + 담당 환자 수 (#2)</td></tr>
+            </table>
+            <blockquote><strong>💡 팁</strong>: 날짜만 바꾸면 어느 달이든 조회 가능! <br>
+            <code>'2024-01-01'</code> → <code>'2024-02-01'</code>로 바꾸면 2월 데이터 조회</blockquote>
+
+            <div class="nav-buttons">
+                <a href="chapter-9.html" class="nav-btn">← 이전</a>
+                <span class="page-num">10 / 12</span>
+                <a href="chapter-11.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/nav.js"></script>
+</body>
+</html>

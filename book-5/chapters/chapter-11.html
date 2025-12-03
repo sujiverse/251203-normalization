@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>11장: WAS 서버 보안 설정 - 물리치료사를 위한 DB 5권</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    @@include('components/top-nav.html', {"root": "../..", "activeBook": "5"})
+
+    @@include('components/mobile-menu.html')
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>🛡️ 5권: 보안 편</h1>
+                <p>DB & 서버 보안</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">WAS 서버 보안 설정</h1>
+
+            <h2>WAS(Web Application Server)란?</h2>
+
+            <pre class="file-tree">웹 서비스 구조
+│
+├── 클라이언트 (브라우저)
+│
+├── 웹 서버 (Nginx/Apache)
+│   └── 정적 파일, 리버스 프록시
+│
+├── WAS (Gunicorn/uWSGI)
+│   └── Python 앱 실행
+│
+└── DB (MySQL)
+    └── 데이터 저장</pre>
+
+            <p>Flask 앱은 개발 서버로 직접 배포하면 안 됩니다!</p>
+
+            <hr>
+
+            <h2>Flask 디버그 모드 비활성화</h2>
+
+            <div class="danger">
+                <strong>절대 금지!</strong><br>
+                운영 환경에서 DEBUG=True는 심각한 보안 위협입니다.
+            </div>
+
+            <pre><code># ❌ 위험: 디버그 모드
+app.run(debug=True)
+
+# 디버그 모드 위험성:
+# - 에러 발생 시 코드 노출
+# - 대화형 디버거로 코드 실행 가능
+# - 서버 정보 노출</code></pre>
+
+            <pre><code># ✅ 안전: 환경변수로 관리
+import os
+
+DEBUG = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+
+if __name__ == '__main__':
+    app.run(debug=DEBUG)</code></pre>
+
+            <hr>
+
+            <h2>Gunicorn 설정</h2>
+
+            <p>Gunicorn은 Python WSGI HTTP 서버입니다.</p>
+
+            <pre><code># 설치
+pip install gunicorn
+
+# 기본 실행
+gunicorn app:app
+
+# 권장 설정으로 실행
+gunicorn --config gunicorn.conf.py app:app</code></pre>
+
+            <h3>gunicorn.conf.py</h3>
+            <pre><code># gunicorn.conf.py
+
+# 바인드 주소 (Nginx 뒤에서 실행)
+bind = "127.0.0.1:8000"
+
+# 워커 프로세스 수 (CPU 코어 * 2 + 1)
+workers = 5
+
+# 워커 클래스
+worker_class = "sync"
+
+# 타임아웃 (초)
+timeout = 30
+
+# 보안: 헤더 크기 제한
+limit_request_line = 4094
+limit_request_fields = 100
+limit_request_field_size = 8190
+
+# 로깅
+accesslog = "/var/log/gunicorn/access.log"
+errorlog = "/var/log/gunicorn/error.log"
+loglevel = "warning"
+
+# 프로세스 이름
+proc_name = "healing_hands"
+
+# 데몬 모드 (systemd 사용 시 False)
+daemon = False
+
+# 사용자/그룹 (root로 실행 금지!)
+user = "www-data"
+group = "www-data"</code></pre>
+
+            <hr>
+
+            <h2>systemd 서비스 등록</h2>
+
+            <pre><code># /etc/systemd/system/healing-hands.service
+
+[Unit]
+Description=Healing Hands Flask App
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/healing-hands
+Environment="PATH=/var/www/healing-hands/venv/bin"
+ExecStart=/var/www/healing-hands/venv/bin/gunicorn --config gunicorn.conf.py app:app
+Restart=always
+RestartSec=5
+
+# 보안 설정
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/gunicorn
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+
+            <pre><code># 서비스 시작
+sudo systemctl daemon-reload
+sudo systemctl start healing-hands
+sudo systemctl enable healing-hands
+
+# 상태 확인
+sudo systemctl status healing-hands</code></pre>
+
+            <hr>
+
+            <h2>Nginx 리버스 프록시</h2>
+
+            <pre><code># /etc/nginx/sites-available/healing-hands
+
+server {
+    listen 80;
+    server_name healing-hands.com;
+
+    # HTTPS로 리다이렉트
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name healing-hands.com;
+
+    # SSL 설정 (다음 장에서 자세히)
+    ssl_certificate /etc/letsencrypt/live/healing-hands.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/healing-hands.com/privkey.pem;
+
+    # 보안 헤더
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # 서버 정보 숨기기
+    server_tokens off;
+
+    # 요청 크기 제한
+    client_max_body_size 10M;
+
+    # 정적 파일
+    location /static {
+        alias /var/www/healing-hands/static;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # API 요청 → Gunicorn
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # 타임아웃
+        proxy_connect_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+}</code></pre>
+
+            <pre><code># 설정 테스트 및 적용
+sudo nginx -t
+sudo systemctl reload nginx</code></pre>
+
+            <hr>
+
+            <h2>보안 헤더 설정</h2>
+
+            <pre><code>from flask import Flask, Response
+
+app = Flask(__name__)
+
+@app.after_request
+def add_security_headers(response):
+    # XSS 방지
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+
+    # MIME 타입 스니핑 방지
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+
+    # 클릭재킹 방지
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+
+    # HTTPS 강제 (1년)
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+
+    # Content Security Policy
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self'"
+
+    # Referrer 정책
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+
+    return response</code></pre>
+
+            <hr>
+
+            <h2>에러 페이지 커스터마이징</h2>
+
+            <pre><code># 에러 핸들러 - 민감 정보 노출 방지
+
+@app.errorhandler(404)
+def not_found(error):
+    return {'error': '페이지를 찾을 수 없습니다'}, 404
+
+@app.errorhandler(500)
+def server_error(error):
+    # 로그에만 기록, 사용자에게는 일반 메시지
+    app.logger.error(f'서버 에러: {error}')
+    return {'error': '서버 오류가 발생했습니다'}, 500
+
+@app.errorhandler(Exception)
+def handle_exception(error):
+    app.logger.exception('처리되지 않은 예외')
+    return {'error': '요청을 처리할 수 없습니다'}, 500</code></pre>
+
+            <hr>
+
+            <h2>환경변수 관리</h2>
+
+            <pre><code># .env 파일 (버전 관리에서 제외!)
+FLASK_ENV=production
+SECRET_KEY=your-super-secret-key-here
+DATABASE_URL=mysql://user:pass@localhost/healing_hands
+ENCRYPTION_KEY=your-encryption-key</code></pre>
+
+            <pre><code># 앱에서 로드
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
+DATABASE_URL = os.environ.get('DATABASE_URL')</code></pre>
+
+            <pre><code># .gitignore에 추가
+.env
+*.pem
+*.key
+__pycache__/
+*.pyc</code></pre>
+
+            <hr>
+
+            <h2>Rate Limiting</h2>
+
+            <pre><code>from flask import Flask
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
+app = Flask(__name__)
+
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"]
+)
+
+# 로그인 엔드포인트 - 더 엄격한 제한
+@app.route('/login', methods=['POST'])
+@limiter.limit("5 per minute")
+def login():
+    ...
+
+# API 엔드포인트
+@app.route('/api/patients')
+@limiter.limit("30 per minute")
+def get_patients():
+    ...</code></pre>
+
+            <hr>
+
+            <h2>파일 업로드 보안</h2>
+
+            <pre><code>import os
+from werkzeug.utils import secure_filename
+
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'pdf'}
+MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # 10MB
+
+app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return {'error': '파일이 없습니다'}, 400
+
+    file = request.files['file']
+
+    if file.filename == '':
+        return {'error': '파일명이 없습니다'}, 400
+
+    if not allowed_file(file.filename):
+        return {'error': '허용되지 않는 파일 형식'}, 400
+
+    # 안전한 파일명 생성
+    filename = secure_filename(file.filename)
+
+    # 저장 (실행 권한 없는 디렉토리에)
+    file.save(os.path.join('/var/uploads', filename))
+
+    return {'success': True}</code></pre>
+
+            <hr>
+
+            <h2>WAS 보안 체크리스트</h2>
+
+            <table>
+                <tr>
+                    <th>항목</th>
+                    <th>확인</th>
+                </tr>
+                <tr>
+                    <td>디버그 모드 비활성화</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>Gunicorn/uWSGI 사용</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>Nginx 리버스 프록시</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>보안 헤더 설정</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>환경변수로 비밀 관리</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>Rate Limiting 적용</td>
+                    <td>☐</td>
+                </tr>
+                <tr>
+                    <td>에러 메시지 일반화</td>
+                    <td>☐</td>
+                </tr>
+            </table>
+
+            <hr>
+
+            <h2>이번 장 정리</h2>
+
+            <ul>
+                <li>운영 환경에서 <strong>디버그 모드 절대 금지</strong></li>
+                <li><strong>Gunicorn</strong> + <strong>Nginx</strong> 조합 사용</li>
+                <li><strong>보안 헤더</strong>로 클라이언트 보호</li>
+                <li>비밀 정보는 <strong>환경변수</strong>로 관리</li>
+                <li><strong>Rate Limiting</strong>으로 무차별 대입 방어</li>
+            </ul>
+
+            <blockquote>다음 장에서는 HTTPS 적용 방법을 배웁니다!</blockquote>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn">← 이전</button>
+                <span class="page-num" id="pageNum"></span>
+                <button class="nav-btn" id="nextBtn">다음 →</button>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

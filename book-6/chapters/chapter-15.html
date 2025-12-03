@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[15장] 기술통계의 모든 것 - 연구 데이터 설계</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>📊</span> 연구 데이터 설계</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+            <a href="../../book-6/index.html" class="top-nav-link book-6 active">6권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📘 6권: 연구 데이터 설계</h1><p>변수부터 회귀분석까지</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <div class="part-header">4부: 기술통계와 추론통계</div>
+            <h1 class="title">[15장] 기술통계의 모든 것</h1>
+
+            <div class="intro-box">
+                <p>이 장에서는 <strong>기술통계(Descriptive Statistics)</strong>의 개념과 SQL/DB를 활용한 계산 방법을 배웁니다.</p>
+            </div>
+
+            <hr>
+
+            <h2>1. 기술통계란?</h2>
+
+            <div class="concept-box">
+                <h3>💡 기술통계의 정의</h3>
+                <p>기술통계(Descriptive Statistics)는 수집된 데이터를 <strong>요약하고 설명</strong>하는 통계 방법입니다.</p>
+                <ul>
+                    <li><strong>목적</strong>: 데이터의 특성을 파악하기 쉽게 정리</li>
+                    <li><strong>결과물</strong>: 평균, 표준편차, 빈도, 그래프 등</li>
+                    <li><strong>범위</strong>: 수집된 데이터 자체에 대한 설명 (모집단 추정 X)</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 기술통계 vs 추론통계</h3>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>구분</th>
+                            <th>기술통계</th>
+                            <th>추론통계</th>
+                        </tr>
+                        <tr>
+                            <td><strong>목적</strong></td>
+                            <td>데이터 요약/설명</td>
+                            <td>모집단 추정/가설 검정</td>
+                        </tr>
+                        <tr>
+                            <td><strong>대상</strong></td>
+                            <td>표본 데이터 자체</td>
+                            <td>표본 → 모집단</td>
+                        </tr>
+                        <tr>
+                            <td><strong>결과</strong></td>
+                            <td>평균, SD, 빈도, 비율</td>
+                            <td>p-value, 신뢰구간, 효과크기</td>
+                        </tr>
+                        <tr>
+                            <td><strong>예시</strong></td>
+                            <td>"환자의 평균 나이는 65세이다"</td>
+                            <td>"치료 효과가 통계적으로 유의하다 (p&lt;.05)"</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 기술통계의 분류</h3>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>분류</th>
+                            <th>설명</th>
+                            <th>측정치</th>
+                        </tr>
+                        <tr>
+                            <td><strong>중심 경향</strong></td>
+                            <td>데이터가 몰려 있는 위치</td>
+                            <td>평균, 중앙값, 최빈값</td>
+                        </tr>
+                        <tr>
+                            <td><strong>산포도</strong></td>
+                            <td>데이터가 흩어진 정도</td>
+                            <td>범위, 분산, 표준편차, IQR</td>
+                        </tr>
+                        <tr>
+                            <td><strong>분포 형태</strong></td>
+                            <td>데이터 분포의 모양</td>
+                            <td>왜도, 첨도</td>
+                        </tr>
+                        <tr>
+                            <td><strong>빈도</strong></td>
+                            <td>범주별 개수/비율</td>
+                            <td>빈도, 백분율, 교차표</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <hr>
+
+            <h2>2. 중심 경향 측정</h2>
+
+            <div class="concept-box">
+                <h3>💡 평균(Mean)</h3>
+                <p>모든 값의 합을 개수로 나눈 값입니다.</p>
+                <p><strong>수식:</strong> x̄ = Σxᵢ / n</p>
+                <ul>
+                    <li><strong>장점</strong>: 모든 데이터 값을 반영</li>
+                    <li><strong>단점</strong>: 이상치(극단값)에 민감</li>
+                    <li><strong>사용</strong>: 정규분포에 가까운 연속형 데이터</li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 평균 계산: AVG()</h3>
+                <pre><code>-- 전체 평균
+SELECT AVG(age) AS mean_age FROM participants;
+
+-- 그룹별 평균
+SELECT
+    group_type,
+    ROUND(AVG(bbs_score), 2) AS mean_bbs,
+    COUNT(*) AS n
+FROM balance_assessments ba
+JOIN participants p ON ba.participant_id = p.participant_id
+WHERE ba.wave_id = 1
+GROUP BY group_type;
+
+-- 결과:
+-- group_type    | mean_bbs | n
+-- intervention  | 42.50    | 25
+-- control       | 43.20    | 25</code></pre>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 중앙값(Median)</h3>
+                <p>데이터를 정렬했을 때 <strong>가운데 위치</strong>의 값입니다.</p>
+                <ul>
+                    <li><strong>n이 홀수</strong>: (n+1)/2 번째 값</li>
+                    <li><strong>n이 짝수</strong>: n/2 번째와 (n/2)+1 번째 값의 평균</li>
+                    <li><strong>장점</strong>: 이상치에 강건함(robust)</li>
+                    <li><strong>사용</strong>: 비대칭 분포, 이상치가 있는 데이터</li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 중앙값 계산 (SQLite)</h3>
+                <pre><code>-- SQLite에서 중앙값 계산 (PERCENTILE 함수 없음)
+-- 방법 1: 서브쿼리 활용
+SELECT value AS median
+FROM (
+    SELECT bbs_score AS value
+    FROM balance_assessments
+    WHERE wave_id = 1
+    ORDER BY bbs_score
+    LIMIT 1
+    OFFSET (SELECT COUNT(*) FROM balance_assessments WHERE wave_id = 1) / 2
+);
+
+-- 방법 2: 순위 기반 (더 정확)
+WITH ranked AS (
+    SELECT
+        bbs_score,
+        ROW_NUMBER() OVER (ORDER BY bbs_score) AS rn,
+        COUNT(*) OVER () AS total
+    FROM balance_assessments
+    WHERE wave_id = 1
+)
+SELECT AVG(bbs_score) AS median
+FROM ranked
+WHERE rn IN (total/2, total/2 + 1)
+   OR (total % 2 = 1 AND rn = (total + 1) / 2);</code></pre>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 최빈값(Mode)</h3>
+                <p>데이터에서 가장 <strong>자주 나타나는 값</strong>입니다.</p>
+                <ul>
+                    <li><strong>사용</strong>: 범주형 데이터에 특히 유용</li>
+                    <li><strong>특징</strong>: 여러 개일 수 있음 (다봉분포)</li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 최빈값 계산</h3>
+                <pre><code>-- 가장 빈번한 값 찾기
+SELECT
+    bbs_score AS mode_value,
+    COUNT(*) AS frequency
+FROM balance_assessments
+WHERE wave_id = 1
+GROUP BY bbs_score
+ORDER BY frequency DESC
+LIMIT 1;
+
+-- 동점 처리 (모든 최빈값 반환)
+WITH freq AS (
+    SELECT
+        bbs_score,
+        COUNT(*) AS cnt
+    FROM balance_assessments
+    WHERE wave_id = 1
+    GROUP BY bbs_score
+)
+SELECT bbs_score AS mode_value, cnt AS frequency
+FROM freq
+WHERE cnt = (SELECT MAX(cnt) FROM freq);</code></pre>
+            </div>
+
+            <div class="warning-box">
+                <h3>⚠️ 언제 어떤 측정치를 사용하나?</h3>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>상황</th>
+                            <th>권장 측정치</th>
+                            <th>이유</th>
+                        </tr>
+                        <tr>
+                            <td>정규분포</td>
+                            <td>평균</td>
+                            <td>모든 값을 반영, 통계 검정에 활용</td>
+                        </tr>
+                        <tr>
+                            <td>비대칭 분포</td>
+                            <td>중앙값</td>
+                            <td>극단값에 영향 받지 않음</td>
+                        </tr>
+                        <tr>
+                            <td>이상치 존재</td>
+                            <td>중앙값</td>
+                            <td>이상치에 강건함</td>
+                        </tr>
+                        <tr>
+                            <td>범주형 데이터</td>
+                            <td>최빈값</td>
+                            <td>평균/중앙값 계산 불가</td>
+                        </tr>
+                        <tr>
+                            <td>서열형 데이터</td>
+                            <td>중앙값 또는 최빈값</td>
+                            <td>순서만 의미 있음</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <hr>
+
+            <h2>3. 산포도 측정</h2>
+
+            <div class="concept-box">
+                <h3>💡 범위(Range)</h3>
+                <p>최댓값과 최솟값의 차이입니다.</p>
+                <p><strong>수식:</strong> Range = Max - Min</p>
+                <ul>
+                    <li><strong>장점</strong>: 계산이 간단함</li>
+                    <li><strong>단점</strong>: 이상치에 매우 민감, 두 값만 사용</li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 범위 계산</h3>
+                <pre><code>SELECT
+    MIN(bbs_score) AS min_value,
+    MAX(bbs_score) AS max_value,
+    MAX(bbs_score) - MIN(bbs_score) AS range_value
+FROM balance_assessments
+WHERE wave_id = 1;
+
+-- 결과: min=32, max=54, range=22</code></pre>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 분산(Variance)</h3>
+                <p>각 값이 평균에서 벗어난 정도의 제곱 평균입니다.</p>
+                <p><strong>모분산:</strong> σ² = Σ(xᵢ - μ)² / N</p>
+                <p><strong>표본분산:</strong> s² = Σ(xᵢ - x̄)² / (n-1)</p>
+                <ul>
+                    <li><strong>n-1로 나누는 이유</strong>: 표본으로 모분산을 추정할 때 발생하는 편향(bias)을 보정</li>
+                    <li><strong>단위</strong>: 원래 단위의 제곱 (해석 어려움)</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 표준편차(Standard Deviation)</h3>
+                <p>분산의 제곱근으로, 원래 단위로 산포도를 표현합니다.</p>
+                <p><strong>모표준편차:</strong> σ = √(Σ(xᵢ - μ)² / N)</p>
+                <p><strong>표본표준편차:</strong> s = √(Σ(xᵢ - x̄)² / (n-1))</p>
+                <ul>
+                    <li><strong>해석</strong>: 평균에서 평균적으로 얼마나 떨어져 있는가</li>
+                    <li><strong>정규분포</strong>: 약 68%의 데이터가 평균±1SD 내에 위치</li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 분산과 표준편차 계산 (SQLite)</h3>
+                <pre><code>-- SQLite는 내장 분산/표준편차 함수가 없음
+-- 수동 계산 필요
+
+WITH stats AS (
+    SELECT
+        AVG(bbs_score) AS mean,
+        COUNT(*) AS n
+    FROM balance_assessments
+    WHERE wave_id = 1
+)
+SELECT
+    s.mean,
+    -- 표본분산
+    SUM((ba.bbs_score - s.mean) * (ba.bbs_score - s.mean)) / (s.n - 1) AS variance,
+    -- 표본표준편차
+    SQRT(SUM((ba.bbs_score - s.mean) * (ba.bbs_score - s.mean)) / (s.n - 1)) AS std_dev
+FROM balance_assessments ba, stats s
+WHERE ba.wave_id = 1;
+
+-- 결과: mean=42.85, variance=25.64, std_dev=5.06</code></pre>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 사분위수(Quartiles)</h3>
+                <p>데이터를 4등분하는 위치의 값입니다:</p>
+                <ul>
+                    <li><strong>Q1 (25번째 백분위수)</strong>: 하위 25% 지점</li>
+                    <li><strong>Q2 (50번째 백분위수)</strong>: 중앙값</li>
+                    <li><strong>Q3 (75번째 백분위수)</strong>: 상위 25% 지점</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 IQR (사분위 범위)</h3>
+                <p>Q3와 Q1의 차이로, 중앙 50% 데이터의 범위입니다.</p>
+                <p><strong>수식:</strong> IQR = Q3 - Q1</p>
+                <ul>
+                    <li><strong>장점</strong>: 이상치에 강건함</li>
+                    <li><strong>활용</strong>: 이상치 탐지 (Q1-1.5×IQR ~ Q3+1.5×IQR 범위 밖)</li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 사분위수와 IQR 계산</h3>
+                <pre><code>WITH sorted AS (
+    SELECT
+        bbs_score,
+        NTILE(4) OVER (ORDER BY bbs_score) AS quartile
+    FROM balance_assessments
+    WHERE wave_id = 1
+)
+SELECT
+    quartile,
+    MIN(bbs_score) AS min_in_quartile,
+    MAX(bbs_score) AS max_in_quartile
+FROM sorted
+GROUP BY quartile;
+
+-- Q1, Q2, Q3 직접 계산
+WITH ranked AS (
+    SELECT
+        bbs_score,
+        ROW_NUMBER() OVER (ORDER BY bbs_score) AS rn,
+        COUNT(*) OVER () AS n
+    FROM balance_assessments
+    WHERE wave_id = 1
+)
+SELECT
+    MAX(CASE WHEN rn = CAST(n * 0.25 AS INTEGER) + 1 THEN bbs_score END) AS Q1,
+    MAX(CASE WHEN rn = CAST(n * 0.50 AS INTEGER) + 1 THEN bbs_score END) AS Q2,
+    MAX(CASE WHEN rn = CAST(n * 0.75 AS INTEGER) + 1 THEN bbs_score END) AS Q3
+FROM ranked;</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>4. 분포 형태</h2>
+
+            <div class="concept-box">
+                <h3>💡 왜도(Skewness)</h3>
+                <p>분포의 <strong>비대칭 정도</strong>를 나타냅니다.</p>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>값</th>
+                            <th>의미</th>
+                            <th>특징</th>
+                        </tr>
+                        <tr>
+                            <td>왜도 = 0</td>
+                            <td>대칭</td>
+                            <td>평균 = 중앙값</td>
+                        </tr>
+                        <tr>
+                            <td>왜도 > 0</td>
+                            <td>오른쪽 꼬리 (양의 왜도)</td>
+                            <td>평균 > 중앙값, 고득점 소수</td>
+                        </tr>
+                        <tr>
+                            <td>왜도 < 0</td>
+                            <td>왼쪽 꼬리 (음의 왜도)</td>
+                            <td>평균 < 중앙값, 저득점 소수</td>
+                        </tr>
+                    </table>
+                </div>
+                <p><strong>판단 기준:</strong> |왜도| < 2이면 대체로 허용 가능</p>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 첨도(Kurtosis)</h3>
+                <p>분포의 <strong>뾰족한 정도</strong>와 꼬리 두께를 나타냅니다.</p>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>값</th>
+                            <th>의미</th>
+                            <th>특징</th>
+                        </tr>
+                        <tr>
+                            <td>첨도 = 0</td>
+                            <td>정규분포와 같음</td>
+                            <td>중심도(mesokurtic)</td>
+                        </tr>
+                        <tr>
+                            <td>첨도 > 0</td>
+                            <td>뾰족함</td>
+                            <td>급첨(leptokurtic), 꼬리 두꺼움</td>
+                        </tr>
+                        <tr>
+                            <td>첨도 < 0</td>
+                            <td>평평함</td>
+                            <td>완첨(platykurtic), 꼬리 얇음</td>
+                        </tr>
+                    </table>
+                </div>
+                <p><strong>판단 기준:</strong> |첨도| < 7이면 대체로 허용 가능</p>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 왜도와 첨도 계산</h3>
+                <pre><code>-- 왜도(Skewness)와 첨도(Kurtosis) 계산
+WITH stats AS (
+    SELECT
+        AVG(bbs_score) AS mean,
+        COUNT(*) AS n,
+        -- 표준편차
+        SQRT(SUM((bbs_score - (SELECT AVG(bbs_score) FROM balance_assessments WHERE wave_id = 1))
+            * (bbs_score - (SELECT AVG(bbs_score) FROM balance_assessments WHERE wave_id = 1)))
+            / (COUNT(*) - 1)) AS sd
+    FROM balance_assessments
+    WHERE wave_id = 1
+),
+deviations AS (
+    SELECT
+        (ba.bbs_score - s.mean) / s.sd AS z,
+        s.n
+    FROM balance_assessments ba, stats s
+    WHERE ba.wave_id = 1
+)
+SELECT
+    -- 왜도: E[(X-μ)³] / σ³
+    SUM(z * z * z) * n / ((n - 1) * (n - 2)) AS skewness,
+    -- 첨도 (초과첨도): E[(X-μ)⁴] / σ⁴ - 3
+    (SUM(z * z * z * z) * n * (n + 1) / ((n - 1) * (n - 2) * (n - 3)))
+        - (3 * (n - 1) * (n - 1) / ((n - 2) * (n - 3))) AS kurtosis
+FROM deviations;</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 히스토그램 데이터 준비</h3>
+                <pre><code>-- 구간별 빈도 계산 (히스토그램용)
+SELECT
+    CASE
+        WHEN bbs_score < 35 THEN '30-34'
+        WHEN bbs_score < 40 THEN '35-39'
+        WHEN bbs_score < 45 THEN '40-44'
+        WHEN bbs_score < 50 THEN '45-49'
+        ELSE '50-56'
+    END AS score_range,
+    COUNT(*) AS frequency,
+    ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER(), 1) AS percent
+FROM balance_assessments
+WHERE wave_id = 1
+GROUP BY 1
+ORDER BY 1;
+
+-- 결과:
+-- score_range | frequency | percent
+-- 30-34       | 3         | 6.0
+-- 35-39       | 8         | 16.0
+-- 40-44       | 20        | 40.0
+-- 45-49       | 15        | 30.0
+-- 50-56       | 4         | 8.0</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>5. 빈도 분석</h2>
+
+            <div class="concept-box">
+                <h3>💡 빈도표(Frequency Table)</h3>
+                <p>범주형 데이터의 각 값이 나타난 <strong>횟수와 비율</strong>을 정리한 표입니다.</p>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>성별</th>
+                            <th>빈도</th>
+                            <th>백분율</th>
+                            <th>누적 백분율</th>
+                        </tr>
+                        <tr><td>남성</td><td>23</td><td>46.0%</td><td>46.0%</td></tr>
+                        <tr><td>여성</td><td>27</td><td>54.0%</td><td>100.0%</td></tr>
+                        <tr><td><strong>합계</strong></td><td><strong>50</strong></td><td><strong>100.0%</strong></td><td></td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 빈도표 생성</h3>
+                <pre><code>-- 기본 빈도표
+SELECT
+    sex,
+    COUNT(*) AS frequency,
+    ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER(), 1) AS percent
+FROM participants
+GROUP BY sex
+ORDER BY sex;
+
+-- 누적 백분율 포함
+SELECT
+    sex,
+    COUNT(*) AS frequency,
+    ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER(), 1) AS percent,
+    ROUND(100.0 * SUM(COUNT(*)) OVER (ORDER BY sex) / SUM(COUNT(*)) OVER(), 1) AS cumulative_pct
+FROM participants
+GROUP BY sex
+ORDER BY sex;</code></pre>
+            </div>
+
+            <div class="concept-box">
+                <h3>💡 교차표(Crosstabulation)</h3>
+                <p>두 범주형 변수의 조합별 빈도를 보여주는 표입니다.</p>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th></th>
+                            <th>중재군</th>
+                            <th>대조군</th>
+                            <th>합계</th>
+                        </tr>
+                        <tr><td><strong>남성</strong></td><td>12</td><td>11</td><td>23</td></tr>
+                        <tr><td><strong>여성</strong></td><td>13</td><td>14</td><td>27</td></tr>
+                        <tr><td><strong>합계</strong></td><td>25</td><td>25</td><td>50</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 교차표 생성</h3>
+                <pre><code>-- 기본 교차표 (Long 형식)
+SELECT
+    sex,
+    group_type,
+    COUNT(*) AS n
+FROM participants
+GROUP BY sex, group_type
+ORDER BY sex, group_type;
+
+-- Wide 형식 교차표 (피벗)
+SELECT
+    sex,
+    SUM(CASE WHEN group_type = 'intervention' THEN 1 ELSE 0 END) AS intervention,
+    SUM(CASE WHEN group_type = 'control' THEN 1 ELSE 0 END) AS control,
+    COUNT(*) AS total
+FROM participants
+GROUP BY sex;
+
+-- 행/열 합계 포함
+WITH crosstab AS (
+    SELECT
+        sex,
+        SUM(CASE WHEN group_type = 'intervention' THEN 1 ELSE 0 END) AS intervention,
+        SUM(CASE WHEN group_type = 'control' THEN 1 ELSE 0 END) AS control,
+        COUNT(*) AS total
+    FROM participants
+    GROUP BY sex
+)
+SELECT * FROM crosstab
+UNION ALL
+SELECT
+    'Total' AS sex,
+    SUM(intervention),
+    SUM(control),
+    SUM(total)
+FROM crosstab;</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 교차표 + 백분율</h3>
+                <pre><code>-- 행 백분율 (각 성별 내에서)
+SELECT
+    sex,
+    group_type,
+    COUNT(*) AS n,
+    ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (PARTITION BY sex), 1) AS row_pct
+FROM participants
+GROUP BY sex, group_type;
+
+-- 열 백분율 (각 그룹 내에서)
+SELECT
+    sex,
+    group_type,
+    COUNT(*) AS n,
+    ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (PARTITION BY group_type), 1) AS col_pct
+FROM participants
+GROUP BY sex, group_type;</code></pre>
+            </div>
+
+            <hr>
+
+            <h2>6. 기술통계 테이블 설계</h2>
+
+            <div class="concept-box">
+                <h3>💡 통계 결과 저장의 필요성</h3>
+                <p>분석 결과를 별도 테이블에 저장하면:</p>
+                <ul>
+                    <li><strong>성능</strong>: 매번 재계산하지 않아도 됨</li>
+                    <li><strong>이력</strong>: 분석 시점별 결과 추적 가능</li>
+                    <li><strong>보고서</strong>: 결과 테이블에서 바로 추출</li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 기술통계 결과 테이블</h3>
+                <pre><code>-- 기술통계 결과 저장 테이블
+CREATE TABLE descriptive_stats (
+    stat_id INTEGER PRIMARY KEY,
+    variable_name TEXT NOT NULL,
+    group_variable TEXT,         -- 그룹 변수 (NULL이면 전체)
+    group_value TEXT,            -- 그룹 값
+    n INTEGER,
+    mean REAL,
+    std_dev REAL,
+    median REAL,
+    min_val REAL,
+    max_val REAL,
+    q1 REAL,
+    q3 REAL,
+    skewness REAL,
+    kurtosis REAL,
+    analysis_date DATE DEFAULT CURRENT_DATE,
+    notes TEXT
+);
+
+-- 빈도 분석 결과 저장 테이블
+CREATE TABLE frequency_stats (
+    freq_id INTEGER PRIMARY KEY,
+    variable_name TEXT NOT NULL,
+    category_value TEXT NOT NULL,
+    frequency INTEGER,
+    percent REAL,
+    cumulative_pct REAL,
+    analysis_date DATE DEFAULT CURRENT_DATE
+);</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 자동 기술통계 계산 및 저장</h3>
+                <pre><code>-- BBS 점수의 그룹별 기술통계 계산 후 저장
+INSERT INTO descriptive_stats (
+    variable_name, group_variable, group_value,
+    n, mean, std_dev, min_val, max_val
+)
+WITH group_stats AS (
+    SELECT
+        'bbs_score' AS variable_name,
+        'group_type' AS group_variable,
+        p.group_type AS group_value,
+        COUNT(*) AS n,
+        AVG(ba.bbs_score) AS mean,
+        -- 표준편차 계산
+        SQRT(SUM((ba.bbs_score -
+            (SELECT AVG(bbs_score) FROM balance_assessments ba2
+             JOIN participants p2 ON ba2.participant_id = p2.participant_id
+             WHERE ba2.wave_id = 1 AND p2.group_type = p.group_type))
+            * (ba.bbs_score -
+            (SELECT AVG(bbs_score) FROM balance_assessments ba2
+             JOIN participants p2 ON ba2.participant_id = p2.participant_id
+             WHERE ba2.wave_id = 1 AND p2.group_type = p.group_type)))
+            / (COUNT(*) - 1)) AS std_dev,
+        MIN(ba.bbs_score) AS min_val,
+        MAX(ba.bbs_score) AS max_val
+    FROM balance_assessments ba
+    JOIN participants p ON ba.participant_id = p.participant_id
+    WHERE ba.wave_id = 1
+    GROUP BY p.group_type
+)
+SELECT * FROM group_stats;</code></pre>
+            </div>
+
+            <div class="sql-box">
+                <h3>🔷 기술통계 보고서 쿼리</h3>
+                <pre><code>-- 논문용 기술통계 테이블 형식
+SELECT
+    variable_name AS "변수",
+    group_value AS "그룹",
+    n AS "n",
+    ROUND(mean, 2) || ' ± ' || ROUND(std_dev, 2) AS "Mean ± SD",
+    ROUND(median, 2) AS "Median",
+    ROUND(min_val, 1) || ' - ' || ROUND(max_val, 1) AS "Range"
+FROM descriptive_stats
+WHERE variable_name = 'bbs_score'
+ORDER BY group_value;
+
+-- 결과:
+-- 변수      | 그룹         | n  | Mean ± SD     | Median | Range
+-- bbs_score | control      | 25 | 43.20 ± 5.12  | 44.0   | 32.0 - 54.0
+-- bbs_score | intervention | 25 | 42.50 ± 4.98  | 43.0   | 33.0 - 52.0</code></pre>
+            </div>
+
+            <div class="example-box">
+                <h3>📋 완전한 기술통계 VIEW</h3>
+                <pre><code>-- 자주 사용하는 기술통계를 VIEW로 정의
+CREATE VIEW v_descriptive_summary AS
+WITH base_stats AS (
+    SELECT
+        p.group_type,
+        ba.bbs_score,
+        AVG(ba.bbs_score) OVER (PARTITION BY p.group_type) AS group_mean
+    FROM balance_assessments ba
+    JOIN participants p ON ba.participant_id = p.participant_id
+    WHERE ba.wave_id = 1
+)
+SELECT
+    group_type,
+    COUNT(*) AS n,
+    ROUND(AVG(bbs_score), 2) AS mean,
+    ROUND(SQRT(SUM((bbs_score - group_mean) * (bbs_score - group_mean)) / (COUNT(*) - 1)), 2) AS sd,
+    MIN(bbs_score) AS min,
+    MAX(bbs_score) AS max
+FROM base_stats
+GROUP BY group_type;
+
+-- 사용
+SELECT * FROM v_descriptive_summary;</code></pre>
+            </div>
+
+            <div class="summary-box">
+                <h3>📝 이 장의 핵심 정리</h3>
+                <ol>
+                    <li><strong>기술통계</strong>: 데이터를 요약/설명하는 통계 (추론통계와 구분)</li>
+                    <li><strong>중심 경향</strong>: 평균(AVG), 중앙값(Median), 최빈값(Mode)</li>
+                    <li><strong>산포도</strong>: 범위, 분산, 표준편차, IQR</li>
+                    <li><strong>분포 형태</strong>: 왜도(비대칭), 첨도(뾰족함)</li>
+                    <li><strong>빈도 분석</strong>: 빈도표(GROUP BY COUNT), 교차표(피벗)</li>
+                    <li><strong>결과 저장</strong>: 별도 테이블에 저장하여 성능/이력/보고서 활용</li>
+                </ol>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-14.html" class="nav-btn">← 이전</a>
+                <span class="page-num">15 / 20</span>
+                <a href="chapter-16.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>

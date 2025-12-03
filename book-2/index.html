@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>물리치료사를 위한 데이터베이스 2권: SQL 기초 편</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- 상단 네비게이션 -->
+    <nav class="top-nav">
+        <a href="../index.html" class="top-nav-brand">
+            <span>🏥</span> DB 완전정복
+        </a>
+        <div class="top-nav-links">
+            <a href="../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../book-2/index.html" class="top-nav-link book-2 active">2권</a>
+            <a href="../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../book-5/index.html" class="top-nav-link book-5">5권</a>
+        </div>
+    </nav>
+
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header">
+                <h1>📙 2권: SQL 기초 편</h1>
+                <p>데이터베이스 활용</p>
+            </div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+
+        <main class="main">
+            <h1 class="title">이 책의 사용법</h1>
+
+            <h2>1권과 2권의 차이</h2>
+            <table>
+                <tr><th>구분</th><th>1권 (입문)</th><th>2권 (활용)</th></tr>
+                <tr><td>초점</td><td>왜? 어떻게 만드나?</td><td>어떻게 쓰나?</td></tr>
+                <tr><td>내용</td><td>개념, 정규화, 설계</td><td>실전 쿼리, 워크플로우</td></tr>
+                <tr><td>결과물</td><td>DB 구조 완성</td><td>매일 쓰는 업무 자동화</td></tr>
+            </table>
+            <hr>
+
+            <h2>우리가 사용하는 테이블 구조</h2>
+            <pre><code>📁 pt_clinic 데이터베이스
+
+[patients]         환자 정보
+[therapists]       치료사 정보
+[treatment_sessions]  치료 세션
+[diagnosis_codes]  진단 코드 목록
+[patient_diagnoses]  환자-진단 연결
+[billings]         청구/수납
+[fee_items]        청구 항목
+[soap_notes]       SOAP 기록
+[insurances]       보험사 정보</code></pre>
+            <hr>
+
+            <h2>쿼리 읽는 법</h2>
+            <pre><code>SELECT 뭘_볼건지           -- 1. 어떤 컬럼
+FROM 어느_테이블에서        -- 2. 어느 테이블
+JOIN 다른_테이블           -- 3. 테이블 연결
+WHERE 조건                 -- 4. 필터 조건
+GROUP BY 그룹_기준         -- 5. 집계 기준
+ORDER BY 정렬_기준         -- 6. 정렬</code></pre>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" disabled>← 이전</button>
+                <span class="page-num">0 / 12</span>
+                <a href="chapters/chapter-1.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/nav.js"></script>
+</body>
+</html>

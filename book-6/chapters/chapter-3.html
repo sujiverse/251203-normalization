@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[3장] 변수란 무엇인가 - 연구 데이터 설계</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="../../index.html" class="top-nav-brand"><span>📊</span> 연구 데이터 설계</a>
+        <div class="top-nav-links">
+            <a href="../../book-1/index.html" class="top-nav-link book-1">1권</a>
+            <a href="../../book-2/index.html" class="top-nav-link book-2">2권</a>
+            <a href="../../book-3/index.html" class="top-nav-link book-3">3권</a>
+            <a href="../../book-4/index.html" class="top-nav-link book-4">4권</a>
+            <a href="../../book-5/index.html" class="top-nav-link book-5">5권</a>
+            <a href="../../book-6/index.html" class="top-nav-link book-6 active">6권</a>
+        </div>
+    </nav>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div class="sidebar-header"><h1>📘 6권: 연구 데이터 설계</h1><p>변수부터 회귀분석까지</p></div>
+            <ul class="nav-list" id="navList"></ul>
+        </nav>
+        <main class="main">
+            <div class="part-header">1부: 연구와 데이터의 기초</div>
+            <h1 class="title">[3장] 변수란 무엇인가</h1>
+
+            <div class="intro-box">
+                <p>이 장에서는 <strong>변수의 정의와 측정</strong>에 대해 배웁니다. 추상적인 개념을 어떻게 측정 가능한 변수로 만드는지가 연구의 핵심입니다.</p>
+            </div>
+
+            <hr>
+
+            <h2>1. 변수의 정의</h2>
+
+            <p>변수(Variable)는 관측 대상에 따라 다른 값을 가지는 특성입니다.</p>
+
+            <div class="concept-box">
+                <h3>변수와 상수</h3>
+                <ul>
+                    <li><strong>변수(Variable):</strong> 관측 단위마다 다른 값을 가짐
+                        <br>예: 나이, 키, 점수, 성별</li>
+                    <li><strong>상수(Constant):</strong> 모든 관측 단위에서 같은 값
+                        <br>예: 원주율(π), 연구 수행 연도</li>
+                </ul>
+                <p>연구에서는 변수 간의 관계를 분석합니다. 상수는 분석 대상이 아닙니다.</p>
+            </div>
+
+            <div class="concept-box">
+                <h3>변수의 값</h3>
+                <p>변수가 취할 수 있는 구체적인 수치나 범주입니다.</p>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>변수</th><th>가능한 값</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>성별</td><td>남, 여</td></tr>
+                            <tr><td>학력</td><td>초졸, 중졸, 고졸, 대졸, 대학원졸</td></tr>
+                            <tr><td>통증 강도 (VAS)</td><td>0~100의 정수</td></tr>
+                            <tr><td>체중 (kg)</td><td>양의 실수</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="explanation-box">
+                <h3>DB에서 변수의 표현</h3>
+                <p>데이터베이스에서 변수는 <strong>열(column)</strong>로 표현됩니다. 각 행(row)은 하나의 관측 단위(참가자)를 나타냅니다.</p>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>id</th><th>age</th><th>gender</th><th>pain_score</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>1</td><td>45</td><td>M</td><td>65</td></tr>
+                            <tr><td>2</td><td>32</td><td>F</td><td>42</td></tr>
+                            <tr><td>3</td><td>58</td><td>M</td><td>78</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p>age, gender, pain_score는 변수(열)이고, 각 행의 값은 해당 참가자의 측정값입니다.</p>
+            </div>
+
+            <hr>
+
+            <h2>2. 개념적 정의 vs 조작적 정의</h2>
+
+            <p>연구에서는 추상적 개념을 측정 가능한 형태로 변환해야 합니다. 이 과정에서 두 종류의 정의가 필요합니다.</p>
+
+            <div class="concept-box">
+                <h3>개념적 정의 (Conceptual Definition)</h3>
+                <p>사전적, 이론적 의미에서의 정의입니다. 추상적이고 일반적입니다.</p>
+                <ul>
+                    <li><strong>우울:</strong> 지속적인 슬픔, 흥미 상실, 무력감을 특징으로 하는 정서 상태</li>
+                    <li><strong>삶의 질:</strong> 신체적, 정신적, 사회적 안녕의 주관적 인식</li>
+                    <li><strong>통증:</strong> 실제 또는 잠재적 조직 손상과 관련된 불쾌한 감각 및 정서적 경험</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>조작적 정의 (Operational Definition)</h3>
+                <p>개념을 <strong>어떻게 측정할 것인가</strong>를 구체적으로 명시한 정의입니다.</p>
+                <ul>
+                    <li><strong>우울:</strong> PHQ-9 점수 (0-27점), 10점 이상을 우울로 분류</li>
+                    <li><strong>삶의 질:</strong> SF-36 설문의 8개 하위 척도 점수</li>
+                    <li><strong>통증:</strong> 100mm VAS에서 참가자가 표시한 지점의 거리 (mm)</li>
+                </ul>
+            </div>
+
+            <div class="example-box">
+                <h3>예시: "운동"의 조작적 정의</h3>
+                <p><strong>개념적 정의:</strong> 건강 증진을 위한 신체 활동</p>
+                <p><strong>조작적 정의 예시:</strong></p>
+                <ol>
+                    <li>"지난 일주일간 중강도 이상 운동을 30분 이상 실시한 일수" (0-7)</li>
+                    <li>"IPAQ 설문으로 측정한 주당 MET-minutes"</li>
+                    <li>"만보기로 측정한 일일 평균 걸음 수"</li>
+                    <li>"최대 산소섭취량(VO2max) 측정값 (mL/kg/min)"</li>
+                </ol>
+                <p>같은 개념도 조작적 정의에 따라 다른 값이 나올 수 있습니다.</p>
+            </div>
+
+            <div class="sql-box">
+                <p><strong>DB 설계:</strong> 변수의 정의 저장</p>
+                <pre>CREATE TABLE variable_definitions (
+    id INTEGER PRIMARY KEY,
+    variable_name TEXT NOT NULL,
+    conceptual_definition TEXT,
+    operational_definition TEXT,
+    measurement_instrument TEXT,
+    unit TEXT,
+    min_value REAL,
+    max_value REAL
+);
+
+INSERT INTO variable_definitions VALUES
+(1, 'depression',
+ '지속적인 슬픔, 흥미 상실을 특징으로 하는 정서 상태',
+ 'PHQ-9 총점 (0-27)',
+ 'PHQ-9', 'points', 0, 27),
+(2, 'pain_intensity',
+ '조직 손상과 관련된 불쾌한 감각적 경험',
+ '100mm VAS에서 참가자가 표시한 거리',
+ 'Visual Analog Scale', 'mm', 0, 100);</pre>
+            </div>
+
+            <hr>
+
+            <h2>3. 측정과 측정 오차</h2>
+
+            <p>측정(Measurement)은 규칙에 따라 대상에 숫자나 기호를 부여하는 과정입니다.</p>
+
+            <div class="concept-box">
+                <h3>측정의 기본 공식</h3>
+                <p class="formula"><strong>관측값 = 참값 + 오차</strong></p>
+                <p>X<sub>observed</sub> = X<sub>true</sub> + Error</p>
+                <ul>
+                    <li><strong>참값(True Score):</strong> 오차가 없을 때의 실제 값</li>
+                    <li><strong>관측값(Observed Score):</strong> 실제로 측정된 값</li>
+                    <li><strong>오차(Error):</strong> 참값과 관측값의 차이</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>체계적 오차 (Systematic Error)</h3>
+                <p>일관된 방향으로 발생하는 오차입니다. 측정값이 한쪽으로 치우칩니다.</p>
+                <ul>
+                    <li><strong>원인:</strong>
+                        <ul>
+                            <li>보정되지 않은 측정 도구</li>
+                            <li>일관된 측정자 편향</li>
+                            <li>환경 요인</li>
+                        </ul>
+                    </li>
+                    <li><strong>영향:</strong> 타당도를 낮춤 (엉뚱한 것을 측정)</li>
+                    <li><strong>예:</strong> 영점이 맞지 않는 체중계 → 모든 측정값이 실제보다 2kg 높음</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>무선 오차 (Random Error)</h3>
+                <p>무작위로 발생하는 오차입니다. 방향이 일정하지 않습니다.</p>
+                <ul>
+                    <li><strong>원인:</strong>
+                        <ul>
+                            <li>피험자의 일시적 상태 (피로, 주의력)</li>
+                            <li>환경의 무작위 변동</li>
+                            <li>측정자의 비일관성</li>
+                        </ul>
+                    </li>
+                    <li><strong>영향:</strong> 신뢰도를 낮춤 (측정이 일관되지 않음)</li>
+                    <li><strong>특성:</strong> 표본 크기가 커지면 평균적으로 상쇄됨</li>
+                </ul>
+            </div>
+
+            <div class="comparison-table">
+                <h3>체계적 오차 vs 무선 오차</h3>
+                <table>
+                    <thead>
+                        <tr><th>구분</th><th>체계적 오차</th><th>무선 오차</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>방향</td><td>일관됨 (한쪽으로)</td><td>무작위 (양쪽으로)</td></tr>
+                        <tr><td>영향</td><td>타당도 ↓</td><td>신뢰도 ↓</td></tr>
+                        <tr><td>표본 증가 시</td><td>상쇄 안 됨</td><td>평균적으로 상쇄</td></tr>
+                        <tr><td>통제 방법</td><td>도구 보정, 맹검</td><td>측정 횟수 증가, 표준화</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <hr>
+
+            <h2>4. 신뢰도와 타당도 개요</h2>
+
+            <p>측정의 질을 평가하는 두 가지 핵심 기준입니다.</p>
+
+            <div class="concept-box">
+                <h3>신뢰도 (Reliability)</h3>
+                <p>측정이 <strong>일관되게 반복되는 정도</strong>입니다.</p>
+                <ul>
+                    <li>같은 대상을 반복 측정했을 때 같은 결과가 나오는가?</li>
+                    <li>무선 오차가 적을수록 신뢰도가 높음</li>
+                    <li>0에서 1 사이의 계수로 표현 (높을수록 좋음)</li>
+                </ul>
+                <p><strong>신뢰도 유형:</strong></p>
+                <ul>
+                    <li>검사-재검사 신뢰도 (Test-retest)</li>
+                    <li>내적 일관성 (Internal consistency, Cronbach's α)</li>
+                    <li>평가자 간 신뢰도 (Inter-rater reliability)</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>타당도 (Validity)</h3>
+                <p>측정이 <strong>의도한 것을 측정하는 정도</strong>입니다.</p>
+                <ul>
+                    <li>측정하려는 개념을 실제로 측정하고 있는가?</li>
+                    <li>체계적 오차가 적을수록 타당도가 높음</li>
+                </ul>
+                <p><strong>타당도 유형:</strong></p>
+                <ul>
+                    <li><strong>내용 타당도:</strong> 측정 내용이 개념을 대표하는가</li>
+                    <li><strong>준거 타당도:</strong> 외부 기준과 일치하는가 (동시/예측)</li>
+                    <li><strong>구성 타당도:</strong> 이론적 구성개념을 측정하는가</li>
+                </ul>
+            </div>
+
+            <div class="example-box">
+                <h3>과녁 비유</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th></th><th>신뢰도 높음</th><th>신뢰도 낮음</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>타당도 높음</strong></td>
+                                <td>과녁 중심에 모여 있음<br>(이상적)</td>
+                                <td>과녁 중심 주변에 흩어져 있음<br>(불가능: 신뢰도는 타당도의 필요조건)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>타당도 낮음</strong></td>
+                                <td>과녁 한쪽에 모여 있음<br>(일관되게 빗나감)</td>
+                                <td>사방에 흩어져 있음<br>(최악)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="explanation-box">
+                <h3>핵심 원리</h3>
+                <p><strong>신뢰도는 타당도의 필요조건이지만 충분조건은 아닙니다.</strong></p>
+                <ul>
+                    <li>신뢰도가 낮으면 타당도도 낮습니다</li>
+                    <li>그러나 신뢰도가 높다고 타당도가 보장되지 않습니다</li>
+                    <li>수학적으로: 타당도 ≤ √신뢰도</li>
+                </ul>
+            </div>
+
+            <hr>
+
+            <h2>5. 변수명 짓기 규칙</h2>
+
+            <p>데이터베이스와 분석 도구에서 사용할 변수명은 규칙을 따라야 합니다.</p>
+
+            <div class="concept-box">
+                <h3>좋은 변수명의 조건</h3>
+                <ul>
+                    <li><strong>의미 있음:</strong> 변수의 내용을 유추할 수 있음</li>
+                    <li><strong>간결함:</strong> 불필요하게 길지 않음</li>
+                    <li><strong>일관성:</strong> 같은 규칙을 모든 변수에 적용</li>
+                    <li><strong>기계 친화적:</strong> 특수문자, 공백 없음</li>
+                </ul>
+            </div>
+
+            <div class="concept-box">
+                <h3>명명 규칙 (Naming Convention)</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>규칙</th><th>예시</th><th>사용처</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>snake_case</td>
+                                <td>pain_score, birth_year</td>
+                                <td>SQL, Python, R</td>
+                            </tr>
+                            <tr>
+                                <td>camelCase</td>
+                                <td>painScore, birthYear</td>
+                                <td>JavaScript, Java</td>
+                            </tr>
+                            <tr>
+                                <td>PascalCase</td>
+                                <td>PainScore, BirthYear</td>
+                                <td>C#, 테이블명</td>
+                            </tr>
+                            <tr>
+                                <td>SCREAMING_SNAKE</td>
+                                <td>PAIN_SCORE</td>
+                                <td>상수, 일부 SQL</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p><strong>권장:</strong> 연구 데이터에서는 <code>snake_case</code>가 가독성이 좋고 SQL, R, Python 모두에서 잘 작동합니다.</p>
+            </div>
+
+            <div class="concept-box">
+                <h3>변수명 작성 팁</h3>
+                <ul>
+                    <li><strong>접두사 활용:</strong>
+                        <ul>
+                            <li><code>pre_</code>, <code>post_</code>: 사전/사후 측정</li>
+                            <li><code>t1_</code>, <code>t2_</code>: 시점</li>
+                            <li><code>is_</code>, <code>has_</code>: 이진 변수</li>
+                        </ul>
+                    </li>
+                    <li><strong>접미사 활용:</strong>
+                        <ul>
+                            <li><code>_score</code>: 점수</li>
+                            <li><code>_date</code>: 날짜</li>
+                            <li><code>_id</code>: 식별자</li>
+                            <li><code>_cat</code>: 범주형</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="warning-box">
+                <h3>피해야 할 변수명</h3>
+                <ul>
+                    <li><strong>공백 포함:</strong> <code>pain score</code> → <code>pain_score</code></li>
+                    <li><strong>특수문자:</strong> <code>pain-score</code>, <code>pain@score</code></li>
+                    <li><strong>숫자로 시작:</strong> <code>1st_score</code> → <code>score_1st</code></li>
+                    <li><strong>예약어:</strong> <code>select</code>, <code>from</code>, <code>where</code>, <code>date</code></li>
+                    <li><strong>너무 짧음:</strong> <code>x</code>, <code>v1</code>, <code>a</code></li>
+                    <li><strong>너무 김:</strong> <code>patient_pain_intensity_visual_analog_scale_score_at_baseline</code></li>
+                    <li><strong>한글:</strong> <code>통증점수</code> (일부 도구에서 오류)</li>
+                </ul>
+            </div>
+
+            <div class="sql-box">
+                <p><strong>예시:</strong> 연구 변수명 설계</p>
+                <pre>-- 좋은 변수명 예시
+CREATE TABLE assessments (
+    id INTEGER PRIMARY KEY,
+    participant_id INTEGER,
+
+    -- 인구통계
+    age INTEGER,
+    gender TEXT,
+    education_years INTEGER,
+
+    -- 사전 측정
+    pre_pain_vas REAL,
+    pre_function_odi REAL,
+    pre_depression_phq9 INTEGER,
+
+    -- 사후 측정
+    post_pain_vas REAL,
+    post_function_odi REAL,
+    post_depression_phq9 INTEGER,
+
+    -- 메타 정보
+    is_completer BOOLEAN,
+    assessment_date DATE
+);</pre>
+            </div>
+
+            <div class="summary-box">
+                <h3>📝 이 장의 핵심 정리</h3>
+                <table>
+                    <thead>
+                        <tr><th>개념</th><th>설명</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>변수</td><td>관측 대상에 따라 다른 값을 가지는 특성</td></tr>
+                        <tr><td>개념적 정의</td><td>사전적, 이론적 의미의 정의</td></tr>
+                        <tr><td>조작적 정의</td><td>어떻게 측정할 것인가를 명시한 정의</td></tr>
+                        <tr><td>체계적 오차</td><td>일관된 방향의 오차 → 타당도 저하</td></tr>
+                        <tr><td>무선 오차</td><td>무작위 방향의 오차 → 신뢰도 저하</td></tr>
+                        <tr><td>신뢰도</td><td>측정의 일관성 (무선 오차와 관련)</td></tr>
+                        <tr><td>타당도</td><td>의도한 것을 측정하는 정도 (체계적 오차와 관련)</td></tr>
+                        <tr><td>snake_case</td><td>권장되는 변수명 규칙 (예: pain_score)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="chapter-2.html" class="nav-btn">← 이전</a>
+                <span class="page-num">3 / 20</span>
+                <a href="chapter-4.html" class="nav-btn">다음 →</a>
+            </div>
+        </main>
+    </div>
+    <script src="../js/nav.js"></script>
+</body>
+</html>
